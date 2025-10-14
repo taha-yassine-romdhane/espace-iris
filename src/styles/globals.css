@@ -1,0 +1,125 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .scrollbar-hide {
+    /* Hide scrollbar for IE, Edge and Firefox */
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-rgb: 255, 255, 255;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: rgb(var(--background-rgb));
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 217 71% 20%;
+    --card: 0 0% 100%;
+    --card-foreground: 217 71% 20%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 217 71% 20%;
+    --primary: 217 71% 20%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 217 71% 95%;
+    --secondary-foreground: 217 71% 20%;
+    --muted: 217 71% 95%;
+    --muted-foreground: 217 71% 40%;
+    --accent: 217 71% 95%;
+    --accent-foreground: 217 71% 20%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 98%;
+    --border: 217 71% 90%;
+    --input: 217 71% 90%;
+    --ring: 217 71% 20%;
+    --chart-1: 217 71% 50%;
+    --chart-2: 217 71% 40%;
+    --chart-3: 217 71% 30%;
+    --chart-4: 217 71% 60%;
+    --chart-5: 217 71% 70%;
+    --radius: 0.5rem;
+  }
+  .dark {
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 14.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 0 0% 14.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 98%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 0 0% 83.1%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Employee theme with green colors */
+.employee-theme {
+  --background: 0 0% 100%;
+  --foreground: 142 71% 20%;
+  --card: 0 0% 100%;
+  --card-foreground: 142 71% 20%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 142 71% 20%;
+  --primary: 142 71% 29%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 142 71% 95%;
+  --secondary-foreground: 142 71% 20%;
+  --muted: 142 71% 95%;
+  --muted-foreground: 142 71% 40%;
+  --accent: 142 71% 95%;
+  --accent-foreground: 142 71% 20%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 98%;
+  --warning: 38 92% 50%;
+  --warning-foreground: 0 0% 98%;
+  --border: 142 71% 90%;
+  --input: 142 71% 90%;
+  --ring: 142 71% 29%;
+  --chart-1: 142 71% 50%;
+  --chart-2: 142 71% 40%;
+  --chart-3: 142 71% 30%;
+  --chart-4: 142 71% 60%;
+  --chart-5: 142 71% 70%;
+}

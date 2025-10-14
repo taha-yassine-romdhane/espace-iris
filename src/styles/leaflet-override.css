@@ -1,0 +1,112 @@
+/* Fix for Leaflet marker icons in Next.js */
+.leaflet-default-icon-path {
+  background-image: url(https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png);
+}
+
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+}
+
+/* Ensure proper z-index for map controls */
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 1000;
+}
+
+/* Custom marker styling */
+.leaflet-marker-icon {
+  transition: all 0.3s ease;
+}
+
+.leaflet-marker-icon:hover {
+  transform: scale(1.1);
+}
+
+/* Custom popup styling */
+.leaflet-popup-content-wrapper {
+  padding: 0;
+  overflow: hidden;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  border: 1px solid #e2e8f0;
+}
+
+.leaflet-popup-content {
+  margin: 0;
+  width: 380px !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.leaflet-popup-tip {
+  background: white;
+  border: 1px solid #e2e8f0;
+}
+
+/* Custom scrollbar for popup */
+.leaflet-popup-content ::-webkit-scrollbar {
+  width: 6px;
+}
+
+.leaflet-popup-content ::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.leaflet-popup-content ::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 3px;
+}
+
+.leaflet-popup-content ::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Remove marker icon background */
+.custom-div-icon {
+  background: transparent;
+  border: none;
+}
+
+/* Custom initials marker styling */
+.custom-initials-icon {
+  background: transparent !important;
+  border: none !important;
+}
+
+.custom-initials-icon > div {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+}
+
+.custom-initials-icon:hover > div {
+  transform: scale(1.1);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+}
+
+/* Company headquarters marker styling */
+.company-headquarters-icon {
+  background: transparent !important;
+  border: none !important;
+}
+
+.company-headquarters-icon > div {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  cursor: pointer;
+}
+
+.company-headquarters-icon:hover > div {
+  transform: scale(1.05);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.5);
+}
+
+/* Add pulsing animation to company headquarters */
+@keyframes pulse {
+  0% { box-shadow: 0 4px 8px rgba(30, 58, 138, 0.4), 0 0 0 0 rgba(30, 58, 138, 0.4); }
+  50% { box-shadow: 0 4px 8px rgba(30, 58, 138, 0.4), 0 0 0 10px rgba(30, 58, 138, 0.1); }
+  100% { box-shadow: 0 4px 8px rgba(30, 58, 138, 0.4), 0 0 0 20px rgba(30, 58, 138, 0); }
+}
+
+.company-headquarters-icon > div {
+  animation: pulse 3s infinite;
+}

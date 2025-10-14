@@ -1,0 +1,55 @@
+/* Print styles for receipt */
+@media print {
+  /* Hide everything except receipt content */
+  body * {
+    visibility: hidden;
+  }
+  
+  #receipt-content, #receipt-content * {
+    visibility: visible;
+  }
+  
+  #receipt-content {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 20px !important;
+  }
+  
+  /* Hide print button */
+  .no-print {
+    display: none !important;
+  }
+  
+  /* Ensure proper page breaks */
+  .page-break {
+    page-break-before: always;
+  }
+  
+  /* Optimize colors for print */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+  
+  /* Remove shadows and rounded corners for print */
+  .shadow-lg, .shadow-md, .shadow-sm {
+    box-shadow: none !important;
+  }
+  
+  .rounded-lg, .rounded-xl, .rounded-md {
+    border-radius: 0 !important;
+  }
+  
+  /* Ensure table borders are visible */
+  table, th, td {
+    border: 1px solid #000 !important;
+  }
+  
+  /* Make text darker for better print visibility */
+  .text-gray-600, .text-gray-500 {
+    color: #333 !important;
+  }
+}

@@ -1,0 +1,381 @@
+import React, { useCallback, useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import FileManager from './components/FileManager';
+import { useToast } from "@/components/ui/use-toast";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MapPin } from 'lucide-react';
+import { ExistingFile } from '@/types/forms/PatientFormData';
+
+interface Technician {
+  id: string;
+  name: string;
+  role: string;
+}
+
+// Define a type for file data if not already defined in the project
+const formSchema = z.object({
+  id: z.string().optional(), // Add ID field for entity identification
+  nomSociete: z.string().min(1, "Le nom de la société est requis"),
+  telephonePrincipale: z.string().min(8, "Le numéro de téléphone doit contenir au moins 8 chiffres"),
+  adresseComplete: z.string().min(1, "L'adresse est requise"),
+  telephoneSecondaire: z.string().optional(),
+  matriculeFiscale: z.string().optional(),
+  technicienResponsable: z.string().optional(),
+  descriptionNom: z.string().optional(),
+  descriptionTelephone: z.string().optional(),
+  descriptionAdresse: z.string().optional(),
+  // Add file fields to the schema
+  files: z.any().optional(),
+  existingFiles: z.any().optional(),
+}).passthrough(); // Allow additional properties
+
+export interface SocieteFormProps {
+  formData: {
+    nomSociete?: string;
+    matriculeFiscale?: string;
+    telephonePrincipale?: string;
+    telephoneSecondaire?: string;
+    adresseComplete?: string;
+    technicienResponsable?: string;
+    descriptionNom?: string;
+    descriptionTelephone?: string;
+    descriptionAdresse?: string;
+    files?: File[];
+    existingFiles?: ExistingFile[];
+    id?: string; // Include ID if available for the entity
+  };
+  onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
+  onFileChange: (files: ExistingFile[] | File[]) => void;
+  onBack: () => void;
+  onNext: () => void;
+}
+
+export default function SocieteForm({ formData, onInputChange, onFileChange, onBack, onNext }: SocieteFormProps) {
+  const { toast } = useToast();
+  const [technicians, setTechnicians] = useState<Technician[]>([]);
+  const [existingFiles, setExistingFiles] = useState<ExistingFile[]>(
+    (formData.existingFiles as ExistingFile[]) || []
+  );
+
+  // Initialize existing files from formData and maintain persistence
+  useEffect(() => {
+    if (formData.existingFiles && formData.existingFiles.length > 0) {
+      setExistingFiles(formData.existingFiles);
+      // Also set in form
+      form?.setValue?.('existingFiles', formData.existingFiles);
+    }
+  }, [formData.existingFiles]);
+
+  // eslint-disable-next-line no-unused-vars
+  useEffect(() => {
+    const fetchTechnicians = async () => {
+      try {
+        const response = await fetch('/api/users/technicians');
+        if (!response.ok) throw new Error('Failed to fetch technicians');
+        const data = await response.json();
+        setTechnicians(data);
+      } catch (error) {
+        console.error('Error fetching technicians:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch technicians",
+          variant: "destructive",
+        });
+      }
+    };
+
+    fetchTechnicians();
+  }, [toast]);
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      id: formData.id || '', // Include ID for file association
+      nomSociete: formData.nomSociete || '',
+      telephonePrincipale: formData.telephonePrincipale || '',
+      adresseComplete: formData.adresseComplete || '',
+      telephoneSecondaire: formData.telephoneSecondaire || '',
+      matriculeFiscale: formData.matriculeFiscale || '',
+      technicienResponsable: formData.technicienResponsable || '',
+      descriptionNom: formData.descriptionNom || '',
+      descriptionTelephone: formData.descriptionTelephone || '',
+      descriptionAdresse: formData.descriptionAdresse || '',
+      existingFiles: formData.existingFiles || [],
+    },
+  });
+
+  // Handle form submission
+  const onSubmit = async (data: z.infer<typeof formSchema>) => {
+    // Ensure files are included in the form data
+    data.existingFiles = existingFiles;
+    
+    // Call the parent's onNext function to proceed
+    try {
+      await onNext();
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      toast({
+        title: "Error",
+        description: "Failed to submit form",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle file removal
+  const handleRemoveFile = (fileUrl: string) => {
+    const updatedExistingFiles = existingFiles.filter(file => file.url !== fileUrl);
+    setExistingFiles(updatedExistingFiles);
+    
+    // Update form state
+    form.setValue('existingFiles', updatedExistingFiles);
+    
+    // Notify parent component
+    onFileChange({
+      target: {
+        name: 'existingFiles',
+        value: updatedExistingFiles
+      }
+    } as unknown as React.ChangeEvent<HTMLInputElement>);
+  };
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        {/* Hidden inputs to pass files data - multiple approaches for reliability */}
+        <input 
+          type="hidden" 
+          name="existingFilesData" 
+          value={JSON.stringify(existingFiles)} 
+        />
+        <input 
+          type="hidden" 
+          name="existingFiles" 
+          value={JSON.stringify(existingFiles)} 
+        />
+        {/* Backup field */}
+        <input 
+          type="hidden" 
+          name="_uploadedFiles" 
+          value={JSON.stringify(existingFiles)} 
+        />
+        <div className="bg-white rounded-lg">
+          <div className="p-5">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="space-y-6">
+                <FormField
+                  control={form.control}
+                  name="nomSociete"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nom Société</FormLabel>
+                      <FormControl>
+                        <Input {...field} onChange={(e) => {
+                          field.onChange(e);
+                          onInputChange(e);
+                        }} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="matriculeFiscale"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Matricule Fiscale</FormLabel>
+                      <FormControl>
+                        <Input {...field} onChange={(e) => {
+                          field.onChange(e);
+                          onInputChange(e);
+                        }} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="telephonePrincipale"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Téléphone Principale</FormLabel>
+                      <FormControl>
+                        <Input {...field} onChange={(e) => {
+                          field.onChange(e);
+                          onInputChange(e);
+                        }} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="telephoneSecondaire"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Téléphone Secondaire</FormLabel>
+                      <FormControl>
+                        <Input {...field} onChange={(e) => {
+                          field.onChange(e);
+                          onInputChange(e);
+                        }} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="adresseComplete"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Adresse Complète</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input {...field} onChange={(e) => {
+                            field.onChange(e);
+                            onInputChange(e);
+                          }} />
+                          <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-500" size={20} />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="technicienResponsable"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Technicien Responsable</FormLabel>
+                      <Select 
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          onInputChange({ target: { name: 'technicienResponsable', value } } as any);
+                        }} 
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner un technicien" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {technicians.map(tech => (
+                            <SelectItem key={tech.id} value={tech.id}>
+                              {tech.name} ({tech.role})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="space-y-6">
+                <FormField
+                  control={form.control}
+                  name="descriptionNom"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description Nom</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} onChange={(e) => {
+                          field.onChange(e);
+                          onInputChange(e);
+                        }} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="descriptionTelephone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description Téléphone</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} onChange={(e) => {
+                          field.onChange(e);
+                          onInputChange(e);
+                        }} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="descriptionAdresse"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description Adresse</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} onChange={(e) => {
+                          field.onChange(e);
+                          onInputChange(e);
+                        }} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="space-y-4">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Documents
+                  </label>
+                  {/* File Upload Section */}
+                  <FileManager 
+                    form={form} 
+                    existingFiles={existingFiles}
+                    onFileChange={setExistingFiles}
+                    onRemoveExistingFile={handleRemoveFile}
+                    endpoint="documentUploader"
+                    maxFiles={5}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-between mt-8 p-4 bg-gray-50 border-t border-gray-200">
+            <Button type="button" variant="outline" onClick={onBack}>
+              Retour
+            </Button>
+            <Button type="submit">
+              Sauvegarder
+            </Button>
+          </div>
+        </div>
+      </form>
+    </Form>
+  );
+}

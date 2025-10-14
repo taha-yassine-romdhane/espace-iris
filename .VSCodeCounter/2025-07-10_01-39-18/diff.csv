@@ -1,0 +1,415 @@
+"filename", "language", "CSS", "TypeScript", "TypeScript JSX", "Markdown", "comment", "blank", "total"
+"d:\gazzeh travail\espace-elite\src\components\FileViewerModal.tsx", "TypeScript JSX", 0, 0, 1, 0, 0, 0, 1
+"d:\gazzeh travail\espace-elite\src\components\MedicaleDevicesParametreForms\ParametreBouteilleForm.tsx", "TypeScript JSX", 0, 0, 24, 0, 0, 4, 28
+"d:\gazzeh travail\espace-elite\src\components\MedicaleDevicesParametreForms\ParametreCPAPForm.tsx", "TypeScript JSX", 0, 0, 79, 0, 0, 4, 83
+"d:\gazzeh travail\espace-elite\src\components\MedicaleDevicesParametreForms\ParametreConcentrateurForm.tsx", "TypeScript JSX", 0, 0, 24, 0, 0, 4, 28
+"d:\gazzeh travail\espace-elite\src\components\MedicaleDevicesParametreForms\ParametreVIForm.tsx", "TypeScript JSX", 0, 0, 67, 0, 0, 4, 71
+"d:\gazzeh travail\espace-elite\src\components\MedicaleDevicesParametreForms\ParametreVNIForm.tsx", "TypeScript JSX", 0, 0, 67, 0, 0, 4, 71
+"d:\gazzeh travail\espace-elite\src\components\MedicaleDevicesParametreForms\index.tsx", "TypeScript JSX", 0, 0, 12, 0, 0, 2, 14
+"d:\gazzeh travail\espace-elite\src\components\forms\PatientForm.tsx", "TypeScript JSX", 0, 0, -4, 0, 9, -2, 3
+"d:\gazzeh travail\espace-elite\src\components\forms\SocieteForm.tsx", "TypeScript JSX", 0, 0, 5, 0, 9, 2, 16
+"d:\gazzeh travail\espace-elite\src\components\forms\components\FileList.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 1, 1
+"d:\gazzeh travail\espace-elite\src\components\forms\components\FileManager.tsx", "TypeScript JSX", 0, 0, 238, 0, 40, 43, 321
+"d:\gazzeh travail\espace-elite\src\components\forms\components\LeafletMap.tsx", "TypeScript JSX", 0, 0, -48, 0, -5, -12, -65
+"d:\gazzeh travail\espace-elite\src\components\forms\components\LocationPicker.tsx", "TypeScript JSX", 0, 0, 66, 0, 4, 9, 79
+"d:\gazzeh travail\espace-elite\src\components\forms\components\MapComponent.tsx", "TypeScript JSX", 0, 0, -43, 0, -1, -6, -50
+"d:\gazzeh travail\espace-elite\src\components\forms\components\SimpleMap.tsx", "TypeScript JSX", 0, 0, 0, 0, 3, 0, 3
+"d:\gazzeh travail\espace-elite\src\components\forms\components\UnitInput.tsx", "TypeScript JSX", 0, 0, 0, 0, 2, 0, 2
+"d:\gazzeh travail\espace-elite\src\components\forms\patientSections\AdditionalInfoBlock.tsx", "TypeScript JSX", 0, 0, 0, 0, 2, 0, 2
+"d:\gazzeh travail\espace-elite\src\components\forms\patientSections\BiometricsBlock.tsx", "TypeScript JSX", 0, 0, 0, 0, 2, 0, 2
+"d:\gazzeh travail\espace-elite\src\components\forms\patientSections\InsuranceDetailsBlock.tsx", "TypeScript JSX", 0, 0, 11, 0, 2, 0, 13
+"d:\gazzeh travail\espace-elite\src\components\forms\patientSections\PersonalInfoBlock.tsx", "TypeScript JSX", 0, 0, -15, 0, 8, 4, -3
+"d:\gazzeh travail\espace-elite\src\components\forms\patientSections\ResponsiblePersonBlock.tsx", "TypeScript JSX", 0, 0, -9, 0, 0, -3, -12
+"d:\gazzeh travail\espace-elite\src\components\medicalDevice\DeviceHeader.tsx", "TypeScript JSX", 0, 0, 80, 0, 0, 4, 84
+"d:\gazzeh travail\espace-elite\src\components\medicalDevice\DeviceMaintenanceHistory.tsx", "TypeScript JSX", 0, 0, 67, 0, 0, 4, 71
+"d:\gazzeh travail\espace-elite\src\components\medicalDevice\DeviceParameters.tsx", "TypeScript JSX", 0, 0, 106, 0, 1, 6, 113
+"d:\gazzeh travail\espace-elite\src\components\medicalDevice\DeviceRelations.tsx", "TypeScript JSX", 0, 0, 92, 0, 3, 5, 100
+"d:\gazzeh travail\espace-elite\src\components\medicalDevice\DeviceStepperHistory.tsx", "TypeScript JSX", 0, 0, 126, 0, 0, 7, 133
+"d:\gazzeh travail\espace-elite\src\components\medicalDevice\DiagnosticDeviceDetails.tsx", "TypeScript JSX", 0, 0, 67, 0, 0, 4, 71
+"d:\gazzeh travail\espace-elite\src\components\patient\PatientAppointments.tsx", "TypeScript JSX", 0, 0, 167, 0, 3, 11, 181
+"d:\gazzeh travail\espace-elite\src\components\patient\PatientBasicInfo.tsx", "TypeScript JSX", 0, 0, 52, 0, 0, 10, 62
+"d:\gazzeh travail\espace-elite\src\components\patient\PatientContactInfo.tsx", "TypeScript JSX", 0, 0, 45, 0, 0, 7, 52
+"d:\gazzeh travail\espace-elite\src\components\patient\PatientDevices.tsx", "TypeScript JSX", 0, 0, 99, 0, 0, 5, 104
+"d:\gazzeh travail\espace-elite\src\components\patient\PatientDiagnostics.tsx", "TypeScript JSX", 0, 0, 108, 0, 0, 6, 114
+"d:\gazzeh travail\espace-elite\src\components\patient\PatientFiles.tsx", "TypeScript JSX", 0, 0, 51, 0, 0, 4, 55
+"d:\gazzeh travail\espace-elite\src\components\patient\PatientHistory.tsx", "TypeScript JSX", 0, 0, 102, 0, 0, 5, 107
+"d:\gazzeh travail\espace-elite\src\components\patient\PatientMedicalInfo.tsx", "TypeScript JSX", 0, 0, 30, 0, 0, 7, 37
+"d:\gazzeh travail\espace-elite\src\components\patient\PatientPayments.tsx", "TypeScript JSX", 0, 0, 119, 0, 0, 5, 124
+"d:\gazzeh travail\espace-elite\src\components\patient\PatientRentals.tsx", "TypeScript JSX", 0, 0, 108, 0, 1, 5, 114
+"d:\gazzeh travail\espace-elite\src\components\patient\PatientStaffInfo.tsx", "TypeScript JSX", 0, 0, 30, 0, 0, 7, 37
+"d:\gazzeh travail\espace-elite\src\components\patient\index.ts", "TypeScript", 0, 24, 0, 0, 0, 2, 26
+"d:\gazzeh travail\espace-elite\src\components\payment\PaymentDetailsForm.tsx", "TypeScript JSX", 0, 0, 213, 0, 7, 10, 230
+"d:\gazzeh travail\espace-elite\src\components\payment\PaymentStepProgress.tsx", "TypeScript JSX", 0, 0, 87, 0, 2, 9, 98
+"d:\gazzeh travail\espace-elite\src\components\payment\PaymentTypeCard.tsx", "TypeScript JSX", 0, 0, 39, 0, 0, 4, 43
+"d:\gazzeh travail\espace-elite\src\components\payment\components\CNAMDossierList.tsx", "TypeScript JSX", 0, 0, 115, 0, 2, 12, 129
+"d:\gazzeh travail\espace-elite\src\components\payment\components\CNAMDossierManager.tsx", "TypeScript JSX", 0, 0, 215, 0, 8, 24, 247
+"d:\gazzeh travail\espace-elite\src\components\payment\components\CNAMStepTracker.tsx", "TypeScript JSX", 0, 0, 61, 0, 9, 5, 75
+"d:\gazzeh travail\espace-elite\src\components\payment\components\PaymentDialog.tsx", "TypeScript JSX", 0, 0, 256, 0, 34, 29, 319
+"d:\gazzeh travail\espace-elite\src\components\payment\components\PaymentSummary.tsx", "TypeScript JSX", 0, 0, 110, 0, 7, 14, 131
+"d:\gazzeh travail\espace-elite\src\components\payment\components\PaymentTypeCard.tsx", "TypeScript JSX", 0, 0, 44, 0, 6, 4, 54
+"d:\gazzeh travail\espace-elite\src\components\payment\config\paymentTypes.tsx", "TypeScript JSX", 0, 0, 60, 0, 6, 4, 70
+"d:\gazzeh travail\espace-elite\src\components\payment\context\PaymentContext.tsx", "TypeScript JSX", 0, 0, 124, 0, 28, 21, 173
+"d:\gazzeh travail\espace-elite\src\components\payment\index.tsx", "TypeScript JSX", 0, 0, 15, 0, 15, 6, 36
+"d:\gazzeh travail\espace-elite\src\components\payment\paymentForms\CNAMForm.tsx", "TypeScript JSX", 0, 0, 595, 0, 44, 56, 695
+"d:\gazzeh travail\espace-elite\src\components\payment\paymentForms\ChequeForm.tsx", "TypeScript JSX", 0, 0, 189, 0, 6, 19, 214
+"d:\gazzeh travail\espace-elite\src\components\payment\paymentForms\EspecesForm.tsx", "TypeScript JSX", 0, 0, 161, 0, 11, 18, 190
+"d:\gazzeh travail\espace-elite\src\components\payment\paymentForms\MondatForm.tsx", "TypeScript JSX", 0, 0, 142, 0, 2, 17, 161
+"d:\gazzeh travail\espace-elite\src\components\payment\paymentForms\PaymentFormsMain.tsx", "TypeScript JSX", 0, 0, 4, 0, 9, 4, 17
+"d:\gazzeh travail\espace-elite\src\components\payment\paymentForms\TraiteForm.tsx", "TypeScript JSX", 0, 0, 266, 0, 2, 29, 297
+"d:\gazzeh travail\espace-elite\src\components\payment\paymentForms\VirementForm.tsx", "TypeScript JSX", 0, 0, 146, 0, 6, 16, 168
+"d:\gazzeh travail\espace-elite\src\components\payment\paymentForms\index.tsx", "TypeScript JSX", 0, 0, 51, 0, 4, 6, 61
+"d:\gazzeh travail\espace-elite\src\components\product\MovementHistory.tsx", "TypeScript JSX", 0, 0, 105, 0, 1, 4, 110
+"d:\gazzeh travail\espace-elite\src\components\product\ProductActions.tsx", "TypeScript JSX", 0, 0, 63, 0, 0, 8, 71
+"d:\gazzeh travail\espace-elite\src\components\product\ProductHeader.tsx", "TypeScript JSX", 0, 0, 91, 0, 0, 11, 102
+"d:\gazzeh travail\espace-elite\src\components\product\StockInfo.tsx", "TypeScript JSX", 0, 0, 86, 0, 3, 8, 97
+"d:\gazzeh travail\espace-elite\src\components\sales\SaleInvoice.tsx", "TypeScript JSX", 0, 0, 290, 0, 18, 31, 339
+"d:\gazzeh travail\espace-elite\src\components\search\GlobalSearch.tsx", "TypeScript JSX", 0, 0, 289, 0, 20, 29, 338
+"d:\gazzeh travail\espace-elite\src\components\settings\BackupRestoreNew.tsx", "TypeScript JSX", 0, 0, 288, 0, 43, 59, 390
+"d:\gazzeh travail\espace-elite\src\components\settings\GeneralSettings.tsx", "TypeScript JSX", 0, 0, 195, 0, 9, 13, 217
+"d:\gazzeh travail\espace-elite\src\components\settings\RolePermissions.tsx", "TypeScript JSX", 0, 0, 278, 0, 13, 23, 314
+"d:\gazzeh travail\espace-elite\src\components\settings\UserManagement.tsx", "TypeScript JSX", 0, 0, 151, 0, 3, 12, 166
+"d:\gazzeh travail\espace-elite\src\components\settings\backup\BackupHistoryModal.tsx", "TypeScript JSX", 0, 0, 138, 0, 2, 7, 147
+"d:\gazzeh travail\espace-elite\src\components\settings\backup\ExportControls.tsx", "TypeScript JSX", 0, 0, 91, 0, 0, 9, 100
+"d:\gazzeh travail\espace-elite\src\components\settings\backup\ImportControls.tsx", "TypeScript JSX", 0, 0, 93, 0, 0, 8, 101
+"d:\gazzeh travail\espace-elite\src\components\settings\backup\RestoreControls.tsx", "TypeScript JSX", 0, 0, 50, 0, 0, 4, 54
+"d:\gazzeh travail\espace-elite\src\components\settings\backup\WarningAlert.tsx", "TypeScript JSX", 0, 0, 19, 0, 0, 3, 22
+"d:\gazzeh travail\espace-elite\src\components\settings\types\backup.ts", "TypeScript", 0, 10, 0, 0, 0, 1, 11
+"d:\gazzeh travail\espace-elite\src\components\steps\PaymentStep.md", "Markdown", 0, 0, 0, 228, 0, 42, 270
+"d:\gazzeh travail\espace-elite\src\components\steps\PaymentStep.tsx", "TypeScript JSX", 0, 0, 348, 0, 31, 47, 426
+"d:\gazzeh travail\espace-elite\src\components\tasks\AddTaskButton.tsx", "TypeScript JSX", 0, 0, 36, 0, 0, 3, 39
+"d:\gazzeh travail\espace-elite\src\components\tasks\TaskFormDialog.tsx", "TypeScript JSX", 0, 0, 342, 0, 7, 27, 376
+"d:\gazzeh travail\espace-elite\src\components\tasks\TaskModal.tsx", "TypeScript JSX", 0, 0, -1, 0, 0, 0, -1
+"d:\gazzeh travail\espace-elite\src\components\ui\LoadingOverlay.tsx", "TypeScript JSX", 0, 0, 16, 0, 0, 5, 21
+"d:\gazzeh travail\espace-elite\src\components\ui\aspect-ratio.tsx", "TypeScript JSX", 0, 0, -4, 0, 0, -4, -8
+"d:\gazzeh travail\espace-elite\src\components\ui\badge.tsx", "TypeScript JSX", 0, 0, 4, 0, 0, 0, 4
+"d:\gazzeh travail\espace-elite\src\components\ui\calendar.tsx", "TypeScript JSX", 0, 0, 80, 0, 0, 6, 86
+"d:\gazzeh travail\espace-elite\src\components\ui\carousel.tsx", "TypeScript JSX", 0, 0, -232, 0, 0, -31, -263
+"d:\gazzeh travail\espace-elite\src\components\ui\chart.tsx", "TypeScript JSX", 0, 0, -327, 0, -2, -37, -366
+"d:\gazzeh travail\espace-elite\src\components\ui\combobox.tsx", "TypeScript JSX", 0, 0, -1, 0, 0, 0, -1
+"d:\gazzeh travail\espace-elite\src\components\ui\command.tsx", "TypeScript JSX", 0, 0, 0, 0, 1, 0, 1
+"d:\gazzeh travail\espace-elite\src\components\ui\context-menu.tsx", "TypeScript JSX", 0, 0, -182, 0, 0, -19, -201
+"d:\gazzeh travail\espace-elite\src\components\ui\date-picker.tsx", "TypeScript JSX", 0, 0, 52, 0, 0, 3, 55
+"d:\gazzeh travail\espace-elite\src\components\ui\drawer.tsx", "TypeScript JSX", 0, 0, -105, 0, 0, -14, -119
+"d:\gazzeh travail\espace-elite\src\components\ui\enhanced-table.tsx", "TypeScript JSX", 0, 0, 131, 0, 5, 18, 154
+"d:\gazzeh travail\espace-elite\src\components\ui\file-upload.tsx", "TypeScript JSX", 0, 0, -192, 0, -4, -20, -216
+"d:\gazzeh travail\espace-elite\src\components\ui\hover-card.tsx", "TypeScript JSX", 0, 0, -23, 0, 0, -7, -30
+"d:\gazzeh travail\espace-elite\src\components\ui\input-otp.tsx", "TypeScript JSX", 0, 0, -63, 0, 0, -9, -72
+"d:\gazzeh travail\espace-elite\src\components\ui\menubar.tsx", "TypeScript JSX", 0, 0, -217, 0, 0, -20, -237
+"d:\gazzeh travail\espace-elite\src\components\ui\navigation-menu.tsx", "TypeScript JSX", 0, 0, -117, 0, 0, -12, -129
+"d:\gazzeh travail\espace-elite\src\components\ui\resizable.tsx", "TypeScript JSX", 0, 0, -39, 0, 0, -7, -46
+"d:\gazzeh travail\espace-elite\src\components\ui\scroll-area.tsx", "TypeScript JSX", 0, 0, -43, 0, 0, -6, -49
+"d:\gazzeh travail\espace-elite\src\components\ui\sonner.tsx", "TypeScript JSX", 0, 0, -26, 0, 0, -6, -32
+"d:\gazzeh travail\espace-elite\src\components\ui\textarea.tsx", "TypeScript JSX", 0, 0, 0, 0, 2, 0, 2
+"d:\gazzeh travail\espace-elite\src\components\ui\toggle-group.tsx", "TypeScript JSX", 0, 0, -52, 0, 0, -10, -62
+"d:\gazzeh travail\espace-elite\src\components\ui\toggle.tsx", "TypeScript JSX", 0, 0, -39, 0, 0, -7, -46
+"d:\gazzeh travail\espace-elite\src\components\ui\use-toast.ts", "TypeScript", 0, 0, 0, 0, 1, 0, 1
+"d:\gazzeh travail\espace-elite\src\components\user\UserActions.tsx", "TypeScript JSX", 0, 0, 63, 0, 0, 8, 71
+"d:\gazzeh travail\espace-elite\src\components\user\UserDetails.tsx", "TypeScript JSX", 0, 0, 148, 0, 0, 6, 154
+"d:\gazzeh travail\espace-elite\src\components\user\UserHeader.tsx", "TypeScript JSX", 0, 0, 89, 0, 1, 9, 99
+"d:\gazzeh travail\espace-elite\src\components\user\UserRelations.tsx", "TypeScript JSX", 0, 0, 224, 0, 0, 10, 234
+"d:\gazzeh travail\espace-elite\src\components\welcome\CTASection.tsx", "TypeScript JSX", 0, 0, 24, 0, 0, 3, 27
+"d:\gazzeh travail\espace-elite\src\components\welcome\FeaturesSection.tsx", "TypeScript JSX", 0, 0, 60, 0, 0, 4, 64
+"d:\gazzeh travail\espace-elite\src\components\welcome\Footer.tsx", "TypeScript JSX", 0, 0, 22, 0, 0, 3, 25
+"d:\gazzeh travail\espace-elite\src\components\welcome\Header.tsx", "TypeScript JSX", 0, 0, 23, 0, 0, 4, 27
+"d:\gazzeh travail\espace-elite\src\components\welcome\HeroSection.tsx", "TypeScript JSX", 0, 0, 43, 0, 2, 3, 48
+"d:\gazzeh travail\espace-elite\src\components\welcome\TestimonialsSection.tsx", "TypeScript JSX", 0, 0, 48, 0, 0, 4, 52
+"d:\gazzeh travail\espace-elite\src\hooks\useCNAMDossiers.ts", "TypeScript", 0, 163, 0, 0, 23, 36, 222
+"d:\gazzeh travail\espace-elite\src\hooks\useDebounce.ts", "TypeScript", 0, 13, 0, 0, 8, 5, 26
+"d:\gazzeh travail\espace-elite\src\hooks\useFileManager.ts", "TypeScript", 0, 0, 0, 0, 0, 1, 1
+"d:\gazzeh travail\espace-elite\src\lib\db.ts", "TypeScript", 0, 11, 0, 0, 0, 4, 15
+"d:\gazzeh travail\espace-elite\src\lib\payment-utils.ts", "TypeScript", 0, 228, 0, 0, 33, 35, 296
+"d:\gazzeh travail\espace-elite\src\lib\prisma.ts", "TypeScript", 0, 0, 0, 0, 1, 0, 1
+"d:\gazzeh travail\espace-elite\src\lib\uploadthing.ts", "TypeScript", 0, 9, 0, 0, 6, 3, 18
+"d:\gazzeh travail\espace-elite\src\lib\utils.ts", "TypeScript", 0, 6, 0, 0, 5, 3, 14
+"d:\gazzeh travail\espace-elite\src\middleware.ts", "TypeScript", 0, -5, 0, 0, 5, 0, 0
+"d:\gazzeh travail\espace-elite\src\pages\_app.tsx", "TypeScript JSX", 0, 0, 45, 0, 13, 14, 72
+"d:\gazzeh travail\espace-elite\src\pages\api\accessories\index.ts", "TypeScript", 0, -70, 0, 0, 0, -16, -86
+"d:\gazzeh travail\espace-elite\src\pages\api\auth\[...nextauth].ts", "TypeScript", 0, 0, 0, 0, 0, -1, -1
+"d:\gazzeh travail\espace-elite\src\pages\api\auth\signup.ts", "TypeScript", 0, -1, 0, 0, 1, 0, 0
+"d:\gazzeh travail\espace-elite\src\pages\api\clients\[id].ts", "TypeScript", 0, 90, 0, 0, 2, 11, 103
+"d:\gazzeh travail\espace-elite\src\pages\api\clients\index.ts", "TypeScript", 0, 23, 0, 0, 0, 0, 23
+"d:\gazzeh travail\espace-elite\src\pages\api\companies\index.ts", "TypeScript", 0, 25, 0, 0, 0, 3, 28
+"d:\gazzeh travail\espace-elite\src\pages\api\diagnostic-parameters\[id].ts", "TypeScript", 0, 1, 0, 0, -5, 0, -4
+"d:\gazzeh travail\espace-elite\src\pages\api\diagnostic-parameters\index.ts", "TypeScript", 0, 0, 0, 0, 2, 1, 3
+"d:\gazzeh travail\espace-elite\src\pages\api\diagnostic-results\[id].ts", "TypeScript", 0, 102, 0, 0, 1, 15, 118
+"d:\gazzeh travail\espace-elite\src\pages\api\diagnostic-results\pending.ts", "TypeScript", 0, 8, 0, 0, -26, 0, -18
+"d:\gazzeh travail\espace-elite\src\pages\api\diagnostics\[id]\documents\[documentId].ts", "TypeScript", 0, 45, 0, 0, 6, 11, 62
+"d:\gazzeh travail\espace-elite\src\pages\api\diagnostics\[id]\documents\index.ts", "TypeScript", 0, 58, 0, 0, 8, 12, 78
+"d:\gazzeh travail\espace-elite\src\pages\api\diagnostics\[id]\index.ts", "TypeScript", 0, 172, 0, 0, 24, 28, 224
+"d:\gazzeh travail\espace-elite\src\pages\api\diagnostics\index.ts", "TypeScript", 0, 49, 0, 0, 12, 6, 67
+"d:\gazzeh travail\espace-elite\src\pages\api\diagnostics\simple.ts", "TypeScript", 0, 50, 0, 0, 0, 11, 61
+"d:\gazzeh travail\espace-elite\src\pages\api\doctors\index.ts", "TypeScript", 0, 2, 0, 0, 0, -1, 1
+"d:\gazzeh travail\espace-elite\src\pages\api\files\index.ts", "TypeScript", 0, 116, 0, 0, 11, 18, 145
+"d:\gazzeh travail\espace-elite\src\pages\api\locations\index.ts", "TypeScript", 0, 0, 0, 0, 1, 0, 1
+"d:\gazzeh travail\espace-elite\src\pages\api\medical-devices\[id].ts", "TypeScript", 0, 6, 0, 0, -2, 1, 5
+"d:\gazzeh travail\espace-elite\src\pages\api\medical-devices\[id]\assign.ts", "TypeScript", 0, 32, 0, 0, 0, 8, 40
+"d:\gazzeh travail\espace-elite\src\pages\api\medical-devices\by-location.ts", "TypeScript", 0, 57, 0, 0, 2, 9, 68
+"d:\gazzeh travail\espace-elite\src\pages\api\medical-devices\diagnostic-devices.ts", "TypeScript", 0, -1, 0, 0, 0, -1, -2
+"d:\gazzeh travail\espace-elite\src\pages\api\medical-devices\index.ts", "TypeScript", 0, 72, 0, 0, 13, 13, 98
+"d:\gazzeh travail\espace-elite\src\pages\api\medical-devices\transfer.ts", "TypeScript", 0, 98, 0, 0, 13, 16, 127
+"d:\gazzeh travail\espace-elite\src\pages\api\notifications\[id].ts", "TypeScript", 0, -10, 0, 0, -19, -4, -33
+"d:\gazzeh travail\espace-elite\src\pages\api\notifications\[id]\view.ts", "TypeScript", 0, 0, 0, 0, -11, -2, -13
+"d:\gazzeh travail\espace-elite\src\pages\api\notifications\get-user-notifications.ts", "TypeScript", 0, 43, 0, 0, 4, 9, 56
+"d:\gazzeh travail\espace-elite\src\pages\api\notifications\index.ts", "TypeScript", 0, 39, 0, 0, -34, 14, 19
+"d:\gazzeh travail\espace-elite\src\pages\api\notifications\mark-as-read.ts", "TypeScript", 0, 40, 0, 0, 4, 10, 54
+"d:\gazzeh travail\espace-elite\src\pages\api\parameter-values\index.ts", "TypeScript", 0, -73, 0, 0, -4, -11, -88
+"d:\gazzeh travail\espace-elite\src\pages\api\patients\[id].ts", "TypeScript", 0, 60, 0, 0, 0, 9, 69
+"d:\gazzeh travail\espace-elite\src\pages\api\patients\index.ts", "TypeScript", 0, 25, 0, 0, 0, 3, 28
+"d:\gazzeh travail\espace-elite\src\pages\api\patients\list.ts", "TypeScript", 0, -1, 0, 0, 0, -1, -2
+"d:\gazzeh travail\espace-elite\src\pages\api\payments\cnam\[id].ts", "TypeScript", 0, 284, 0, 0, 46, 49, 379
+"d:\gazzeh travail\espace-elite\src\pages\api\payments\create.ts", "TypeScript", 0, 126, 0, 0, 9, 16, 151
+"d:\gazzeh travail\espace-elite\src\pages\api\products\index.ts", "TypeScript", 0, -9, 0, 0, 0, -1, -10
+"d:\gazzeh travail\espace-elite\src\pages\api\profile\me.ts", "TypeScript", 0, 45, 0, 0, 0, 7, 52
+"d:\gazzeh travail\espace-elite\src\pages\api\renseignements\[id].ts", "TypeScript", 0, 415, 0, 0, 31, 43, 489
+"d:\gazzeh travail\espace-elite\src\pages\api\renseignements\patients\[id].ts", "TypeScript", 0, 61, 0, 0, 3, 13, 77
+"d:\gazzeh travail\espace-elite\src\pages\api\renseignements\patients\index.ts", "TypeScript", 0, -42, 0, 0, 7, -1, -36
+"d:\gazzeh travail\espace-elite\src\pages\api\renseignements\patients\search.ts", "TypeScript", 0, 17, 0, 0, 0, 0, 17
+"d:\gazzeh travail\espace-elite\src\pages\api\rentals\[id]\index.ts", "TypeScript", 0, 46, 0, 0, 7, 9, 62
+"d:\gazzeh travail\espace-elite\src\pages\api\rentals\index.ts", "TypeScript", 0, 204, 0, 0, 18, 23, 245
+"d:\gazzeh travail\espace-elite\src\pages\api\repair-locations\index.ts", "TypeScript", 0, 88, 0, 0, 1, 13, 102
+"d:\gazzeh travail\espace-elite\src\pages\api\repairs\index.ts", "TypeScript", 0, -4, 0, 0, -1, 1, -4
+"d:\gazzeh travail\espace-elite\src\pages\api\role\employee\diagnostics.ts", "TypeScript", 0, 73, 0, 0, 6, 8, 87
+"d:\gazzeh travail\espace-elite\src\pages\api\role\employee\diagnostics\[id].ts", "TypeScript", 0, 6, 0, 0, 0, 3, 9
+"d:\gazzeh travail\espace-elite\src\pages\api\sales\[id].ts", "TypeScript", 0, 368, 0, 0, 42, 53, 463
+"d:\gazzeh travail\espace-elite\src\pages\api\sales\[id]\payments.ts", "TypeScript", 0, 276, 0, 0, 44, 53, 373
+"d:\gazzeh travail\espace-elite\src\pages\api\sales\index.ts", "TypeScript", 0, 318, 0, 0, 33, 46, 397
+"d:\gazzeh travail\espace-elite\src\pages\api\search\index.ts", "TypeScript", 0, 213, 0, 0, 11, 20, 244
+"d:\gazzeh travail\espace-elite\src\pages\api\settings\backup.ts", "TypeScript", 0, 287, 0, 0, 50, 56, 393
+"d:\gazzeh travail\espace-elite\src\pages\api\settings\backup\restore-json.ts", "TypeScript", 0, 130, 0, 0, 26, 26, 182
+"d:\gazzeh travail\espace-elite\src\pages\api\settings\general.ts", "TypeScript", 0, 59, 0, 0, 8, 11, 78
+"d:\gazzeh travail\espace-elite\src\pages\api\settings\restore.ts", "TypeScript", 0, 80, 0, 0, 13, 22, 115
+"d:\gazzeh travail\espace-elite\src\pages\api\societes\[id].ts", "TypeScript", 0, 65, 0, 0, 1, 10, 76
+"d:\gazzeh travail\espace-elite\src\pages\api\spare-parts\index.ts", "TypeScript", 0, -70, 0, 0, 0, -16, -86
+"d:\gazzeh travail\espace-elite\src\pages\api\stock-locations\[id].ts", "TypeScript", 0, 26, 0, 0, 3, 4, 33
+"d:\gazzeh travail\espace-elite\src\pages\api\stock-locations\[id]\contents.ts", "TypeScript", 0, 21, 0, 0, 0, 7, 28
+"d:\gazzeh travail\espace-elite\src\pages\api\stock\inventory\index.ts", "TypeScript", 0, 133, 0, 0, 18, 13, 164
+"d:\gazzeh travail\espace-elite\src\pages\api\stock\locations\index.ts", "TypeScript", 0, 50, 0, 0, 8, 8, 66
+"d:\gazzeh travail\espace-elite\src\pages\api\stock\transfers\[id]\index.ts", "TypeScript", 0, 142, 0, 0, 2, 22, 166
+"d:\gazzeh travail\espace-elite\src\pages\api\stock\transfers\[id]\verify.ts", "TypeScript", 0, 72, 0, 0, 5, 12, 89
+"d:\gazzeh travail\espace-elite\src\pages\api\stock\transfers\history.ts", "TypeScript", 0, 87, 0, 0, 0, 7, 94
+"d:\gazzeh travail\espace-elite\src\pages\api\stock\transfers\index.ts", "TypeScript", 0, 14, 0, 0, 0, 1, 15
+"d:\gazzeh travail\espace-elite\src\pages\api\stock\transfers\recent.ts", "TypeScript", 0, 20, 0, 0, 2, 2, 24
+"d:\gazzeh travail\espace-elite\src\pages\api\tasks\[id]\complete.ts", "TypeScript", 0, 70, 0, 0, 6, 9, 85
+"d:\gazzeh travail\espace-elite\src\pages\api\tasks\index.ts", "TypeScript", 0, 73, 0, 0, -1, 13, 85
+"d:\gazzeh travail\espace-elite\src\pages\api\technicians\[id]\installations.ts", "TypeScript", 0, 14, 0, 0, 1, 1, 16
+"d:\gazzeh travail\espace-elite\src\pages\api\uploadthing.ts", "TypeScript", 0, 6, 0, 0, 1, 4, 11
+"d:\gazzeh travail\espace-elite\src\pages\api\users\[id]\relations.ts", "TypeScript", 0, 72, 0, 0, 1, 11, 84
+"d:\gazzeh travail\espace-elite\src\pages\api\users\formatted.ts", "TypeScript", 0, 58, 0, 0, 11, 10, 79
+"d:\gazzeh travail\espace-elite\src\pages\api\users\index.ts", "TypeScript", 0, 84, 0, 0, 25, 12, 121
+"d:\gazzeh travail\espace-elite\src\pages\auth\signin.tsx", "TypeScript JSX", 0, 0, 4, 0, 0, -1, 3
+"d:\gazzeh travail\espace-elite\src\pages\auth\signup.tsx", "TypeScript JSX", 0, 0, 4, 0, 0, 0, 4
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\AdminLayout.tsx", "TypeScript JSX", 0, 0, 37, 0, 8, 10, 55
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\AdminNavbar.tsx", "TypeScript JSX", 0, 0, 311, 0, 24, 28, 363
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\AdminSidebar.tsx", "TypeScript JSX", 0, 0, 175, 0, 14, 29, 218
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\accessories\index.tsx", "TypeScript JSX", 0, 0, -369, 0, -3, -24, -396
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\accessory\[id].tsx", "TypeScript JSX", 0, 0, 124, 0, 0, 12, 136
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\AccessoriesTable.tsx", "TypeScript JSX", 0, 0, 164, 0, 14, 16, 194
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\DeviceActions.tsx", "TypeScript JSX", 0, 0, 96, 0, 0, 12, 108
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\DiagnosticDevicesTable.tsx", "TypeScript JSX", 0, 0, 148, 0, 11, 15, 174
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\DiagnosticResultsNotification.tsx", "TypeScript JSX", 0, 0, 1, 0, 0, 1, 2
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\LocationEditForm.tsx", "TypeScript JSX", 0, 0, 148, 0, 4, 13, 165
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\LocationForm.tsx", "TypeScript JSX", 0, 0, 7, 0, 1, 1, 9
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\MedicalDevicesTable.tsx", "TypeScript JSX", 0, 0, 172, 0, 11, 20, 203
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\ParameterPreviewDialog.tsx", "TypeScript JSX", 0, 0, 71, 0, 1, 7, 79
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\ParametersViewDialog.tsx", "TypeScript JSX", 0, 0, 1, 0, 0, 0, 1
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\ProductForm.tsx", "TypeScript JSX", 0, 0, -469, 0, -9, -34, -512
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\RepairHistoryDialog.tsx", "TypeScript JSX", 0, 0, 19, 0, 0, 2, 21
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\SparePartsTable.tsx", "TypeScript JSX", 0, 0, 164, 0, 14, 14, 192
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\StockLocationsTable.tsx", "TypeScript JSX", 0, 0, 288, 0, 13, 24, 325
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\TabSwitcher.tsx", "TypeScript JSX", 0, 0, 12, 0, 0, 0, 12
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\dialogs\AssignDeviceDialog.tsx", "TypeScript JSX", 0, 0, 148, 0, 1, 14, 163
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\dialogs\EditDeviceDialog.tsx", "TypeScript JSX", 0, 0, 65, 0, 1, 8, 74
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\dialogs\RepairDeviceDialog.tsx", "TypeScript JSX", 0, 0, 47, 0, 0, 6, 53
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\forms\AccessoryForm.tsx", "TypeScript JSX", 0, 0, 78, 0, 0, -1, 77
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\forms\DiagnosticDeviceForm.tsx", "TypeScript JSX", 0, 0, -31, 0, 2, -1, -30
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\forms\DynamicParameterBuilder.tsx", "TypeScript JSX", 0, 0, -343, 0, 0, -16, -359
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\forms\MedicalDeviceForm.tsx", "TypeScript JSX", 0, 0, 94, 0, 6, 2, 102
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\forms\ParameterConsumer.tsx", "TypeScript JSX", 0, 0, 189, 0, 21, 21, 231
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\forms\RepairForm.tsx", "TypeScript JSX", 0, 0, 1, 0, 0, 2, 3
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\forms\SparePartForm.tsx", "TypeScript JSX", 0, 0, 1, 0, 0, 1, 2
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\diagnostic-device\[id].tsx", "TypeScript JSX", 0, 0, 144, 0, 0, 15, 159
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\index.tsx", "TypeScript JSX", 0, 0, -11, 0, -1, 0, -12
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\medical-device\[id].tsx", "TypeScript JSX", 0, 0, 162, 0, 0, 22, 184
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\spare-part\[id].tsx", "TypeScript JSX", 0, 0, 124, 0, 0, 12, 136
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\types.ts", "TypeScript", 0, -35, 0, 0, 0, -4, -39
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\components\DiagnosticStepperDialog.tsx", "TypeScript JSX", 0, 0, 118, 0, 31, 27, 176
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\components\DiagnosticStepperSidebar.tsx", "TypeScript JSX", 0, 0, 111, 0, 5, 8, 124
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\components\NewStepperDialog.tsx", "TypeScript JSX", 0, 0, -265, 0, -12, -24, -301
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\components\PatientInfoCard.tsx", "TypeScript JSX", 0, 0, 67, 0, 3, 7, 77
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\components\ProductFormCompany.tsx", "TypeScript JSX", 0, 0, 1, 0, 0, 1, 2
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\components\ProductFormPatient.tsx", "TypeScript JSX", 0, 0, 1, 0, 0, 1, 2
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\components\RentStepperDialog.tsx", "TypeScript JSX", 0, 0, 327, 0, 25, 39, 391
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\components\RentStepperSidebar.tsx", "TypeScript JSX", 0, 0, 190, 0, 9, 12, 211
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\components\SaleStepperDialog.tsx", "TypeScript JSX", 0, 0, 414, 0, 31, 47, 492
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\components\SaleStepperSidebar.tsx", "TypeScript JSX", 0, 0, 204, 0, 9, 13, 226
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\components\StepperForm.tsx", "TypeScript JSX", 0, 0, 1, 0, 0, 1, 2
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\components\TabSwitcher.tsx", "TypeScript JSX", 0, 0, 56, 0, 0, 6, 62
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\components\dialogs\DiagnosticResultDialog.tsx", "TypeScript JSX", 0, 0, 116, 0, 0, 9, 125
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\components\dialogs\ProductDialog.tsx", "TypeScript JSX", 0, 0, 94, 0, 14, 10, 118
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\components\sales\CNAMDossierSection.tsx", "TypeScript JSX", 0, 0, 94, 0, 1, 8, 103
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\components\sales\SaleDetailsCNAMTab.tsx", "TypeScript JSX", 0, 0, 124, 0, 2, 11, 137
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\components\sales\SaleDetailsTabsWithCNAM.tsx", "TypeScript JSX", 0, 0, 51, 0, 5, 10, 66
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\components\steps\ClientSelectionStep.tsx", "TypeScript JSX", 0, 0, 27, 0, 12, 8, 47
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\components\steps\DiagnosticProductStep.tsx", "TypeScript JSX", 0, 0, -384, 0, -19, -38, -441
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\components\steps\ProductCard.tsx", "TypeScript JSX", 0, 0, 86, 0, 4, 13, 103
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\components\steps\ProductSelectionStep.tsx", "TypeScript JSX", 0, 0, -93, 0, 11, 0, -82
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\components\steps\diagnostic\DiagnosticProductDialog.tsx", "TypeScript JSX", 0, 0, 122, 0, 3, 9, 134
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\components\steps\diagnostic\NewDiagnosticProductStep.tsx", "TypeScript JSX", 0, 0, 204, 0, 17, 25, 246
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\components\steps\diagnostic\ParameterConfigurationDialog.tsx", "TypeScript JSX", 0, 0, 162, 0, 13, 20, 195
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\components\steps\product\CompanyProductSelection.tsx", "TypeScript JSX", 0, 0, 480, 0, 24, 36, 540
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\components\steps\product\PatientProductSelection.tsx", "TypeScript JSX", 0, 0, 318, 0, 22, 35, 375
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\components\steps\product\ProductParameterDialog.tsx", "TypeScript JSX", 0, 0, 86, 0, 7, 13, 106
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\components\steps\rental\RentalDetailsStep.tsx", "TypeScript JSX", 0, 0, 162, 0, 6, 11, 179
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\components\tables\DiagnosticTable.tsx", "TypeScript JSX", 0, 0, 346, 0, 11, 29, 386
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\components\tables\RentalTable.tsx", "TypeScript JSX", 0, 0, 266, 0, 5, 20, 291
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\components\tables\SalesTable.tsx", "TypeScript JSX", 0, 0, 314, 0, 5, 20, 339
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\index.tsx", "TypeScript JSX", 0, 0, 24, 0, 1, 5, 30
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\diagnostic\index.tsx", "TypeScript JSX", 0, 0, -327, 0, 0, -21, -348
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\diagnostics\[id]\components\DeviceInformation.tsx", "TypeScript JSX", 0, 0, 119, 0, 2, 13, 134
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\diagnostics\[id]\components\DiagnosticDocuments.tsx", "TypeScript JSX", 0, 0, 235, 0, 17, 24, 276
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\diagnostics\[id]\components\DiagnosticHeader.tsx", "TypeScript JSX", 0, 0, 114, 0, 3, 12, 129
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\diagnostics\[id]\components\DiagnosticNotes.tsx", "TypeScript JSX", 0, 0, 123, 0, 1, 11, 135
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\diagnostics\[id]\components\DiagnosticResultsForm.tsx", "TypeScript JSX", 0, 0, 305, 0, 16, 25, 346
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\diagnostics\[id]\components\DiagnosticTasks.tsx", "TypeScript JSX", 0, 0, 218, 0, 7, 25, 250
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\diagnostics\[id]\components\PatientInformation.tsx", "TypeScript JSX", 0, 0, 84, 0, 2, 12, 98
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\diagnostics\[id]\index.tsx", "TypeScript JSX", 0, 0, 203, 0, 12, 19, 234
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\diagnostics\[id]\results.tsx", "TypeScript JSX", 0, 0, 197, 0, 7, 19, 223
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\diagnostics\index.tsx", "TypeScript JSX", 0, 0, 76, 0, 3, 10, 89
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\espace-technicien\components\InstallationsHistory.tsx", "TypeScript JSX", 0, 0, 1, 0, 0, 1, 2
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\espace-technicien\components\PaymentsHistory.tsx", "TypeScript JSX", 0, 0, 1, 0, 0, 1, 2
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\espace-technicien\components\TasksHistory.tsx", "TypeScript JSX", 0, 0, 1, 0, 0, 1, 2
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\espace-technicien\components\TechnicianHistory.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 1, 1
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\espace-technicien\components\TechnicianSelector.tsx", "TypeScript JSX", 0, 0, 1, 0, 0, 1, 2
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\espace-technicien\components\TransfersHistory.tsx", "TypeScript JSX", 0, 0, 1, 0, 0, 1, 2
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\help\index.tsx", "TypeScript JSX", 0, 0, 225, 0, 7, 16, 248
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\index.tsx", "TypeScript JSX", 0, 0, 156, 0, 3, 11, 170
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\info-step\components\DiagnosticStepperInfo.tsx", "TypeScript JSX", 0, 0, 90, 0, 0, 7, 97
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\info-step\components\RentStepperInfo.tsx", "TypeScript JSX", 0, 0, 90, 0, 0, 7, 97
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\info-step\components\SaleStepperInfo.tsx", "TypeScript JSX", 0, 0, 173, 0, 4, 11, 188
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\info-step\index.tsx", "TypeScript JSX", 0, 0, 59, 0, 0, 7, 66
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\notifications\index.tsx", "TypeScript JSX", 0, 0, -72, 0, -2, -3, -77
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\produits\[id].tsx", "TypeScript JSX", 0, 0, 103, 0, 0, 11, 114
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\profile.tsx", "TypeScript JSX", 0, 0, 137, 0, 3, 13, 153
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\renseignement\components\FileViewer.tsx", "TypeScript JSX", 0, 0, 59, 0, 13, 19, 91
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\renseignement\components\RenseignementTable.tsx", "TypeScript JSX", 0, 0, 132, 0, 12, 16, 160
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\renseignement\index.tsx", "TypeScript JSX", 0, 0, 42, 0, 8, 6, 56
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\renseignement\patient\[id]\index.tsx", "TypeScript JSX", 0, 0, 222, 0, 15, 22, 259
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\renseignement\societe\[id]\index.tsx", "TypeScript JSX", 0, 0, 271, 0, 13, 20, 304
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\rentals\[id].tsx", "TypeScript JSX", 0, 0, 148, 0, 6, 21, 175
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\rentals\components\RentalDetailsCNAMSteps.tsx", "TypeScript JSX", 0, 0, 118, 0, 6, 15, 139
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\rentals\components\RentalDetailsDeviceConfig.tsx", "TypeScript JSX", 0, 0, 163, 0, 5, 13, 181
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\rentals\components\RentalDetailsPatientInfo.tsx", "TypeScript JSX", 0, 0, 62, 0, 0, 8, 70
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\rentals\components\RentalDetailsPaymentInfo.tsx", "TypeScript JSX", 0, 0, 97, 0, 3, 13, 113
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\reparateur\index.tsx", "TypeScript JSX", 0, 0, -2, 0, 0, 0, -2
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\sales\[id].tsx", "TypeScript JSX", 0, 0, 328, 0, 10, 22, 360
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\settings\components\BackupRestore.tsx", "TypeScript JSX", 0, 0, -366, 0, -23, -44, -433
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\settings\components\GeneralSettings.tsx", "TypeScript JSX", 0, 0, -356, 0, -9, -21, -386
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\settings\components\RolePermissions.tsx", "TypeScript JSX", 0, 0, -289, 0, -15, -22, -326
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\settings\components\UserManagement.tsx", "TypeScript JSX", 0, 0, -149, 0, -3, -11, -163
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\settings\index.tsx", "TypeScript JSX", 0, 0, -9, 0, 0, 0, -9
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\stock\components\StockInventory.tsx", "TypeScript JSX", 0, 0, 308, 0, 16, 16, 340
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\stock\components\StockLocations.tsx", "TypeScript JSX", 0, 0, 118, 0, 16, 16, 150
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\stock\components\StockTransfers.tsx", "TypeScript JSX", 0, 0, 100, 0, -2, 15, 113
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\stock\components\StockViewDialog.tsx", "TypeScript JSX", 0, 0, 280, 0, 23, 35, 338
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\stock\components\TransferDetailDialog.tsx", "TypeScript JSX", 0, 0, 208, 0, 8, 16, 232
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\stock\components\TransferHistory.tsx", "TypeScript JSX", 0, 0, 66, 0, 6, 4, 76
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\stock\components\TransferVerificationStatus.tsx", "TypeScript JSX", 0, 0, 166, 0, 7, 17, 190
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\stock\index.tsx", "TypeScript JSX", 0, 0, -7, 0, 0, 0, -7
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\tasks\index.tsx", "TypeScript JSX", 0, 0, 57, 0, 5, 16, 78
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\users\[id].tsx", "TypeScript JSX", 0, 0, 108, 0, 0, 11, 119
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\users\components\UsersTable.tsx", "TypeScript JSX", 0, 0, 215, 0, 13, 18, 246
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\users\components\columns.tsx", "TypeScript JSX", 0, 0, 93, 0, 2, 3, 98
+"d:\gazzeh travail\espace-elite\src\pages\roles\admin\users\index.tsx", "TypeScript JSX", 0, 0, -58, 0, -4, 3, -59
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\EmployeeNavbar.tsx", "TypeScript JSX", 0, 0, 295, 0, 19, 31, 345
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\EmployeeSidebar.tsx", "TypeScript JSX", 0, 0, 206, 0, 15, 31, 252
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\dashboard\components\DiagnosticStepperDialog.tsx", "TypeScript JSX", 0, 0, 513, 0, 52, 69, 634
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\dashboard\components\DiagnosticStepperSidebar.tsx", "TypeScript JSX", 0, 0, 111, 0, 5, 8, 124
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\dashboard\components\PatientInfoCard.tsx", "TypeScript JSX", 0, 0, 67, 0, 3, 7, 77
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\dashboard\components\ProductFormCompany.tsx", "TypeScript JSX", 0, 0, 191, 0, 4, 14, 209
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\dashboard\components\ProductFormPatient.tsx", "TypeScript JSX", 0, 0, 150, 0, 4, 13, 167
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\dashboard\components\RentStepperDialog.tsx", "TypeScript JSX", 0, 0, 327, 0, 25, 39, 391
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\dashboard\components\RentStepperSidebar.tsx", "TypeScript JSX", 0, 0, 190, 0, 9, 12, 211
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\dashboard\components\SaleStepperDialog.tsx", "TypeScript JSX", 0, 0, 386, 0, 31, 44, 461
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\dashboard\components\SaleStepperSidebar.tsx", "TypeScript JSX", 0, 0, 204, 0, 9, 13, 226
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\dashboard\components\StepperForm.tsx", "TypeScript JSX", 0, 0, 104, 0, 1, 10, 115
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\dashboard\components\TabSwitcher.tsx", "TypeScript JSX", 0, 0, 56, 0, 0, 6, 62
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\dashboard\components\dialogs\DiagnosticResultDialog.tsx", "TypeScript JSX", 0, 0, 116, 0, 0, 9, 125
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\dashboard\components\dialogs\ProductDialog.tsx", "TypeScript JSX", 0, 0, 262, 0, 27, 25, 314
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\dashboard\components\sales\CNAMDossierSection.tsx", "TypeScript JSX", 0, 0, 94, 0, 1, 8, 103
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\dashboard\components\sales\SaleDetailsCNAMTab.tsx", "TypeScript JSX", 0, 0, 124, 0, 2, 11, 137
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\dashboard\components\sales\SaleDetailsTabsWithCNAM.tsx", "TypeScript JSX", 0, 0, 51, 0, 5, 10, 66
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\dashboard\components\steps\ClientSelectionStep.tsx", "TypeScript JSX", 0, 0, 363, 0, 21, 29, 413
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\dashboard\components\steps\ProductCard.tsx", "TypeScript JSX", 0, 0, 86, 0, 4, 13, 103
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\dashboard\components\steps\ProductSelectionStep.tsx", "TypeScript JSX", 0, 0, 68, 0, 14, 6, 88
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\dashboard\components\steps\diagnostic\DiagnosticProductDialog.tsx", "TypeScript JSX", 0, 0, 122, 0, 3, 9, 134
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\dashboard\components\steps\diagnostic\NewDiagnosticProductStep.tsx", "TypeScript JSX", 0, 0, 204, 0, 17, 25, 246
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\dashboard\components\steps\diagnostic\ParameterConfigurationDialog.tsx", "TypeScript JSX", 0, 0, 162, 0, 13, 20, 195
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\dashboard\components\steps\product\CompanyProductSelection.tsx", "TypeScript JSX", 0, 0, 346, 0, 11, 23, 380
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\dashboard\components\steps\product\PatientProductSelection.tsx", "TypeScript JSX", 0, 0, 318, 0, 22, 35, 375
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\dashboard\components\steps\product\ProductParameterDialog.tsx", "TypeScript JSX", 0, 0, 86, 0, 7, 13, 106
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\dashboard\components\steps\rental\RentalDetailsStep.tsx", "TypeScript JSX", 0, 0, 162, 0, 6, 11, 179
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\dashboard\components\tables\DiagnosticTable.tsx", "TypeScript JSX", 0, 0, 336, 0, 12, 28, 376
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\dashboard\components\tables\EmployeeDiagnosticTable.tsx", "TypeScript JSX", 0, 0, 20, 0, 0, 6, 26
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\dashboard\components\tables\RentalTable.tsx", "TypeScript JSX", 0, 0, 266, 0, 5, 20, 291
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\dashboard\components\tables\SalesTable.tsx", "TypeScript JSX", 0, 0, 314, 0, 5, 20, 339
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\dashboard\components\tables\columns.tsx", "TypeScript JSX", 0, 0, 98, 0, 2, 6, 106
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\dashboard\components\tables\data-table.tsx", "TypeScript JSX", 0, 0, 105, 0, 0, 7, 112
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\dashboard\index.tsx", "TypeScript JSX", 0, 0, 88, 0, 5, 14, 107
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\diagnostics\[id]\components\DeviceInformation.tsx", "TypeScript JSX", 0, 0, 119, 0, 2, 13, 134
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\diagnostics\[id]\components\DiagnosticDocuments.tsx", "TypeScript JSX", 0, 0, 235, 0, 17, 24, 276
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\diagnostics\[id]\components\DiagnosticHeader.tsx", "TypeScript JSX", 0, 0, 114, 0, 3, 12, 129
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\diagnostics\[id]\components\DiagnosticNotes.tsx", "TypeScript JSX", 0, 0, 123, 0, 1, 11, 135
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\diagnostics\[id]\components\DiagnosticResultsForm.tsx", "TypeScript JSX", 0, 0, 305, 0, 16, 25, 346
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\diagnostics\[id]\components\DiagnosticTasks.tsx", "TypeScript JSX", 0, 0, 218, 0, 7, 25, 250
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\diagnostics\[id]\components\PatientInformation.tsx", "TypeScript JSX", 0, 0, 84, 0, 2, 12, 98
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\diagnostics\[id]\index.tsx", "TypeScript JSX", 0, 0, 207, 0, 12, 20, 239
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\diagnostics\[id]\results.tsx", "TypeScript JSX", 0, 0, 197, 0, 7, 19, 223
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\diagnostics\index.tsx", "TypeScript JSX", 0, 0, 80, 0, 3, 10, 93
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\history\index.tsx", "TypeScript JSX", 0, 0, 13, 0, 0, 4, 17
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\notifications\index.tsx", "TypeScript JSX", 0, 0, 13, 0, 0, 4, 17
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\renseignement\components\FileViewer.tsx", "TypeScript JSX", 0, 0, 1, 0, 0, 1, 2
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\renseignement\components\RenseignementTable.tsx", "TypeScript JSX", 0, 0, 8, 0, 0, 2, 10
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\renseignement\index.tsx", "TypeScript JSX", 0, 0, 10, 0, 3, 1, 14
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\rentals\index.tsx", "TypeScript JSX", 0, 0, 13, 0, 0, 4, 17
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\sales\index.tsx", "TypeScript JSX", 0, 0, 13, 0, 0, 4, 17
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\stock\index.tsx", "TypeScript JSX", 0, 0, 13, 0, 0, 4, 17
+"d:\gazzeh travail\espace-elite\src\pages\roles\employee\tasks\index.tsx", "TypeScript JSX", 0, 0, -31, 0, -2, -2, -35
+"d:\gazzeh travail\espace-elite\src\pages\welcome.tsx", "TypeScript JSX", 0, 0, -109, 0, -2, -3, -114
+"d:\gazzeh travail\espace-elite\src\server\uploadthing.ts", "TypeScript", 0, 83, 0, 0, 10, 12, 105
+"d:\gazzeh travail\espace-elite\src\styles\globals.css", "CSS", 32, 0, 0, 0, 1, 1, 34
+"d:\gazzeh travail\espace-elite\src\types\enums\index.ts", "TypeScript", 0, 92, 0, 0, 0, 16, 108
+"d:\gazzeh travail\espace-elite\src\types\forms\PatientFormData.ts", "TypeScript", 0, 40, 0, 0, 18, 6, 64
+"d:\gazzeh travail\espace-elite\src\types\forms\PatientFormProps.ts", "TypeScript", 0, 32, 0, 0, 1, 1, 34
+"d:\gazzeh travail\espace-elite\src\types\index.ts", "TypeScript", 0, -345, 0, 0, 2, -21, -364
+"d:\gazzeh travail\espace-elite\src\types\models\Appointment.ts", "TypeScript", 0, 16, 0, 0, 0, 2, 18
+"d:\gazzeh travail\espace-elite\src\types\models\AuthState.ts", "TypeScript", 0, 6, 0, 0, 0, 2, 8
+"d:\gazzeh travail\espace-elite\src\types\models\Company.ts", "TypeScript", 0, 32, 0, 0, 0, 2, 34
+"d:\gazzeh travail\espace-elite\src\types\models\Diagnostic.ts", "TypeScript", 0, 22, 0, 0, 0, 2, 24
+"d:\gazzeh travail\espace-elite\src\types\models\DiagnosticResult.ts", "TypeScript", 0, 12, 0, 0, 0, 1, 13
+"d:\gazzeh travail\espace-elite\src\types\models\Doctor.ts", "TypeScript", 0, 12, 0, 0, 0, 2, 14
+"d:\gazzeh travail\espace-elite\src\types\models\File.ts", "TypeScript", 0, 13, 0, 0, 0, 2, 15
+"d:\gazzeh travail\espace-elite\src\types\models\Location.ts", "TypeScript", 0, 10, 0, 0, 0, 2, 12
+"d:\gazzeh travail\espace-elite\src\types\models\MedicalDevice.ts", "TypeScript", 0, 45, 0, 0, 0, 3, 48
+"d:\gazzeh travail\espace-elite\src\types\models\MedicalDeviceParametre.ts", "TypeScript", 0, 26, 0, 0, 7, 8, 41
+"d:\gazzeh travail\espace-elite\src\types\models\MedicalRecord.ts", "TypeScript", 0, 10, 0, 0, 0, 2, 12
+"d:\gazzeh travail\espace-elite\src\types\models\Notification.ts", "TypeScript", 0, 17, 0, 0, 0, 2, 19
+"d:\gazzeh travail\espace-elite\src\types\models\Patient.ts", "TypeScript", 0, 48, 0, 0, 0, 2, 50
+"d:\gazzeh travail\espace-elite\src\types\models\PatientHistory.ts", "TypeScript", 0, 16, 0, 0, 0, 2, 18
+"d:\gazzeh travail\espace-elite\src\types\models\Payment.ts", "TypeScript", 0, 21, 0, 0, 0, 2, 23
+"d:\gazzeh travail\espace-elite\src\types\models\Product.ts", "TypeScript", 0, 30, 0, 0, 0, 2, 32
+"d:\gazzeh travail\espace-elite\src\types\models\Rental.ts", "TypeScript", 0, 20, 0, 0, 0, 2, 22
+"d:\gazzeh travail\espace-elite\src\types\models\RepairLog.ts", "TypeScript", 0, 19, 0, 0, 0, 2, 21
+"d:\gazzeh travail\espace-elite\src\types\models\RepairSparePart.ts", "TypeScript", 0, 12, 0, 0, 0, 2, 14
+"d:\gazzeh travail\espace-elite\src\types\models\Sale.ts", "TypeScript", 0, 26, 0, 0, 5, 7, 38
+"d:\gazzeh travail\espace-elite\src\types\models\SaleItem.ts", "TypeScript", 0, 20, 0, 0, 4, 6, 30
+"d:\gazzeh travail\espace-elite\src\types\models\Stock.ts", "TypeScript", 0, 14, 0, 0, 0, 2, 16
+"d:\gazzeh travail\espace-elite\src\types\models\StockLocation.ts", "TypeScript", 0, 20, 0, 0, 0, 2, 22
+"d:\gazzeh travail\espace-elite\src\types\models\StockTransfer.ts", "TypeScript", 0, 28, 0, 0, 0, 6, 34
+"d:\gazzeh travail\espace-elite\src\types\models\Task.ts", "TypeScript", 0, 15, 0, 0, 0, 2, 17
+"d:\gazzeh travail\espace-elite\src\types\models\Technician.ts", "TypeScript", 0, 11, 0, 0, 0, 2, 13
+"d:\gazzeh travail\espace-elite\src\types\models\User.ts", "TypeScript", 0, 40, 0, 0, 0, 2, 42
+"d:\gazzeh travail\espace-elite\src\types\models\UserActionHistory.ts", "TypeScript", 0, 12, 0, 0, 0, 2, 14
+"d:\gazzeh travail\espace-elite\src\types\react-leaflet.d.ts", "TypeScript", 0, -48, 0, 0, 0, -8, -56
+"d:\gazzeh travail\espace-elite\src\utils\statusUtils.ts", "TypeScript", 0, 18, 0, 0, 0, 2, 20
+"d:\gazzeh travail\espace-elite\src\utils\uploadthing.ts", "TypeScript", 0, 7, 0, 0, 0, 3, 10
+"Total", "-", 32, 5911, 25434, 228, 2051, 3589, 37245

@@ -1,0 +1,323 @@
+Date : 2025-04-19 16:31:32
+Directory : d:\gazzeh travail\espace-elite\src
+Total : 208 files,  27855 codes, 787 comments, 2802 blanks, all 31444 lines
+
+Languages
++----------------+------------+------------+------------+------------+------------+
+| language       | files      | code       | comment    | blank      | total      |
++----------------+------------+------------+------------+------------+------------+
+| TypeScript JSX |        152 |     22,220 |        448 |      2,077 |     24,745 |
+| TypeScript     |         55 |      5,561 |        339 |        720 |      6,620 |
+| CSS            |          1 |         74 |          0 |          5 |         79 |
++----------------+------------+------------+------------+------------+------------+
+
+Directories
++-------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                                                        | files      | code       | comment    | blank      | total      |
++-------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                                                           |        208 |     27,855 |        787 |      2,802 |     31,444 |
+| . (Files)                                                                                                   |          1 |         75 |         26 |         17 |        118 |
+| components                                                                                                  |         80 |      7,558 |        124 |        911 |      8,593 |
+| components (Files)                                                                                          |          1 |        110 |          0 |          5 |        115 |
+| components\forms                                                                                            |         20 |      2,760 |        113 |        299 |      3,172 |
+| components\forms (Files)                                                                                    |          4 |      1,239 |         57 |        120 |      1,416 |
+| components\forms\components                                                                                 |         11 |        827 |         39 |        114 |        980 |
+| components\forms\patientSections                                                                            |          5 |        694 |         17 |         65 |        776 |
+| components\layout                                                                                           |          1 |         27 |          2 |          6 |         35 |
+| components\tables                                                                                           |          3 |        205 |          0 |         17 |        222 |
+| components\tasks                                                                                            |          2 |        285 |          0 |         25 |        310 |
+| components\ui                                                                                               |         53 |      4,171 |          9 |        559 |      4,739 |
+| lib                                                                                                         |          3 |         50 |          5 |         14 |         69 |
+| pages                                                                                                       |        119 |     19,592 |        632 |      1,816 |     22,040 |
+| pages (Files)                                                                                               |          3 |        201 |          6 |         16 |        223 |
+| pages\api                                                                                                   |         44 |      4,733 |        305 |        615 |      5,653 |
+| pages\api\accessories                                                                                       |          1 |         70 |          0 |         16 |         86 |
+| pages\api\auth                                                                                              |          2 |        127 |         11 |         21 |        159 |
+| pages\api\clients                                                                                           |          1 |         48 |          0 |          7 |         55 |
+| pages\api\diagnostic-parameters                                                                             |          2 |        117 |         13 |         24 |        154 |
+| pages\api\diagnostic-results                                                                                |          2 |         85 |         47 |         17 |        149 |
+| pages\api\diagnostics                                                                                       |          1 |        258 |         17 |         36 |        311 |
+| pages\api\doctors                                                                                           |          1 |        124 |          5 |         19 |        148 |
+| pages\api\locations                                                                                         |          1 |         78 |          0 |          8 |         86 |
+| pages\api\medical-devices                                                                                   |          3 |        634 |         32 |         64 |        730 |
+| pages\api\notifications                                                                                     |          3 |        192 |         77 |         34 |        303 |
+| pages\api\notifications (Files)                                                                             |          2 |        169 |         66 |         27 |        262 |
+| pages\api\notifications\[id]                                                                                |          1 |         23 |         11 |          7 |         41 |
+| pages\api\parameter-values                                                                                  |          1 |         73 |          4 |         11 |         88 |
+| pages\api\patients                                                                                          |          1 |         34 |          0 |          6 |         40 |
+| pages\api\products                                                                                          |          1 |        150 |         13 |         24 |        187 |
+| pages\api\renseignements                                                                                    |          4 |      1,213 |         42 |        111 |      1,366 |
+| pages\api\renseignements (Files)                                                                            |          1 |        562 |          7 |         36 |        605 |
+| pages\api\renseignements\companies                                                                          |          1 |        180 |          6 |         23 |        209 |
+| pages\api\renseignements\patients                                                                           |          2 |        471 |         29 |         52 |        552 |
+| pages\api\repairs                                                                                           |          1 |        155 |          8 |         14 |        177 |
+| pages\api\spare-parts                                                                                       |          1 |         70 |          0 |         16 |         86 |
+| pages\api\stock                                                                                             |          3 |        273 |          5 |         31 |        309 |
+| pages\api\stock-locations                                                                                   |          3 |        193 |          7 |         30 |        230 |
+| pages\api\stock\inventory                                                                                   |          1 |         52 |          0 |          7 |         59 |
+| pages\api\stock\locations                                                                                   |          1 |         72 |          0 |          9 |         81 |
+| pages\api\stock\transfers                                                                                   |          1 |        149 |          5 |         15 |        169 |
+| pages\api\tasks                                                                                             |          1 |        114 |          1 |         15 |        130 |
+| pages\api\technicians                                                                                       |          6 |        414 |         14 |         58 |        486 |
+| pages\api\technicians (Files)                                                                               |          1 |         64 |          3 |          8 |         75 |
+| pages\api\technicians\[id]                                                                                  |          5 |        350 |         11 |         50 |        411 |
+| pages\api\upload                                                                                            |          1 |         53 |          4 |         11 |         68 |
+| pages\api\users                                                                                             |          4 |        258 |          5 |         42 |        305 |
+| pages\auth                                                                                                  |          2 |        301 |          4 |         23 |        328 |
+| pages\roles                                                                                                 |         70 |     14,357 |        317 |      1,162 |     15,836 |
+| pages\roles\admin                                                                                           |         61 |     12,847 |        275 |      1,024 |     14,146 |
+| pages\roles\admin (Files)                                                                                   |          4 |        275 |         15 |         31 |        321 |
+| pages\roles\admin\accessories                                                                               |          1 |        369 |          3 |         24 |        396 |
+| pages\roles\admin\appareils                                                                                 |         20 |      4,312 |         63 |        325 |      4,700 |
+| pages\roles\admin\appareils (Files)                                                                         |          2 |        615 |         14 |         38 |        667 |
+| pages\roles\admin\appareils\components                                                                      |         18 |      3,697 |         49 |        287 |      4,033 |
+| pages\roles\admin\appareils\components (Files)                                                              |         11 |      1,540 |         18 |        114 |      1,672 |
+| pages\roles\admin\appareils\components\forms                                                                |          7 |      2,157 |         31 |        173 |      2,361 |
+| pages\roles\admin\dashboard                                                                                 |         10 |      2,211 |         87 |        190 |      2,488 |
+| pages\roles\admin\dashboard (Files)                                                                         |          1 |         60 |          4 |          8 |         72 |
+| pages\roles\admin\dashboard\components                                                                      |          9 |      2,151 |         83 |        182 |      2,416 |
+| pages\roles\admin\dashboard\components (Files)                                                              |          5 |      1,102 |         42 |        100 |      1,244 |
+| pages\roles\admin\dashboard\components\dialogs                                                              |          1 |        168 |         10 |         17 |        195 |
+| pages\roles\admin\dashboard\components\steps                                                                |          3 |        881 |         31 |         65 |        977 |
+| pages\roles\admin\diagnostic                                                                                |          1 |        327 |          0 |         21 |        348 |
+| pages\roles\admin\espace-technicien                                                                         |          7 |        853 |          4 |         71 |        928 |
+| pages\roles\admin\espace-technicien (Files)                                                                 |          1 |         23 |          0 |          5 |         28 |
+| pages\roles\admin\espace-technicien\components                                                              |          6 |        830 |          4 |         66 |        900 |
+| pages\roles\admin\help                                                                                      |          1 |        108 |          2 |          7 |        117 |
+| pages\roles\admin\notifications                                                                             |          1 |        490 |         15 |         48 |        553 |
+| pages\roles\admin\renseignement                                                                             |          3 |        830 |         22 |         66 |        918 |
+| pages\roles\admin\renseignement (Files)                                                                     |          1 |        568 |         22 |         58 |        648 |
+| pages\roles\admin\renseignement\components                                                                  |          2 |        262 |          0 |          8 |        270 |
+| pages\roles\admin\reparateur                                                                                |          1 |        323 |          0 |         23 |        346 |
+| pages\roles\admin\settings                                                                                  |          5 |      1,229 |         50 |        102 |      1,381 |
+| pages\roles\admin\settings (Files)                                                                          |          1 |         69 |          0 |          4 |         73 |
+| pages\roles\admin\settings\components                                                                       |          4 |      1,160 |         50 |         98 |      1,308 |
+| pages\roles\admin\stock                                                                                     |          5 |        802 |          5 |         55 |        862 |
+| pages\roles\admin\stock (Files)                                                                             |          1 |         41 |          0 |          8 |         49 |
+| pages\roles\admin\stock\components                                                                          |          4 |        761 |          5 |         47 |        813 |
+| pages\roles\admin\tasks                                                                                     |          1 |        360 |          5 |         32 |        397 |
+| pages\roles\admin\users                                                                                     |          1 |        358 |          4 |         29 |        391 |
+| pages\roles\employee                                                                                        |          9 |      1,510 |         42 |        138 |      1,690 |
+| pages\roles\employee (Files)                                                                                |          5 |        311 |         14 |         35 |        360 |
+| pages\roles\employee\renseignement                                                                          |          3 |        834 |         22 |         69 |        925 |
+| pages\roles\employee\renseignement (Files)                                                                  |          1 |        572 |         22 |         61 |        655 |
+| pages\roles\employee\renseignement\components                                                               |          2 |        262 |          0 |          8 |        270 |
+| pages\roles\employee\tasks                                                                                  |          1 |        365 |          6 |         34 |        405 |
+| styles                                                                                                      |          1 |         74 |          0 |          5 |         79 |
+| types                                                                                                       |          4 |        506 |          0 |         39 |        545 |
++-------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++-------------------------------------------------------------------------------------------------------------+----------------+------------+------------+------------+------------+
+| filename                                                                                                    | language       | code       | comment    | blank      | total      |
++-------------------------------------------------------------------------------------------------------------+----------------+------------+------------+------------+------------+
+| d:\gazzeh travail\espace-elite\src\components\FileViewerModal.tsx                                           | TypeScript JSX |        110 |          0 |          5 |        115 |
+| d:\gazzeh travail\espace-elite\src\components\forms\PatientForm.tsx                                         | TypeScript JSX |        427 |         48 |         62 |        537 |
+| d:\gazzeh travail\espace-elite\src\components\forms\ProductForm.tsx                                         | TypeScript JSX |        288 |          3 |         20 |        311 |
+| d:\gazzeh travail\espace-elite\src\components\forms\SocieteForm.tsx                                         | TypeScript JSX |        333 |          5 |         23 |        361 |
+| d:\gazzeh travail\espace-elite\src\components\forms\UserForm.tsx                                            | TypeScript JSX |        191 |          1 |         15 |        207 |
+| d:\gazzeh travail\espace-elite\src\components\forms\components\DynamicRadioGroup.tsx                        | TypeScript JSX |         53 |          0 |          6 |         59 |
+| d:\gazzeh travail\espace-elite\src\components\forms\components\FileManager.tsx                              | TypeScript JSX |         86 |          7 |         12 |        105 |
+| d:\gazzeh travail\espace-elite\src\components\forms\components\FormSection.tsx                              | TypeScript JSX |         33 |          0 |          5 |         38 |
+| d:\gazzeh travail\espace-elite\src\components\forms\components\LeafletMap.tsx                               | TypeScript JSX |         48 |          5 |         12 |         65 |
+| d:\gazzeh travail\espace-elite\src\components\forms\components\LocationPicker.tsx                           | TypeScript JSX |        211 |          2 |         24 |        237 |
+| d:\gazzeh travail\espace-elite\src\components\forms\components\MapComponent.tsx                             | TypeScript JSX |         43 |          1 |          6 |         50 |
+| d:\gazzeh travail\espace-elite\src\components\forms\components\MapEvents.tsx                                | TypeScript JSX |         13 |          0 |          4 |         17 |
+| d:\gazzeh travail\espace-elite\src\components\forms\components\SearchSelect.tsx                             | TypeScript JSX |         67 |          2 |          7 |         76 |
+| d:\gazzeh travail\espace-elite\src\components\forms\components\SimpleMap.tsx                                | TypeScript JSX |         95 |         15 |         23 |        133 |
+| d:\gazzeh travail\espace-elite\src\components\forms\components\SmartInput.tsx                               | TypeScript JSX |        111 |          4 |          8 |        123 |
+| d:\gazzeh travail\espace-elite\src\components\forms\components\UnitInput.tsx                                | TypeScript JSX |         67 |          3 |          7 |         77 |
+| d:\gazzeh travail\espace-elite\src\components\forms\patientSections\AdditionalInfoBlock.tsx                 | TypeScript JSX |         43 |          0 |          4 |         47 |
+| d:\gazzeh travail\espace-elite\src\components\forms\patientSections\BiometricsBlock.tsx                     | TypeScript JSX |         58 |          2 |          7 |         67 |
+| d:\gazzeh travail\espace-elite\src\components\forms\patientSections\InsuranceDetailsBlock.tsx               | TypeScript JSX |        134 |          0 |          9 |        143 |
+| d:\gazzeh travail\espace-elite\src\components\forms\patientSections\PersonalInfoBlock.tsx                   | TypeScript JSX |        290 |         12 |         28 |        330 |
+| d:\gazzeh travail\espace-elite\src\components\forms\patientSections\ResponsiblePersonBlock.tsx              | TypeScript JSX |        169 |          3 |         17 |        189 |
+| d:\gazzeh travail\espace-elite\src\components\layout\SEO.tsx                                                | TypeScript JSX |         27 |          2 |          6 |         35 |
+| d:\gazzeh travail\espace-elite\src\components\tables\ClientTable.tsx                                        | TypeScript JSX |         61 |          0 |          5 |         66 |
+| d:\gazzeh travail\espace-elite\src\components\tables\DiagnosticTable.tsx                                    | TypeScript JSX |         75 |          0 |          7 |         82 |
+| d:\gazzeh travail\espace-elite\src\components\tables\LocationTable.tsx                                      | TypeScript JSX |         69 |          0 |          5 |         74 |
+| d:\gazzeh travail\espace-elite\src\components\tasks\DayTasksModal.tsx                                       | TypeScript JSX |        114 |          0 |         10 |        124 |
+| d:\gazzeh travail\espace-elite\src\components\tasks\TaskModal.tsx                                           | TypeScript JSX |        171 |          0 |         15 |        186 |
+| d:\gazzeh travail\espace-elite\src\components\ui\Card.tsx                                                   | TypeScript JSX |         71 |          0 |          9 |         80 |
+| d:\gazzeh travail\espace-elite\src\components\ui\accordion.tsx                                              | TypeScript JSX |         50 |          0 |          9 |         59 |
+| d:\gazzeh travail\espace-elite\src\components\ui\alert-dialog.tsx                                           | TypeScript JSX |        127 |          0 |         15 |        142 |
+| d:\gazzeh travail\espace-elite\src\components\ui\alert.tsx                                                  | TypeScript JSX |         53 |          0 |          7 |         60 |
+| d:\gazzeh travail\espace-elite\src\components\ui\aspect-ratio.tsx                                           | TypeScript JSX |          4 |          0 |          4 |          8 |
+| d:\gazzeh travail\espace-elite\src\components\ui\avatar.tsx                                                 | TypeScript JSX |         44 |          0 |          7 |         51 |
+| d:\gazzeh travail\espace-elite\src\components\ui\badge.tsx                                                  | TypeScript JSX |         31 |          0 |          6 |         37 |
+| d:\gazzeh travail\espace-elite\src\components\ui\breadcrumb.tsx                                             | TypeScript JSX |        105 |          0 |         11 |        116 |
+| d:\gazzeh travail\espace-elite\src\components\ui\button.tsx                                                 | TypeScript JSX |         63 |          0 |          6 |         69 |
+| d:\gazzeh travail\espace-elite\src\components\ui\calendar.tsx                                               | TypeScript JSX |         61 |          0 |          6 |         67 |
+| d:\gazzeh travail\espace-elite\src\components\ui\carousel.tsx                                               | TypeScript JSX |        232 |          0 |         31 |        263 |
+| d:\gazzeh travail\espace-elite\src\components\ui\chart.tsx                                                  | TypeScript JSX |        327 |          2 |         37 |        366 |
+| d:\gazzeh travail\espace-elite\src\components\ui\checkbox.tsx                                               | TypeScript JSX |         26 |          0 |          5 |         31 |
+| d:\gazzeh travail\espace-elite\src\components\ui\collapsible.tsx                                            | TypeScript JSX |          6 |          0 |          6 |         12 |
+| d:\gazzeh travail\espace-elite\src\components\ui\combobox.tsx                                               | TypeScript JSX |        105 |          0 |          6 |        111 |
+| d:\gazzeh travail\espace-elite\src\components\ui\command.tsx                                                | TypeScript JSX |        137 |          0 |         19 |        156 |
+| d:\gazzeh travail\espace-elite\src\components\ui\container.tsx                                              | TypeScript JSX |         13 |          0 |          2 |         15 |
+| d:\gazzeh travail\espace-elite\src\components\ui\context-menu.tsx                                           | TypeScript JSX |        182 |          0 |         19 |        201 |
+| d:\gazzeh travail\espace-elite\src\components\ui\data-table.tsx                                             | TypeScript JSX |         48 |          0 |          4 |         52 |
+| d:\gazzeh travail\espace-elite\src\components\ui\dialog.tsx                                                 | TypeScript JSX |        109 |          0 |         14 |        123 |
+| d:\gazzeh travail\espace-elite\src\components\ui\drawer.tsx                                                 | TypeScript JSX |        105 |          0 |         14 |        119 |
+| d:\gazzeh travail\espace-elite\src\components\ui\dropdown-menu.tsx                                          | TypeScript JSX |        182 |          0 |         19 |        201 |
+| d:\gazzeh travail\espace-elite\src\components\ui\file-upload.tsx                                            | TypeScript JSX |        192 |          4 |         20 |        216 |
+| d:\gazzeh travail\espace-elite\src\components\ui\form.tsx                                                   | TypeScript JSX |        154 |          0 |         26 |        180 |
+| d:\gazzeh travail\espace-elite\src\components\ui\hover-card.tsx                                             | TypeScript JSX |         23 |          0 |          7 |         30 |
+| d:\gazzeh travail\espace-elite\src\components\ui\index.ts                                                   | TypeScript     |          3 |          0 |          0 |          3 |
+| d:\gazzeh travail\espace-elite\src\components\ui\input-otp.tsx                                              | TypeScript JSX |         63 |          0 |          9 |         72 |
+| d:\gazzeh travail\espace-elite\src\components\ui\input.tsx                                                  | TypeScript JSX |         21 |          0 |          5 |         26 |
+| d:\gazzeh travail\espace-elite\src\components\ui\label.tsx                                                  | TypeScript JSX |         21 |          0 |          6 |         27 |
+| d:\gazzeh travail\espace-elite\src\components\ui\menubar.tsx                                                | TypeScript JSX |        217 |          0 |         20 |        237 |
+| d:\gazzeh travail\espace-elite\src\components\ui\navigation-menu.tsx                                        | TypeScript JSX |        117 |          0 |         12 |        129 |
+| d:\gazzeh travail\espace-elite\src\components\ui\pagination.tsx                                             | TypeScript JSX |        107 |          0 |         11 |        118 |
+| d:\gazzeh travail\espace-elite\src\components\ui\popover.tsx                                                | TypeScript JSX |         25 |          0 |          7 |         32 |
+| d:\gazzeh travail\espace-elite\src\components\ui\progress.tsx                                               | TypeScript JSX |         24 |          0 |          5 |         29 |
+| d:\gazzeh travail\espace-elite\src\components\ui\radio-group.tsx                                            | TypeScript JSX |         39 |          0 |          6 |         45 |
+| d:\gazzeh travail\espace-elite\src\components\ui\resizable.tsx                                              | TypeScript JSX |         39 |          0 |          7 |         46 |
+| d:\gazzeh travail\espace-elite\src\components\ui\scroll-area.tsx                                            | TypeScript JSX |         43 |          0 |          6 |         49 |
+| d:\gazzeh travail\espace-elite\src\components\ui\select.tsx                                                 | TypeScript JSX |        146 |          0 |         15 |        161 |
+| d:\gazzeh travail\espace-elite\src\components\ui\separator.tsx                                              | TypeScript JSX |         27 |          0 |          5 |         32 |
+| d:\gazzeh travail\espace-elite\src\components\ui\sheet.tsx                                                  | TypeScript JSX |        125 |          0 |         16 |        141 |
+| d:\gazzeh travail\espace-elite\src\components\ui\skeleton.tsx                                               | TypeScript JSX |         13 |          0 |          3 |         16 |
+| d:\gazzeh travail\espace-elite\src\components\ui\slider.tsx                                                 | TypeScript JSX |         44 |          0 |          8 |         52 |
+| d:\gazzeh travail\espace-elite\src\components\ui\sonner.tsx                                                 | TypeScript JSX |         26 |          0 |          6 |         32 |
+| d:\gazzeh travail\espace-elite\src\components\ui\switch.tsx                                                 | TypeScript JSX |         25 |          0 |          5 |         30 |
+| d:\gazzeh travail\espace-elite\src\components\ui\table.tsx                                                  | TypeScript JSX |        107 |          0 |         11 |        118 |
+| d:\gazzeh travail\espace-elite\src\components\ui\tabs.tsx                                                   | TypeScript JSX |         48 |          0 |          8 |         56 |
+| d:\gazzeh travail\espace-elite\src\components\ui\textarea.tsx                                               | TypeScript JSX |         20 |          0 |          5 |         25 |
+| d:\gazzeh travail\espace-elite\src\components\ui\toast.tsx                                                  | TypeScript JSX |        116 |          0 |         14 |        130 |
+| d:\gazzeh travail\espace-elite\src\components\ui\toaster.tsx                                                | TypeScript JSX |         32 |          0 |          4 |         36 |
+| d:\gazzeh travail\espace-elite\src\components\ui\toggle-group.tsx                                           | TypeScript JSX |         52 |          0 |         10 |         62 |
+| d:\gazzeh travail\espace-elite\src\components\ui\toggle.tsx                                                 | TypeScript JSX |         39 |          0 |          7 |         46 |
+| d:\gazzeh travail\espace-elite\src\components\ui\tooltip.tsx                                                | TypeScript JSX |         23 |          0 |          8 |         31 |
+| d:\gazzeh travail\espace-elite\src\components\ui\use-toast.ts                                               | TypeScript     |        159 |          3 |         31 |        193 |
+| d:\gazzeh travail\espace-elite\src\lib\auth.ts                                                              | TypeScript     |         19 |          4 |          6 |         29 |
+| d:\gazzeh travail\espace-elite\src\lib\prisma.ts                                                            | TypeScript     |         26 |          1 |          6 |         33 |
+| d:\gazzeh travail\espace-elite\src\lib\utils.ts                                                             | TypeScript     |          5 |          0 |          2 |          7 |
+| d:\gazzeh travail\espace-elite\src\middleware.ts                                                            | TypeScript     |         75 |         26 |         17 |        118 |
+| d:\gazzeh travail\espace-elite\src\pages\_app.tsx                                                           | TypeScript JSX |         40 |          2 |          5 |         47 |
+| d:\gazzeh travail\espace-elite\src\pages\api\accessories\index.ts                                           | TypeScript     |         70 |          0 |         16 |         86 |
+| d:\gazzeh travail\espace-elite\src\pages\api\auth\[...nextauth].ts                                          | TypeScript     |         88 |          6 |         12 |        106 |
+| d:\gazzeh travail\espace-elite\src\pages\api\auth\signup.ts                                                 | TypeScript     |         39 |          5 |          9 |         53 |
+| d:\gazzeh travail\espace-elite\src\pages\api\clients\index.ts                                               | TypeScript     |         48 |          0 |          7 |         55 |
+| d:\gazzeh travail\espace-elite\src\pages\api\diagnostic-parameters\[id].ts                                  | TypeScript     |         68 |         11 |         16 |         95 |
+| d:\gazzeh travail\espace-elite\src\pages\api\diagnostic-parameters\index.ts                                 | TypeScript     |         49 |          2 |          8 |         59 |
+| d:\gazzeh travail\espace-elite\src\pages\api\diagnostic-results\[id].ts                                     | TypeScript     |         47 |         17 |         11 |         75 |
+| d:\gazzeh travail\espace-elite\src\pages\api\diagnostic-results\pending.ts                                  | TypeScript     |         38 |         30 |          6 |         74 |
+| d:\gazzeh travail\espace-elite\src\pages\api\diagnostics\index.ts                                           | TypeScript     |        258 |         17 |         36 |        311 |
+| d:\gazzeh travail\espace-elite\src\pages\api\doctors\index.ts                                               | TypeScript     |        124 |          5 |         19 |        148 |
+| d:\gazzeh travail\espace-elite\src\pages\api\locations\index.ts                                             | TypeScript     |         78 |          0 |          8 |         86 |
+| d:\gazzeh travail\espace-elite\src\pages\api\medical-devices\[id].ts                                        | TypeScript     |        327 |         21 |         37 |        385 |
+| d:\gazzeh travail\espace-elite\src\pages\api\medical-devices\diagnostic-devices.ts                          | TypeScript     |         37 |          0 |          6 |         43 |
+| d:\gazzeh travail\espace-elite\src\pages\api\medical-devices\index.ts                                       | TypeScript     |        270 |         11 |         21 |        302 |
+| d:\gazzeh travail\espace-elite\src\pages\api\notifications\[id].ts                                          | TypeScript     |         57 |         22 |         13 |         92 |
+| d:\gazzeh travail\espace-elite\src\pages\api\notifications\[id]\view.ts                                     | TypeScript     |         23 |         11 |          7 |         41 |
+| d:\gazzeh travail\espace-elite\src\pages\api\notifications\index.ts                                         | TypeScript     |        112 |         44 |         14 |        170 |
+| d:\gazzeh travail\espace-elite\src\pages\api\parameter-values\index.ts                                      | TypeScript     |         73 |          4 |         11 |         88 |
+| d:\gazzeh travail\espace-elite\src\pages\api\patients\list.ts                                               | TypeScript     |         34 |          0 |          6 |         40 |
+| d:\gazzeh travail\espace-elite\src\pages\api\products\index.ts                                              | TypeScript     |        150 |         13 |         24 |        187 |
+| d:\gazzeh travail\espace-elite\src\pages\api\renseignements\companies\index.ts                              | TypeScript     |        180 |          6 |         23 |        209 |
+| d:\gazzeh travail\espace-elite\src\pages\api\renseignements\index.ts                                        | TypeScript     |        562 |          7 |         36 |        605 |
+| d:\gazzeh travail\espace-elite\src\pages\api\renseignements\patients\index.ts                               | TypeScript     |        352 |         21 |         43 |        416 |
+| d:\gazzeh travail\espace-elite\src\pages\api\renseignements\patients\search.ts                              | TypeScript     |        119 |          8 |          9 |        136 |
+| d:\gazzeh travail\espace-elite\src\pages\api\repairs\index.ts                                               | TypeScript     |        155 |          8 |         14 |        177 |
+| d:\gazzeh travail\espace-elite\src\pages\api\spare-parts\index.ts                                           | TypeScript     |         70 |          0 |         16 |         86 |
+| d:\gazzeh travail\espace-elite\src\pages\api\stock-locations\[id].ts                                        | TypeScript     |         63 |          2 |         11 |         76 |
+| d:\gazzeh travail\espace-elite\src\pages\api\stock-locations\index.ts                                       | TypeScript     |         72 |          2 |         10 |         84 |
+| d:\gazzeh travail\espace-elite\src\pages\api\stock-locations\setup.ts                                       | TypeScript     |         58 |          3 |          9 |         70 |
+| d:\gazzeh travail\espace-elite\src\pages\api\stock\inventory\index.ts                                       | TypeScript     |         52 |          0 |          7 |         59 |
+| d:\gazzeh travail\espace-elite\src\pages\api\stock\locations\index.ts                                       | TypeScript     |         72 |          0 |          9 |         81 |
+| d:\gazzeh travail\espace-elite\src\pages\api\stock\transfers\index.ts                                       | TypeScript     |        149 |          5 |         15 |        169 |
+| d:\gazzeh travail\espace-elite\src\pages\api\tasks\index.ts                                                 | TypeScript     |        114 |          1 |         15 |        130 |
+| d:\gazzeh travail\espace-elite\src\pages\api\technicians\[id]\index.ts                                      | TypeScript     |         45 |          0 |          9 |         54 |
+| d:\gazzeh travail\espace-elite\src\pages\api\technicians\[id]\installations.ts                              | TypeScript     |        129 |          5 |         11 |        145 |
+| d:\gazzeh travail\espace-elite\src\pages\api\technicians\[id]\payments.ts                                   | TypeScript     |         78 |          2 |         10 |         90 |
+| d:\gazzeh travail\espace-elite\src\pages\api\technicians\[id]\tasks.ts                                      | TypeScript     |         41 |          2 |         10 |         53 |
+| d:\gazzeh travail\espace-elite\src\pages\api\technicians\[id]\transfers.ts                                  | TypeScript     |         57 |          2 |         10 |         69 |
+| d:\gazzeh travail\espace-elite\src\pages\api\technicians\index.ts                                           | TypeScript     |         64 |          3 |          8 |         75 |
+| d:\gazzeh travail\espace-elite\src\pages\api\upload\index.ts                                                | TypeScript     |         53 |          4 |         11 |         68 |
+| d:\gazzeh travail\espace-elite\src\pages\api\users\doctors.ts                                               | TypeScript     |         40 |          0 |          7 |         47 |
+| d:\gazzeh travail\espace-elite\src\pages\api\users\employees.ts                                             | TypeScript     |         40 |          0 |          5 |         45 |
+| d:\gazzeh travail\espace-elite\src\pages\api\users\index.ts                                                 | TypeScript     |        136 |          5 |         23 |        164 |
+| d:\gazzeh travail\espace-elite\src\pages\api\users\technicians.ts                                           | TypeScript     |         42 |          0 |          7 |         49 |
+| d:\gazzeh travail\espace-elite\src\pages\auth\signin.tsx                                                    | TypeScript JSX |        120 |          0 |          9 |        129 |
+| d:\gazzeh travail\espace-elite\src\pages\auth\signup.tsx                                                    | TypeScript JSX |        181 |          4 |         14 |        199 |
+| d:\gazzeh travail\espace-elite\src\pages\index.tsx                                                          | TypeScript JSX |         23 |          1 |          5 |         29 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\AdminLayout.tsx                                        | TypeScript JSX |         33 |          3 |          7 |         43 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\AdminNavbar.tsx                                        | TypeScript JSX |         47 |          1 |          5 |         53 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\AdminSidebar.tsx                                       | TypeScript JSX |        125 |          6 |         10 |        141 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\accessories\index.tsx                                  | TypeScript JSX |        369 |          3 |         24 |        396 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\AccessoriesTable.tsx              | TypeScript JSX |        115 |          0 |          7 |        122 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\DiagnosticDevicesTable.tsx        | TypeScript JSX |        108 |          0 |          6 |        114 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\DiagnosticResultsNotification.tsx | TypeScript JSX |        204 |          5 |         17 |        226 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\LocationForm.tsx                  | TypeScript JSX |        115 |          1 |         10 |        126 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\MedicalDevicesTable.tsx           | TypeScript JSX |         97 |          0 |          6 |        103 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\ParametersViewDialog.tsx          | TypeScript JSX |        113 |          1 |         11 |        125 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\ProductForm.tsx                   | TypeScript JSX |        469 |          9 |         34 |        512 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\RepairHistoryDialog.tsx           | TypeScript JSX |        100 |          1 |          5 |        106 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\SparePartsTable.tsx               | TypeScript JSX |        113 |          0 |          7 |        120 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\StockLocationsTable.tsx           | TypeScript JSX |         88 |          1 |          8 |         97 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\TabSwitcher.tsx                   | TypeScript JSX |         18 |          0 |          3 |         21 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\forms\AccessoryForm.tsx           | TypeScript JSX |        214 |          1 |         16 |        231 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\forms\DiagnosticDeviceForm.tsx    | TypeScript JSX |        405 |         11 |         37 |        453 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\forms\DynamicParameterBuilder.tsx | TypeScript JSX |        343 |          0 |         16 |        359 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\forms\MedicalDeviceForm.tsx       | TypeScript JSX |        331 |          1 |         26 |        358 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\forms\ParameterConsumer.tsx       | TypeScript JSX |        256 |         10 |         28 |        294 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\forms\RepairForm.tsx              | TypeScript JSX |        370 |          3 |         33 |        406 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\components\forms\SparePartForm.tsx           | TypeScript JSX |        238 |          5 |         17 |        260 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\index.tsx                                    | TypeScript JSX |        580 |         14 |         34 |        628 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\appareils\types.ts                                     | TypeScript     |         35 |          0 |          4 |         39 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\components\DiagnosticStepperDialog.tsx       | TypeScript JSX |        395 |         21 |         42 |        458 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\components\NewStepperDialog.tsx              | TypeScript JSX |        265 |         12 |         24 |        301 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\components\ProductFormCompany.tsx            | TypeScript JSX |        190 |          4 |         13 |        207 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\components\ProductFormPatient.tsx            | TypeScript JSX |        149 |          4 |         12 |        165 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\components\StepperForm.tsx                   | TypeScript JSX |        103 |          1 |          9 |        113 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\components\dialogs\ProductDialog.tsx         | TypeScript JSX |        168 |         10 |         17 |        195 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\components\steps\ClientSelectionStep.tsx     | TypeScript JSX |        336 |          9 |         21 |        366 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\components\steps\DiagnosticProductStep.tsx   | TypeScript JSX |        384 |         19 |         38 |        441 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\components\steps\ProductSelectionStep.tsx    | TypeScript JSX |        161 |          3 |          6 |        170 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\dashboard\index.tsx                                    | TypeScript JSX |         60 |          4 |          8 |         72 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\diagnostic\index.tsx                                   | TypeScript JSX |        327 |          0 |         21 |        348 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\espace-technicien\components\InstallationsHistory.tsx  | TypeScript JSX |        130 |          0 |          8 |        138 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\espace-technicien\components\PaymentsHistory.tsx       | TypeScript JSX |        155 |          0 |         11 |        166 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\espace-technicien\components\TasksHistory.tsx          | TypeScript JSX |        193 |          3 |         13 |        209 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\espace-technicien\components\TechnicianHistory.tsx     | TypeScript JSX |         85 |          0 |         12 |         97 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\espace-technicien\components\TechnicianSelector.tsx    | TypeScript JSX |        121 |          1 |          9 |        131 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\espace-technicien\components\TransfersHistory.tsx      | TypeScript JSX |        146 |          0 |         13 |        159 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\espace-technicien\index.tsx                            | TypeScript JSX |         23 |          0 |          5 |         28 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\help\index.tsx                                         | TypeScript JSX |        108 |          2 |          7 |        117 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\index.tsx                                              | TypeScript JSX |         70 |          5 |          9 |         84 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\notifications\index.tsx                                | TypeScript JSX |        490 |         15 |         48 |        553 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\renseignement\components\FileViewer.tsx                | TypeScript JSX |         56 |          0 |          4 |         60 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\renseignement\components\RenseignementTable.tsx        | TypeScript JSX |        206 |          0 |          4 |        210 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\renseignement\index.tsx                                | TypeScript JSX |        568 |         22 |         58 |        648 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\reparateur\index.tsx                                   | TypeScript JSX |        323 |          0 |         23 |        346 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\settings\components\BackupRestore.tsx                  | TypeScript JSX |        366 |         23 |         44 |        433 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\settings\components\GeneralSettings.tsx                | TypeScript JSX |        356 |          9 |         21 |        386 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\settings\components\RolePermissions.tsx                | TypeScript JSX |        289 |         15 |         22 |        326 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\settings\components\UserManagement.tsx                 | TypeScript JSX |        149 |          3 |         11 |        163 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\settings\index.tsx                                     | TypeScript JSX |         69 |          0 |          4 |         73 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\stock\components\StockInventory.tsx                    | TypeScript JSX |        150 |          0 |         11 |        161 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\stock\components\StockLocations.tsx                    | TypeScript JSX |        191 |          2 |          9 |        202 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\stock\components\StockTransfers.tsx                    | TypeScript JSX |        221 |          3 |         15 |        239 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\stock\components\TransferHistory.tsx                   | TypeScript JSX |        199 |          0 |         12 |        211 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\stock\index.tsx                                        | TypeScript JSX |         41 |          0 |          8 |         49 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\tasks\index.tsx                                        | TypeScript JSX |        360 |          5 |         32 |        397 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\admin\users\index.tsx                                        | TypeScript JSX |        358 |          4 |         29 |        391 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\employee\404.tsx                                             | TypeScript JSX |         37 |          1 |          4 |         42 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\employee\EmployeeLayout.tsx                                  | TypeScript JSX |         24 |          4 |          7 |         35 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\employee\EmployeeNavbar.tsx                                  | TypeScript JSX |         47 |          1 |          5 |         53 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\employee\EmployeeSidebar.tsx                                 | TypeScript JSX |         82 |          3 |          8 |         93 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\employee\index.tsx                                           | TypeScript JSX |        121 |          5 |         11 |        137 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\employee\renseignement\components\FileViewer.tsx             | TypeScript JSX |         56 |          0 |          4 |         60 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\employee\renseignement\components\RenseignementTable.tsx     | TypeScript JSX |        206 |          0 |          4 |        210 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\employee\renseignement\index.tsx                             | TypeScript JSX |        572 |         22 |         61 |        655 |
+| d:\gazzeh travail\espace-elite\src\pages\roles\employee\tasks\index.tsx                                     | TypeScript JSX |        365 |          6 |         34 |        405 |
+| d:\gazzeh travail\espace-elite\src\pages\welcome.tsx                                                        | TypeScript JSX |        138 |          3 |          6 |        147 |
+| d:\gazzeh travail\espace-elite\src\styles\globals.css                                                       | CSS            |         74 |          0 |          5 |         79 |
+| d:\gazzeh travail\espace-elite\src\types\index.ts                                                           | TypeScript     |        371 |          0 |         22 |        393 |
+| d:\gazzeh travail\espace-elite\src\types\next-auth.d.ts                                                     | TypeScript     |         21 |          0 |          4 |         25 |
+| d:\gazzeh travail\espace-elite\src\types\react-leaflet.d.ts                                                 | TypeScript     |         48 |          0 |          8 |         56 |
+| d:\gazzeh travail\espace-elite\src\types\renseignement.ts                                                   | TypeScript     |         66 |          0 |          5 |         71 |
+| Total                                                                                                       |                |     27,855 |        787 |      2,802 |     31,444 |
++-------------------------------------------------------------------------------------------------------------+----------------+------------+------------+------------+------------+
