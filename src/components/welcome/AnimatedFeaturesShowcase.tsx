@@ -197,7 +197,7 @@ const AnimatedFeaturesShowcase: React.FC = () => {
                           <div className="bg-white rounded-full px-3 py-1.5 flex items-center space-x-2 border border-gray-300">
                             <div className="w-3 h-3 text-gray-400 text-xs">🔒</div>
                             <span className="text-xs text-gray-600 font-mono truncate">
-                              espace-elite.tn/{feature.category.toLowerCase()}
+                              Espace-Iris.tn /{feature.category.toLowerCase()}
                             </span>
                           </div>
                         </div>

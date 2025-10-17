@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import Image from 'next/image';
 import { Eye, EyeOff, Lock, Mail, Loader2, Shield, Stethoscope, Activity, Users } from 'lucide-react';
 import Header from '@/components/welcome/Header';
 
@@ -191,7 +190,7 @@ export default function SignIn() {
           {/* Back to home link */}
           <div className="text-center">
             <Link href="/welcome" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
-              ← Retour à l'accueil
+              ← Retour à l&apos;accueil
             </Link>
           </div>
         </div>
@@ -227,7 +226,7 @@ export default function SignIn() {
                 </div>
                 <div>
                   <h3 className="font-semibold mb-1">Appareils CPAP/VNI</h3>
-                  <p className="text-sm text-blue-100">Gestion intelligente du parc d'appareils médicaux</p>
+                  <p className="text-sm text-blue-100">Gestion intelligente du parc d&apos;appareils médicaux</p>
                 </div>
               </div>
               

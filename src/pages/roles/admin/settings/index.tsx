@@ -44,12 +44,16 @@ function SettingsPage() {
                 <Settings className="h-4 w-4 mr-2" />
                 Paramètres Généraux
               </TabsTrigger>
-              <TabsTrigger 
-                value="backup" 
-                className="w-full justify-start text-left px-3 py-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700"
+              <TabsTrigger
+                value="backup"
+                disabled
+                className="w-full justify-start text-left px-3 py-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none"
               >
                 <Database className="h-4 w-4 mr-2" />
-                Restauration
+                <div className="flex flex-col">
+                  <span>Restauration</span>
+                  <span className="text-xs text-orange-600 font-semibold">🔒 Beta - Désactivé</span>
+                </div>
               </TabsTrigger>
             </TabsList>
           </Tabs>

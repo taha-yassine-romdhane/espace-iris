@@ -202,30 +202,30 @@ const PricingSection: React.FC = () => {
                       {plan.setupFee && (
                         <div className="bg-gray-50 rounded-lg p-2 mb-3">
                           <div className="text-xs text-gray-600">Installation</div>
-                          <div className="text-lg font-bold text-gray-900">{plan.setupFee} DT</div>
+                          <div className="text-lg font-bold text-gray-900 blur-md select-none">{plan.setupFee} DT</div>
                         </div>
                       )}
-                      
+
                       {/* Recurring Price - Compact */}
-                      <div className="flex items-end justify-center space-x-1">
+                      <div className="flex items-end justify-center space-x-1 blur-md select-none">
                         <span className="text-3xl font-bold text-gray-900">
-                          {billingPeriod === 'monthly' ? plan.price.monthly : 
+                          {billingPeriod === 'monthly' ? plan.price.monthly :
                            billingPeriod === 'quarterly' ? Math.round(plan.price.quarterly! / 3) :
                            Math.round(plan.price.yearly! / 12)}
                         </span>
                         <span className="text-sm text-gray-600 mb-1">DT/mois</span>
                       </div>
-                      <div className="flex items-center justify-center space-x-1 text-xs">
+                      <div className="flex items-center justify-center space-x-1 text-xs blur-md select-none">
                         <span className="line-through text-gray-400">
-                          {billingPeriod === 'monthly' ? plan.originalPrice.monthly : 
+                          {billingPeriod === 'monthly' ? plan.originalPrice.monthly :
                            billingPeriod === 'quarterly' ? Math.round(plan.originalPrice.quarterly! / 3) :
                            Math.round(plan.originalPrice.yearly! / 12)} DT
                         </span>
                         <span className="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-medium">
-                          -{Math.round(((billingPeriod === 'monthly' ? plan.originalPrice.monthly! - plan.price.monthly! : 
+                          -{Math.round(((billingPeriod === 'monthly' ? plan.originalPrice.monthly! - plan.price.monthly! :
                                billingPeriod === 'quarterly' ? Math.round(plan.originalPrice.quarterly! / 3) - Math.round(plan.price.quarterly! / 3) :
-                               Math.round(plan.originalPrice.yearly! / 12) - Math.round(plan.price.yearly! / 12)) / 
-                               (billingPeriod === 'monthly' ? plan.originalPrice.monthly! : 
+                               Math.round(plan.originalPrice.yearly! / 12) - Math.round(plan.price.yearly! / 12)) /
+                               (billingPeriod === 'monthly' ? plan.originalPrice.monthly! :
                                 billingPeriod === 'quarterly' ? Math.round(plan.originalPrice.quarterly! / 3) :
                                 Math.round(plan.originalPrice.yearly! / 12))) * 100)}%
                         </span>
@@ -296,22 +296,22 @@ const PricingSection: React.FC = () => {
           </p>
           <div className="grid md:grid-cols-4 gap-4">
             <div className="bg-white rounded-xl p-6 text-center shadow-sm">
-              <div className="text-3xl font-bold text-blue-600 mb-2">3 000 DT</div>
+              <div className="text-3xl font-bold text-blue-600 mb-2 blur-md select-none">3 000 DT</div>
               <div className="text-gray-600 font-medium">Plan Starter</div>
               <div className="text-sm text-gray-500 mt-2">Installation en 3 jours</div>
             </div>
             <div className="bg-white rounded-xl p-6 text-center shadow-sm border-2 border-purple-200">
-              <div className="text-3xl font-bold text-purple-600 mb-2">4 500 DT</div>
+              <div className="text-3xl font-bold text-purple-600 mb-2 blur-md select-none">4 500 DT</div>
               <div className="text-gray-600 font-medium">Plan Professional</div>
               <div className="text-sm text-gray-500 mt-2">Installation en 5 jours</div>
             </div>
             <div className="bg-white rounded-xl p-6 text-center shadow-sm">
-              <div className="text-3xl font-bold text-gray-600 mb-2">8 000 DT</div>
+              <div className="text-3xl font-bold text-gray-600 mb-2 blur-md select-none">8 000 DT</div>
               <div className="text-gray-600 font-medium">Plan Enterprise</div>
               <div className="text-sm text-gray-500 mt-2">Installation en 7 jours</div>
             </div>
             <div className="bg-white rounded-xl p-6 text-center shadow-sm">
-              <div className="text-3xl font-bold text-indigo-600 mb-2">Sur devis</div>
+              <div className="text-3xl font-bold text-indigo-600 mb-2 blur-md select-none">Sur devis</div>
               <div className="text-gray-600 font-medium">Contact Us</div>
               <div className="text-sm text-gray-500 mt-2">Installation personnalisée</div>
             </div>

@@ -45,7 +45,7 @@ export default function SupportSection() {
       icon: <Mail className="h-6 w-6" />,
       title: "Support par Email",
       description: "Pour les questions détaillées et non-urgentes",
-      contact: "support@espace-elite.tn",
+      contact: "support@Espace-Iris.tn ",
       available: "24/7",
       responseTime: "< 4 heures",
       priority: "medium",
