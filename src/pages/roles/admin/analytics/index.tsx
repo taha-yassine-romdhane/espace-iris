@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useSession } from 'next-auth/react';
+import React, { useState, useEffect } from 'react';
 import { 
   BarChart, 
   Bar, 
@@ -8,8 +7,6 @@ import {
   CartesianGrid, 
   Tooltip, 
   ResponsiveContainer,
-  LineChart,
-  Line,
   PieChart,
   Pie,
   Cell,
@@ -33,10 +30,6 @@ import {
   DollarSign, 
   Package, 
   Activity,
-  Calendar,
-  Stethoscope,
-  CreditCard,
-  FileText,
   RefreshCw
 } from "lucide-react";
 
@@ -78,7 +71,6 @@ interface AnalyticsData {
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
 const AnalyticsPage: React.FC = () => {
-  const { data: session } = useSession();
   const [loading, setLoading] = useState(true);
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
   const [timeRange, setTimeRange] = useState('12months');
@@ -214,7 +206,7 @@ const AnalyticsPage: React.FC = () => {
             <RefreshCw className="h-5 w-5 text-yellow-600 mr-2" />
             <div>
               <p className="text-yellow-800 font-medium">Données de démonstration</p>
-              <p className="text-yellow-700 text-sm">L'API de données analytiques rencontre des difficultés. Affichage des données d'exemple.</p>
+              <p className="text-yellow-700 text-sm">L&apos;API de données analytiques rencontre des difficultés. Affichage des données d&apos;exemple.</p>
             </div>
           </div>
         </div>
@@ -225,7 +217,7 @@ const AnalyticsPage: React.FC = () => {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Analyses & Rapports</h1>
           <p className="text-muted-foreground">
-            Vue d'ensemble des performances de votre entreprise
+            Vue d&apos;ensemble des performances de votre entreprise
           </p>
         </div>
         <div className="flex items-center space-x-4">
@@ -251,7 +243,7 @@ const AnalyticsPage: React.FC = () => {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Chiffre d'affaires</CardTitle>
+            <CardTitle className="text-sm font-medium">Chiffre d&apos;affaires</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -295,7 +287,7 @@ const AnalyticsPage: React.FC = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Taux d'approbation CNAM</CardTitle>
+            <CardTitle className="text-sm font-medium">Taux d&apos;approbation CNAM</CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -312,8 +304,8 @@ const AnalyticsPage: React.FC = () => {
         {/* Revenue Trend */}
         <Card>
           <CardHeader>
-            <CardTitle>Évolution du Chiffre d'Affaires</CardTitle>
-            <CardDescription>Revenus mensuels par type d'activité</CardDescription>
+            <CardTitle>Évolution du Chiffre d&apos;Affaires</CardTitle>
+            <CardDescription>Revenus mensuels par type d&apos;activité</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -351,7 +343,7 @@ const AnalyticsPage: React.FC = () => {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ method, percentage }) => `${method} ${percentage.toFixed(1)}%`}
+                  label={({ method, percentage }: { method: string; percentage: number }) => `${method} ${percentage.toFixed(1)}%`}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="amount"
