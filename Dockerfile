@@ -15,7 +15,7 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-ENV DATABASE_URL=postgresql://postgres:postgres@localhost:5432/espace-elite
+ENV DATABASE_URL=postgresql://postgres:postgres@localhost:5432/espace-iris
 ENV SKIP_ENV_VALIDATION=1
 RUN npx prisma generate --schema=./prisma/schema.prisma
 ENV NODE_OPTIONS="--max-old-space-size=1536"

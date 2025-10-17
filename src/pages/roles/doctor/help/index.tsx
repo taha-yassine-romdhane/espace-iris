@@ -80,7 +80,7 @@ const DoctorHelp: React.FC = () => {
                             <Mail className="h-8 w-8 text-red-600" />
                             <div>
                                 <h4 className="font-medium text-gray-900">Email Support</h4>
-                                <p className="text-sm text-gray-600">support@elitesante.tn</p>
+                                <p className="text-sm text-gray-600">support@irissante.tn</p>
                                 <p className="text-xs text-gray-500">Réponse sous 24h</p>
                             </div>
                         </div>

@@ -6,7 +6,7 @@ import fs from 'fs';
 import path from 'path';
 
 // Base storage path outside the project
-const STORAGE_BASE_PATH = '/home/taha/Desktop/projects/espace-elite-files';
+const STORAGE_BASE_PATH = '/home/taha/Desktop/projects/espace-iris-files';
 
 // Helper function to delete file from filesystem
 const deleteFileFromDisk = async (filePath: string) => {

@@ -24,9 +24,9 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/espace-elite:latest
-          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/espace-elite:buildcache
-          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/espace-elite:buildcache,mode=max
+          tags: ${{ secrets.DOCKER_USERNAME }}/espace-iris:latest
+          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/espace-iris:buildcache
+          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/espace-iris:buildcache,mode=max
       
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v0.1.5
@@ -35,7 +35,7 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            cd ~/crm/espace-elite
+            cd ~/crm/espace-iris
             docker-compose pull
             docker-compose up -d
             docker system prune -f

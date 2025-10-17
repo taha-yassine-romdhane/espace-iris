@@ -173,7 +173,7 @@ const Map: React.FC<MapProps> = ({ patients }) => {
               <div className="bg-green-50 p-2 rounded">
                 <h4 className="font-semibold text-gray-700 mb-1">Contact</h4>
                 <p className="text-gray-600">📞 +216 XX XXX XXX</p>
-                <p className="text-gray-600">📧 contact@elitemedical.tn</p>
+                <p className="text-gray-600">📧 contact@irismedical.tn</p>
               </div>
             </div>
           </div>

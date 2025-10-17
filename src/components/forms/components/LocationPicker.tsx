@@ -73,7 +73,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
           { 
             headers: { 
               'Accept-Language': 'fr',
-              'User-Agent': 'EliteSanteApp/1.0' // Proper user-agent as required by Nominatim
+              'User-Agent': 'IrisSanteApp/1.0' // Proper user-agent as required by Nominatim
             } 
           }
         );

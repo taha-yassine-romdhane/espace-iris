@@ -8,7 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 import prisma from '@/lib/db';
 
 // Base storage path outside the project
-const STORAGE_BASE_PATH = '/home/taha/Desktop/projects/espace-elite-files';
+const STORAGE_BASE_PATH = '/home/taha/Desktop/projects/espace-iris-files';
 
 // Configure multer for file uploads
 const upload = multer({

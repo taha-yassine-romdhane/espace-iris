@@ -124,7 +124,7 @@ const UserForm: React.FC<UserFormProps> = ({
                       name="email"
                       value={formData.email}
                       onChange={handleInputChange}
-                      placeholder="exemple@elite-medical.tn"
+                      placeholder="exemple@iris-medical.tn"
                       className="border-gray-200 focus:border-[#1e3a8a] focus:ring-[#1e3a8a]"
                       required
                     />

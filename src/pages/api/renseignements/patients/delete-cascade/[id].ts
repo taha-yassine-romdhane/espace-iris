@@ -5,7 +5,7 @@ import prisma from '@/lib/db';
 import fs from 'fs/promises';
 import path from 'path';
 
-const STORAGE_BASE_PATH = '/home/taha/Desktop/projects/espace-elite-files';
+const STORAGE_BASE_PATH = '/home/taha/Desktop/projects/espace-iris-files';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const session = await getServerSession(req, res, authOptions);

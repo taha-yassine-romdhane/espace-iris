@@ -6,7 +6,7 @@ import fs from 'fs';
 import path from 'path';
 
 // Base storage path outside the project
-const STORAGE_BASE_PATH = '/home/taha/Desktop/projects/espace-elite-files';
+const STORAGE_BASE_PATH = '/home/taha/Desktop/projects/espace-iris-files';
 const TEMP_PATH = path.join(STORAGE_BASE_PATH, 'temp');
 
 // Helper function to ensure directory exists

@@ -39,7 +39,7 @@ export function GeneralSettings() {
     companyName: "Iris Santé",
     companyAddress: "123 Rue de la Santé, Tunis, Tunisie",
     companyPhone: "+216 71 123 456",
-    companyEmail: "contact@elite-sante.tn",
+    companyEmail: "contact@iris-sante.tn",
     companyLogo: "/logo.png",
   };
 
