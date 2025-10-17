@@ -50,3 +50,6 @@ node_modules/
 # Large archive files
 *.tar.gz
 espace-elite.tar.gz
+
+# Scripts for data manipulation and testing
+/scripts
