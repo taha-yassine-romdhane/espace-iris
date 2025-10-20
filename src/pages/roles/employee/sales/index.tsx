@@ -83,7 +83,7 @@ export default function EmployeeSalesPage() {
           {/* Sales Table */}
           <div className="mb-8 w-full">
             <div className="w-full overflow-hidden">
-              <SalesTable 
+              <SalesTable
                 onViewDetails={handleViewDetails}
                 onEdit={handleEditSale}
               />
