@@ -22,7 +22,7 @@ import * as z from "zod";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 // Define Parameter interface for type safety
 interface Parameter {
@@ -43,6 +43,7 @@ interface Parameter {
 // Form validation schema for diagnostic devices
 const diagnosticDeviceSchema = z.object({
   id: z.string().optional(),
+  deviceCode: z.string().optional(),
   name: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
   type: z.literal("DIAGNOSTIC_DEVICE"),
   brand: z.string().optional().nullable(),
@@ -76,11 +77,33 @@ interface DiagnosticDeviceFormProps {
 }
 
 export function DiagnosticDeviceForm({ initialData, onSubmit, stockLocations, isEditMode = false }: DiagnosticDeviceFormProps) {
+  const [nextDeviceCode, setNextDeviceCode] = useState<string>('');
+
+  // Generate next device code for new devices
+  useEffect(() => {
+    if (!isEditMode && !nextDeviceCode) {
+      fetchNextDeviceCode();
+    }
+  }, [isEditMode, nextDeviceCode]);
+
+  const fetchNextDeviceCode = async () => {
+    try {
+      const response = await fetch('/api/medical-devices/next-code?type=DIAGNOSTIC_DEVICE');
+      if (response.ok) {
+        const { nextCode } = await response.json();
+        setNextDeviceCode(nextCode);
+      }
+    } catch (error) {
+      console.error('Error fetching next device code:', error);
+    }
+  };
+
   const form = useForm<DiagnosticDeviceFormValues>({
     resolver: zodResolver(diagnosticDeviceSchema),
     defaultValues: {
       id: initialData?.id || undefined,
       ...initialData,
+      deviceCode: isEditMode ? initialData?.deviceCode : nextDeviceCode,
       type: "DIAGNOSTIC_DEVICE",
       brand: initialData?.brand || '',
       model: initialData?.model || '',
@@ -99,6 +122,12 @@ export function DiagnosticDeviceForm({ initialData, onSubmit, stockLocations, is
       status: initialData?.status || "ACTIVE"
     },
   });
+
+  useEffect(() => {
+    if (!isEditMode && nextDeviceCode) {
+      form.setValue('deviceCode', nextDeviceCode);
+    }
+  }, [nextDeviceCode, form, isEditMode]);
 
   const handleSubmit = async (values: DiagnosticDeviceFormValues) => {
     try {
@@ -173,6 +202,33 @@ export function DiagnosticDeviceForm({ initialData, onSubmit, stockLocations, is
                 <TabsContent value="basic">
                   <Card>
                     <CardContent className="space-y-4 pt-4">
+                      <FormField
+                        control={form.control}
+                        name="deviceCode"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Code de l'appareil</FormLabel>
+                            <FormControl>
+                              <div className="flex items-center space-x-2">
+                                <Input
+                                  {...field}
+                                  value={field.value || (isEditMode ? 'Code existant' : nextDeviceCode || 'Génération...')}
+                                  readOnly
+                                  className="bg-gray-50 font-mono text-lg font-semibold text-blue-600"
+                                  placeholder="Code automatique..."
+                                />
+                                {!isEditMode && (
+                                  <div className="text-sm text-gray-500 whitespace-nowrap">
+                                    Auto-généré
+                                  </div>
+                                )}
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
                       <FormField
                         control={form.control}
                         name="name"

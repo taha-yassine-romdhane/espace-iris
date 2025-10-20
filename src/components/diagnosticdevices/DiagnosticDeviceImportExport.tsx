@@ -36,6 +36,7 @@ interface ValidationError {
 }
 
 interface DiagnosticDeviceRow {
+  deviceCode?: string;
   name: string;
   type: string;
   brand?: string;
@@ -64,6 +65,7 @@ export function DiagnosticDeviceImportExport({ onImportSuccess, stockLocations }
     const firstLocationName = stockLocations.length > 0 ? stockLocations[0].name : 'Bureau Principal';
     return [
       {
+        deviceCode: 'DIAG0001',
         name: 'Polygraphe du sommeil',
         type: 'DIAGNOSTIC_DEVICE',
         brand: 'ResMed',
@@ -77,6 +79,7 @@ export function DiagnosticDeviceImportExport({ onImportSuccess, stockLocations }
         status: 'ACTIVE'
       },
       {
+        deviceCode: 'DIAG0002',
         name: 'Polysomnographe',
         type: 'DIAGNOSTIC_DEVICE',
         brand: 'Nihon Kohden',
@@ -101,6 +104,7 @@ export function DiagnosticDeviceImportExport({ onImportSuccess, stockLocations }
     // Add headers styling and instructions
     const locationNames = stockLocations.map(loc => loc.name).join(', ');
     const headers = [
+      'Code Appareil (DIAG0001, DIAG0002, etc.)',
       'Nom (obligatoire)',
       'Type (DIAGNOSTIC_DEVICE)',
       'Marque',
@@ -202,6 +206,9 @@ export function DiagnosticDeviceImportExport({ onImportSuccess, stockLocations }
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // IMMEDIATELY close the import dialog before processing
+    setIsImportOpen(false);
+
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
@@ -217,24 +224,28 @@ export function DiagnosticDeviceImportExport({ onImportSuccess, stockLocations }
             description: 'Le fichier Excel doit contenir au moins une ligne de données',
             variant: 'destructive',
           });
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
           return;
         }
 
         // Skip header row and convert to objects, filter out empty rows
         const rows = jsonData.slice(1)
-          .filter((row: any) => row[0] && row[0].toString().trim() !== '') // Only rows with a name
+          .filter((row: any) => row[1] && row[1].toString().trim() !== '') // Only rows with a name (now in column 1)
           .map((row: any) => ({
-            name: row[0]?.toString().trim() || '',
-            type: row[1]?.toString().trim() || 'DIAGNOSTIC_DEVICE',
-            brand: row[2]?.toString().trim() || '',
-            model: row[3]?.toString().trim() || '',
-            serialNumber: row[4]?.toString().trim() || '',
-            stockLocationName: row[5]?.toString().trim() || '',
-            purchasePrice: row[6] ? Number(row[6]) : undefined,
-            sellingPrice: row[7] ? Number(row[7]) : undefined,
-            technicalSpecs: row[8]?.toString().trim() || '',
-            configuration: row[9]?.toString().trim() || '',
-            status: row[10]?.toString().trim() || 'ACTIVE',
+            deviceCode: (row[0] && row[0].toString().trim()) || undefined,
+            name: row[1]?.toString().trim() || '',
+            type: row[2]?.toString().trim() || 'DIAGNOSTIC_DEVICE',
+            brand: row[3]?.toString().trim() || '',
+            model: row[4]?.toString().trim() || '',
+            serialNumber: row[5]?.toString().trim() || '',
+            stockLocationName: row[6]?.toString().trim() || '',
+            purchasePrice: row[7] ? Number(row[7]) : undefined,
+            sellingPrice: row[8] ? Number(row[8]) : undefined,
+            technicalSpecs: row[9]?.toString().trim() || '',
+            configuration: row[10]?.toString().trim() || '',
+            status: row[11]?.toString().trim() || 'ACTIVE',
           })) as DiagnosticDeviceRow[];
 
         // Validate all rows
@@ -247,13 +258,23 @@ export function DiagnosticDeviceImportExport({ onImportSuccess, stockLocations }
         if (allErrors.length > 0) {
           setValidationErrors(allErrors);
           setShowErrorDialog(true);
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
           return;
         }
 
         // Show preview if validation passes
         setPreviewData(rows);
-        setShowPreviewDialog(true);
-        
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+
+        // Small delay to ensure import dialog closes before preview opens
+        setTimeout(() => {
+          setShowPreviewDialog(true);
+        }, 300);
+
       } catch (error) {
         console.error('Error reading file:', error);
         toast({
@@ -261,6 +282,9 @@ export function DiagnosticDeviceImportExport({ onImportSuccess, stockLocations }
           description: 'Erreur lors de la lecture du fichier Excel',
           variant: 'destructive',
         });
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
       }
     };
     reader.readAsArrayBuffer(file);
@@ -275,6 +299,7 @@ export function DiagnosticDeviceImportExport({ onImportSuccess, stockLocations }
         );
 
         return {
+          deviceCode: row.deviceCode || null,
           name: row.name,
           type: row.type || 'DIAGNOSTIC_DEVICE',
           brand: row.brand || null,
@@ -468,7 +493,12 @@ export function DiagnosticDeviceImportExport({ onImportSuccess, stockLocations }
 
       {/* Preview Dialog */}
       <Dialog open={showPreviewDialog} onOpenChange={setShowPreviewDialog}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent
+          className="max-w-4xl max-h-[80vh] overflow-y-auto"
+          onInteractOutside={(e) => e.preventDefault()}
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle>Aperçu de l'importation</DialogTitle>
             <DialogDescription>
@@ -480,6 +510,7 @@ export function DiagnosticDeviceImportExport({ onImportSuccess, stockLocations }
               <table className="w-full border-collapse border border-gray-300">
                 <thead>
                   <tr className="bg-gray-50">
+                    <th className="border border-gray-300 p-2 text-left">Code</th>
                     <th className="border border-gray-300 p-2 text-left">Nom</th>
                     <th className="border border-gray-300 p-2 text-left">Marque</th>
                     <th className="border border-gray-300 p-2 text-left">Modèle</th>
@@ -491,6 +522,7 @@ export function DiagnosticDeviceImportExport({ onImportSuccess, stockLocations }
                 <tbody>
                   {previewData.slice(0, 10).map((row, index) => (
                     <tr key={index}>
+                      <td className="border border-gray-300 p-2">{row.deviceCode || '-'}</td>
                       <td className="border border-gray-300 p-2">{row.name}</td>
                       <td className="border border-gray-300 p-2">{row.brand}</td>
                       <td className="border border-gray-300 p-2">{row.model}</td>

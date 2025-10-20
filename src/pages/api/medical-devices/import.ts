@@ -50,6 +50,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Create the medical device
         const newDevice = await prisma.medicalDevice.create({
           data: {
+            deviceCode: device.deviceCode,
             name: device.name,
             type: device.type || 'MEDICAL_DEVICE',
             brand: device.brand,

@@ -185,6 +185,9 @@ export function SparePartImportExport({ onImportSuccess, stockLocations }: Spare
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // IMMEDIATELY close the import dialog before processing
+    setIsImportOpen(false);
+
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
@@ -200,6 +203,10 @@ export function SparePartImportExport({ onImportSuccess, stockLocations }: Spare
             description: 'Le fichier Excel doit contenir au moins une ligne de données',
             variant: 'destructive',
           });
+          // Reset file input
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
           return;
         }
 
@@ -228,13 +235,26 @@ export function SparePartImportExport({ onImportSuccess, stockLocations }: Spare
         if (allErrors.length > 0) {
           setValidationErrors(allErrors);
           setShowErrorDialog(true);
+          // Reset file input
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
           return;
         }
 
         // Show preview if validation passes
         setPreviewData(rows);
-        setShowPreviewDialog(true);
-        
+
+        // Reset file input
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+
+        // Open preview dialog after a short delay to ensure import dialog is unmounted
+        setTimeout(() => {
+          setShowPreviewDialog(true);
+        }, 300);
+
       } catch (error) {
         console.error('Error reading file:', error);
         toast({
@@ -242,6 +262,10 @@ export function SparePartImportExport({ onImportSuccess, stockLocations }: Spare
           description: 'Erreur lors de la lecture du fichier Excel',
           variant: 'destructive',
         });
+        // Reset file input
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
       }
     };
     reader.readAsArrayBuffer(file);
@@ -437,7 +461,12 @@ export function SparePartImportExport({ onImportSuccess, stockLocations }: Spare
 
       {/* Preview Dialog */}
       <Dialog open={showPreviewDialog} onOpenChange={setShowPreviewDialog}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent
+          className="max-w-4xl max-h-[80vh] overflow-y-auto"
+          onInteractOutside={(e) => e.preventDefault()}
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle>Aperçu de l'importation</DialogTitle>
             <DialogDescription>

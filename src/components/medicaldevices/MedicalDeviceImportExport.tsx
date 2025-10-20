@@ -8,12 +8,10 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -36,6 +34,7 @@ interface ValidationError {
 }
 
 interface MedicalDeviceRow {
+  deviceCode?: string;
   name: string;
   type: string;
   brand?: string;
@@ -66,6 +65,7 @@ export function MedicalDeviceImportExport({ onImportSuccess, stockLocations }: M
     const firstLocationName = stockLocations.length > 0 ? stockLocations[0].name : 'Bureau Principal';
     return [
       {
+        deviceCode: 'APP0001',
         name: 'CPAP',
         type: 'MEDICAL_DEVICE',
         brand: 'Philips',
@@ -81,6 +81,7 @@ export function MedicalDeviceImportExport({ onImportSuccess, stockLocations }: M
         status: 'ACTIVE'
       },
       {
+        deviceCode: 'APP0002',
         name: 'VNI',
         type: 'MEDICAL_DEVICE',
         brand: 'ResMed',
@@ -107,6 +108,7 @@ export function MedicalDeviceImportExport({ onImportSuccess, stockLocations }: M
     // Add headers styling and instructions
     const locationNames = stockLocations.map(loc => loc.name).join(', ');
     const headers = [
+      'Code Appareil (APP0001, APP0002, etc.)',
       'Nom (CPAP, VNI, Concentrateur O², Vi, Bouteil O², Autre)',
       'Type (MEDICAL_DEVICE)',
       'Marque',
@@ -228,6 +230,9 @@ export function MedicalDeviceImportExport({ onImportSuccess, stockLocations }: M
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // IMMEDIATELY close the import dialog before processing
+    setIsImportOpen(false);
+
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
@@ -243,26 +248,31 @@ export function MedicalDeviceImportExport({ onImportSuccess, stockLocations }: M
             description: 'Le fichier Excel doit contenir au moins une ligne de données',
             variant: 'destructive',
           });
+          // Reset file input
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
           return;
         }
 
         // Skip header row and convert to objects, filter out empty rows
         const rows = jsonData.slice(1)
-          .filter((row: any) => row[0] && row[0].toString().trim() !== '') // Only rows with a name
+          .filter((row: any) => row[1] && row[1].toString().trim() !== '') // Only rows with a name (now in column 1)
           .map((row: any) => ({
-            name: row[0]?.toString().trim() || '',
-            type: row[1]?.toString().trim() || 'MEDICAL_DEVICE',
-            brand: row[2]?.toString().trim() || '',
-            model: row[3]?.toString().trim() || '',
-            serialNumber: row[4]?.toString().trim() || '',
-            stockLocationName: row[5]?.toString().trim() || '',
-            purchasePrice: row[6] ? Number(row[6]) : undefined,
-            sellingPrice: row[7] ? Number(row[7]) : undefined,
-            rentalPrice: row[8] ? Number(row[8]) : undefined,
-            technicalSpecs: row[9]?.toString().trim() || '',
-            availableForRent: row[10] ? (row[10].toString().toLowerCase() === 'true') : false,
-            requiresMaintenance: row[11] ? (row[11].toString().toLowerCase() === 'true') : false,
-            status: row[12]?.toString().trim() || 'ACTIVE',
+            deviceCode: (row[0] && row[0].toString().trim()) || undefined,
+            name: row[1]?.toString().trim() || '',
+            type: row[2]?.toString().trim() || 'MEDICAL_DEVICE',
+            brand: row[3]?.toString().trim() || '',
+            model: row[4]?.toString().trim() || '',
+            serialNumber: row[5]?.toString().trim() || '',
+            stockLocationName: row[6]?.toString().trim() || '',
+            purchasePrice: row[7] ? Number(row[7]) : undefined,
+            sellingPrice: row[8] ? Number(row[8]) : undefined,
+            rentalPrice: row[9] ? Number(row[9]) : undefined,
+            technicalSpecs: row[10]?.toString().trim() || '',
+            availableForRent: row[11] ? (row[11].toString().toLowerCase() === 'true') : false,
+            requiresMaintenance: row[12] ? (row[12].toString().toLowerCase() === 'true') : false,
+            status: row[13]?.toString().trim() || 'ACTIVE',
           })) as MedicalDeviceRow[];
 
         // Validate all rows
@@ -275,12 +285,25 @@ export function MedicalDeviceImportExport({ onImportSuccess, stockLocations }: M
         if (allErrors.length > 0) {
           setValidationErrors(allErrors);
           setShowErrorDialog(true);
+          // Reset file input
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
           return;
         }
 
         // Show preview if validation passes
         setPreviewData(rows);
-        setShowPreviewDialog(true);
+
+        // Reset file input
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+        
+        // Open preview dialog after a short delay to ensure import dialog is unmounted
+        setTimeout(() => {
+          setShowPreviewDialog(true);
+        }, 300);
         
       } catch (error) {
         console.error('Error reading file:', error);
@@ -289,6 +312,10 @@ export function MedicalDeviceImportExport({ onImportSuccess, stockLocations }: M
           description: 'Erreur lors de la lecture du fichier Excel',
           variant: 'destructive',
         });
+        // Reset file input
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
       }
     };
     reader.readAsArrayBuffer(file);
@@ -303,6 +330,7 @@ export function MedicalDeviceImportExport({ onImportSuccess, stockLocations }: M
         );
 
         return {
+          deviceCode: row.deviceCode || null,
           name: row.name,
           type: row.type || 'MEDICAL_DEVICE',
           brand: row.brand || null,
@@ -428,13 +456,17 @@ export function MedicalDeviceImportExport({ onImportSuccess, stockLocations }: M
       </Button>
 
       {/* Import Button */}
+      <Button 
+        variant="outline" 
+        className="flex items-center gap-2"
+        onClick={() => setIsImportOpen(true)}
+      >
+        <Upload className="h-4 w-4" />
+        Importer
+      </Button>
+
+      {/* Import Dialog */}
       <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
-        <DialogTrigger asChild>
-          <Button variant="outline" className="flex items-center gap-2">
-            <Upload className="h-4 w-4" />
-            Importer
-          </Button>
-        </DialogTrigger>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Importer des appareils médicaux</DialogTitle>
@@ -501,7 +533,7 @@ export function MedicalDeviceImportExport({ onImportSuccess, stockLocations }: M
       <Dialog open={showPreviewDialog} onOpenChange={setShowPreviewDialog}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Aperçu de l'importation</DialogTitle>
+            <DialogTitle>Aperçu de l&apos;importation</DialogTitle>
             <DialogDescription>
               {previewData.length} appareils médicaux seront importés
             </DialogDescription>
@@ -511,6 +543,7 @@ export function MedicalDeviceImportExport({ onImportSuccess, stockLocations }: M
               <table className="w-full border-collapse border border-gray-300">
                 <thead>
                   <tr className="bg-gray-50">
+                    <th className="border border-gray-300 p-2 text-left">Code</th>
                     <th className="border border-gray-300 p-2 text-left">Nom</th>
                     <th className="border border-gray-300 p-2 text-left">Marque</th>
                     <th className="border border-gray-300 p-2 text-left">Modèle</th>
@@ -522,6 +555,7 @@ export function MedicalDeviceImportExport({ onImportSuccess, stockLocations }: M
                 <tbody>
                   {previewData.slice(0, 10).map((row, index) => (
                     <tr key={index}>
+                      <td className="border border-gray-300 p-2">{row.deviceCode || '-'}</td>
                       <td className="border border-gray-300 p-2">{row.name}</td>
                       <td className="border border-gray-300 p-2">{row.brand}</td>
                       <td className="border border-gray-300 p-2">{row.model}</td>
@@ -549,7 +583,7 @@ export function MedicalDeviceImportExport({ onImportSuccess, stockLocations }: M
                 onClick={processImport}
                 disabled={isProcessing}
               >
-                {isProcessing ? 'Importation...' : 'Confirmer l\'importation'}
+                {isProcessing ? 'Importation...' : 'Confirmer l&apos;importation'}
               </Button>
             </div>
           </div>

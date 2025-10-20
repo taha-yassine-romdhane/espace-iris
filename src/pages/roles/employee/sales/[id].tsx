@@ -7,8 +7,6 @@ import {
   Edit2, 
   Save, 
   X,
-  Plus,
-  Trash2,
   Settings,
   CreditCard,
   Package,
@@ -25,7 +23,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/components/ui/use-toast';
 
@@ -36,9 +33,8 @@ import { ProductPaymentMatrixEnhanced } from '@/components/payment/components/Pr
 import ProductParameterDialog from '@/pages/roles/employee/dashboard/components/steps/product/ProductParameterDialog';
 
 // Additional icons
-import { Stethoscope, Phone } from 'lucide-react';
+import { Stethoscope } from 'lucide-react';
 
-interface SaleDetailsPageProps {}
 
 export default function EnhancedSaleDetailsPage() {
   const router = useRouter();
@@ -48,7 +44,6 @@ export default function EnhancedSaleDetailsPage() {
 
   // State for editing modes
   const [isEditingGeneral, setIsEditingGeneral] = useState(false);
-  const [isEditingProducts, setIsEditingProducts] = useState(false);
   const [isEditingPayments, setIsEditingPayments] = useState(false);
   const [editedSale, setEditedSale] = useState<any>(null);
   
@@ -543,7 +538,7 @@ export default function EnhancedSaleDetailsPage() {
                             <div className="mt-4 p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg border border-green-200">
                               <div className="flex items-center gap-2 mb-3">
                                 <Settings className="h-4 w-4 text-green-600" />
-                                <p className="font-semibold text-green-900">Configuration de l'Appareil</p>
+                                <p className="font-semibold text-green-900">Configuration de l&apos;appareil</p>
                               </div>
                               <div className="grid grid-cols-2 gap-3">
                                 {item.deviceConfiguration.debit && (
