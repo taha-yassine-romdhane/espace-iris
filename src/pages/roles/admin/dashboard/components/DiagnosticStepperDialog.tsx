@@ -305,8 +305,8 @@ export function DiagnosticStepperDialog({ isOpen, onClose }: DiagnosticStepperDi
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-5xl p-0 overflow-hidden">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+      <DialogContent className="max-w-5xl p-0 overflow-hidden" onInteractOutside={(e) => e.preventDefault()}>
         <DialogHeader className="px-6 py-4 border-b">
           <DialogTitle>Nouveau Diagnostic</DialogTitle>
         </DialogHeader>

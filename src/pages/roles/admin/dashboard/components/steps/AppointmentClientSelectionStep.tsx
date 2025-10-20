@@ -366,8 +366,13 @@ export function AppointmentClientSelectionStep({
       </div>
 
       {/* Create Patient Dialog */}
-      <Dialog open={isCreateFormOpen} onOpenChange={setIsCreateFormOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+      <Dialog open={isCreateFormOpen} onOpenChange={(open) => !open && setIsCreateFormOpen(false)} modal>
+        <DialogContent
+          className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
+          onInteractOutside={(e) => e.preventDefault()}
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <UserPlus className="h-5 w-5" />

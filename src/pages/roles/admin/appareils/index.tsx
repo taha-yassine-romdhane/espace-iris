@@ -367,11 +367,11 @@ export default function AppareilsPage() {
                 <Dialog
                   open={isOpen}
                   onOpenChange={(open) => {
+                    setIsOpen(open);
                     if (!open) {
                       setCurrentProduct(null);
                       setIsEditMode(false);
                     }
-                    setIsOpen(open);
                   }}
                 >
                   <DialogTrigger asChild>
@@ -380,7 +380,7 @@ export default function AppareilsPage() {
                       Ajouter un appareil médical
                     </Button>
                   </DialogTrigger>
-                <DialogContent className="max-w-4xl">
+                <DialogContent className="max-w-4xl" onInteractOutside={(e) => e.preventDefault()}>
                   <DialogHeader>
                     <DialogTitle>
                       {isEditMode ? "Modifier l'appareil médical" : "Ajouter un appareil médical"}
@@ -420,11 +420,11 @@ export default function AppareilsPage() {
                 <Dialog
                   open={isOpen}
                   onOpenChange={(open) => {
+                    setIsOpen(open);
                     if (!open) {
                       setCurrentProduct(null);
                       setIsEditMode(false);
                     }
-                    setIsOpen(open);
                   }}
                 >
                   <DialogTrigger asChild>
@@ -433,7 +433,7 @@ export default function AppareilsPage() {
                       Ajouter un appareil de diagnostic
                     </Button>
                   </DialogTrigger>
-                <DialogContent className="max-w-4xl">
+                <DialogContent className="max-w-4xl" onInteractOutside={(e) => e.preventDefault()}>
                   <DialogHeader>
                     <DialogTitle>
                       {isEditMode ? "Modifier l'appareil de diagnostic" : "Ajouter un appareil de diagnostic"}
@@ -476,11 +476,11 @@ export default function AppareilsPage() {
                 <Dialog
                   open={isOpen}
                   onOpenChange={(open) => {
+                    setIsOpen(open);
                     if (!open) {
                       setCurrentProduct(null);
                       setIsEditMode(false);
                     }
-                    setIsOpen(open);
                   }}
                 >
                   <DialogTrigger asChild>
@@ -489,7 +489,7 @@ export default function AppareilsPage() {
                       Ajouter un accessoire
                     </Button>
                   </DialogTrigger>
-                <DialogContent className="max-w-4xl">
+                <DialogContent className="max-w-4xl" onInteractOutside={(e) => e.preventDefault()}>
                   <DialogHeader>
                     <DialogTitle>
                       {isEditMode ? "Modifier l'accessoire" : "Ajouter un accessoire"}
@@ -531,11 +531,11 @@ export default function AppareilsPage() {
                 <Dialog
                   open={isOpen}
                   onOpenChange={(open) => {
+                    setIsOpen(open);
                     if (!open) {
                       setCurrentProduct(null);
                       setIsEditMode(false);
                     }
-                    setIsOpen(open);
                   }}
                 >
                   <DialogTrigger asChild>
@@ -544,7 +544,7 @@ export default function AppareilsPage() {
                       Ajouter une pièce de rechange
                     </Button>
                   </DialogTrigger>
-                <DialogContent className="max-w-4xl">
+                <DialogContent className="max-w-4xl" onInteractOutside={(e) => e.preventDefault()}>
                   <DialogHeader>
                     <DialogTitle>
                       {isEditMode ? "Modifier la pièce de rechange" : "Ajouter une pièce de rechange"}
@@ -581,7 +581,7 @@ export default function AppareilsPage() {
                     Ajouter un emplacement
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent onInteractOutside={(e) => e.preventDefault()}>
                   <DialogHeader>
                     <DialogTitle>Ajouter un emplacement</DialogTitle>
                   </DialogHeader>
@@ -611,7 +611,7 @@ export default function AppareilsPage() {
       </AlertDialog>
 
       <Dialog open={isRepairDialogOpen} onOpenChange={setIsRepairDialogOpen}>
-        <DialogContent className="max-w-[600px] max-h-[800px] rounded-lg overflow-y-auto">
+        <DialogContent className="max-w-[600px] max-h-[800px] rounded-lg overflow-y-auto" onInteractOutside={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>Enregistrer une réparation</DialogTitle>
             <DialogDescription>

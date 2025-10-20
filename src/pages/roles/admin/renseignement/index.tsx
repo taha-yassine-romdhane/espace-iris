@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/router';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
@@ -745,7 +746,7 @@ export default function RenseignementPage() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <h4 className="font-medium text-sm">Tranche d'âge</h4>
+                    <h4 className="font-medium text-sm">Tranche d&apos;age</h4>
                     <Select
                       value={filters.ageRange}
                       onValueChange={(value) => handleFilterChange('ageRange', value)}
@@ -911,10 +912,10 @@ export default function RenseignementPage() {
          )}
        </div>
 
-      {isOpen && (
-        <div className="fixed inset-0 flex items-center justify-center z-50">
+      {isOpen && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 flex items-center justify-center z-[200]">
           {/* Modal backdrop with blur effect */}
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsOpen(false)}></div>
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
 
           {/* Modal container */}
           <div className="relative bg-white rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col m-4">
@@ -955,7 +956,8 @@ export default function RenseignementPage() {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <Suspense fallback={<LoadingFallback />}>

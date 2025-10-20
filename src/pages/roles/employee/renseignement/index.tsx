@@ -601,7 +601,7 @@ export default function RenseignementPage() {
       {isOpen && (
         <div className="fixed inset-0 flex items-center justify-center z-50">
           {/* Modal backdrop with blur effect */}
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsOpen(false)}></div>
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
           
           {/* Modal container */}
           <div className="relative bg-white rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col m-4">

@@ -579,8 +579,8 @@ const UsersPage = () => {
           className="hidden"
         />
 
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogContent>
+        <Dialog open={isOpen} onOpenChange={(open) => !open && setIsOpen(false)}>
+          <DialogContent onInteractOutside={(e) => e.preventDefault()}>
             <DialogHeader>
               <DialogTitle>{isEditMode ? 'Modifier l\'utilisateur' : 'Ajouter un utilisateur'}</DialogTitle>
             </DialogHeader>

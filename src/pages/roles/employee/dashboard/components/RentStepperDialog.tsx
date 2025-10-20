@@ -227,8 +227,8 @@ export function RentStepperDialog({ isOpen, onClose }: RentStepperDialogProps) {
   });
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-[95vw] w-full p-0 overflow-hidden max-h-[95vh]">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+      <DialogContent className="max-w-[95vw] w-full p-0 overflow-hidden max-h-[95vh]" onInteractOutside={(e) => e.preventDefault()}>
         <div className="flex h-[90vh]">
           {/* Sidebar */}
           <RentStepperSidebar

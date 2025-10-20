@@ -310,8 +310,8 @@ export function SaleStepperDialog({ isOpen, onClose, action }: StepperDialogProp
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-[95vw] w-full min-h-[85vh] max-h-[95vh] overflow-hidden p-0 flex flex-col">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+      <DialogContent className="max-w-[95vw] w-full min-h-[85vh] max-h-[95vh] overflow-hidden p-0 flex flex-col" onInteractOutside={(e) => e.preventDefault()}>
         <div className="flex h-full overflow-hidden">
           {/* Sale Stepper Sidebar */}
           {action === "vente" && (
