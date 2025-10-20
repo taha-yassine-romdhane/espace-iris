@@ -15,24 +15,28 @@ interface ProductParameterDialogProps {
   onClose: () => void;
   product: any;
   onSaveParameters: (productId: string, parameters: any) => void;
+  initialParameters?: any;
 }
 
 export default function ProductParameterDialog({
   isOpen,
   onClose,
   product,
-  onSaveParameters
+  onSaveParameters,
+  initialParameters
 }: ProductParameterDialogProps) {
-  const [parameters, setParameters] = useState<any>(product?.parameters || {});
+  const [parameters, setParameters] = useState<any>(initialParameters || product?.parameters || {});
 
   useEffect(() => {
-    // Update parameters when product changes
-    if (product?.parameters) {
+    // Update parameters when product or initialParameters changes
+    if (initialParameters) {
+      setParameters(initialParameters);
+    } else if (product?.parameters) {
       setParameters(product.parameters);
     } else {
       setParameters({});
     }
-  }, [product]);
+  }, [product, initialParameters]);
 
   const handleSubmit = (values: any) => {
     if (product?.id) {
