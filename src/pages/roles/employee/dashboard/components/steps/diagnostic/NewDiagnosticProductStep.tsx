@@ -1,13 +1,11 @@
 import { Button } from "@/components/ui/button";
-import { 
-  Plus, 
-  ChevronRight, 
+import {
+  Plus,
+  ChevronRight,
   ChevronLeft,
   Stethoscope
 } from "lucide-react";
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { DiagnosticDeviceForm } from "@/components/appareils/forms/DiagnosticDeviceForm";
 import { useQuery } from "@tanstack/react-query";
 
 // Import our new components
@@ -37,21 +35,8 @@ export function NewDiagnosticProductStep({
   onResultDueDateChange = () => {}
 }: DiagnosticProductStepProps) {
   const [productDialogOpen, setProductDialogOpen] = useState(false);
-  const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const [isParameterDialogOpen, setIsParameterDialogOpen] = useState(false);
   const [selectedProductIndex, setSelectedProductIndex] = useState<number | null>(null);
-  
-  // Fetch stock locations for forms
-  const { data: stockLocations } = useQuery({
-    queryKey: ["stock-locations"],
-    queryFn: async () => {
-      const response = await fetch("/api/stock-locations");
-      if (!response.ok) {
-        throw new Error("Failed to fetch stock locations");
-      }
-      return response.json();
-    },
-  });
 
   // Fetch ONLY diagnostic devices assigned to employee's stock locations
   const { data: diagnosticProducts, isLoading } = useQuery({
@@ -70,10 +55,6 @@ export function NewDiagnosticProductStep({
 
   const handleOpenProductDialog = () => {
     setProductDialogOpen(true);
-  };
-
-  const handleCreateProduct = () => {
-    setIsCreateFormOpen(true);
   };
 
   const handleOpenParameterDialog = async (index: number) => {
@@ -102,14 +83,6 @@ export function NewDiagnosticProductStep({
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-semibold text-gray-900">Équipements de Diagnostic</h2>
-        <Button
-          onClick={handleCreateProduct}
-          variant="outline"
-          className="flex items-center gap-1 text-green-700 border-green-200 hover:bg-green-50"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Créer un Équipement</span>
-        </Button>
       </div>
 
       <div className="flex justify-between">
@@ -172,61 +145,6 @@ export function NewDiagnosticProductStep({
         products={diagnosticProducts || []}
         isLoading={isLoading}
       />
-
-      {/* Create Form Dialog */}
-      {isCreateFormOpen && (
-        <Dialog open={isCreateFormOpen} onOpenChange={() => setIsCreateFormOpen(false)}>
-          <DialogContent className="max-w-4xl">
-            <DialogHeader>
-              <DialogTitle>Créer un Équipement de Diagnostic</DialogTitle>
-            </DialogHeader>
-            <div className="py-4">
-              <DiagnosticDeviceForm
-                onSubmit={async (data) => {
-                  try {
-                    // First save the device to the database
-                    const response = await fetch('/api/medical-devices', {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json',
-                      },
-                      body: JSON.stringify({ ...data, type: "DIAGNOSTIC_DEVICE" }),
-                    });
-                    
-                    if (!response.ok) {
-                      // Handle specific error cases
-                      const errorData = await response.json();
-                      
-                      if (response.status === 409 && errorData.code === 'P2002') {
-                        // Handle duplicate serial number
-                        const field = errorData.field || 'serialNumber';
-                        const fieldName = field === 'serialNumber' ? 'Numéro de série' : field;
-                        
-                        // Show user-friendly error message
-                        alert(`${fieldName} déjà utilisé. Veuillez utiliser une valeur unique.`);
-                        return;
-                      }
-                      
-                      throw new Error(errorData.error || 'Failed to create diagnostic device');
-                    }
-                    
-                    // Get the newly created device with its ID from the response
-                    const savedDevice = await response.json();
-                    
-                    // Now select the device with its database ID
-                    onSelectProduct(savedDevice);
-                    setIsCreateFormOpen(false);
-                  } catch (error) {
-                    console.error('Error creating diagnostic device:', error);
-                    alert('Échec de la création de l\'appareil de diagnostic. Veuillez réessayer.');
-                  }
-                }}
-                stockLocations={stockLocations || []}
-              />
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
 
       {/* Parameter Form Dialog */}
       {isParameterDialogOpen && selectedProductIndex !== null && (

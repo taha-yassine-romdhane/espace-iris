@@ -2,16 +2,15 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Plus, 
-  ChevronRight, 
+import {
+  Plus,
+  ChevronRight,
   ChevronLeft,
   Stethoscope,
   Puzzle,
   Search,
   X,
-  Settings,
-  PlusCircle
+  Settings
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ProductParameterDialog from "./ProductParameterDialog";
@@ -28,16 +27,14 @@ interface PatientProductSelectionProps {
 }
 
 // Product Type Button Component
-const ProductTypeButton = ({ type, onSelect, onCreateNew }: {
+const ProductTypeButton = ({ type, onSelect }: {
   type: {
     id: string;
     label: string;
     selectLabel: string;
-    createLabel: string;
     icon: React.ElementType;
   };
   onSelect: () => void;
-  onCreateNew: () => void;
 }) => {
   return (
     <div className="space-y-3">
@@ -46,9 +43,9 @@ const ProductTypeButton = ({ type, onSelect, onCreateNew }: {
         <type.icon className="h-5 w-5 text-green-600" />
         <span className="font-semibold text-green-800">{type.label}</span>
       </div>
-      
+
       <div className="flex flex-col gap-2">
-        {/* Select Button - Primary Action */}
+        {/* Select Button - Only Action */}
         <Button
           variant="default"
           size="sm"
@@ -64,26 +61,6 @@ const ProductTypeButton = ({ type, onSelect, onCreateNew }: {
           <div className="flex-1 text-left">
             <div className="text-sm font-semibold">{type.selectLabel}</div>
             <div className="text-xs text-green-100">Choisir depuis le stock</div>
-          </div>
-        </Button>
-        
-        {/* Create Button - Secondary Action */}
-        <Button
-          variant="outline"
-          size="sm"
-          className={cn(
-            "w-full h-12 flex items-center gap-3 px-4",
-            "border-2 border-green-300 hover:border-green-500",
-            "bg-white hover:bg-green-50 text-green-700",
-            "transition-all duration-200",
-            "rounded-lg font-medium"
-          )}
-          onClick={onCreateNew}
-        >
-          <PlusCircle className="h-5 w-5 flex-shrink-0" />
-          <div className="flex-1 text-left">
-            <div className="text-sm font-semibold">{type.createLabel}</div>
-            <div className="text-xs text-green-500">Ajouter nouveau produit</div>
           </div>
         </Button>
       </div>
@@ -240,18 +217,16 @@ export function PatientProductSelection({
   
   // Define the available product types for patients
   const productTypes = [
-    { 
-      id: "medical-device", 
-      label: "Appareils Médicaux", 
-      selectLabel: "Sélectionner un appareil", 
-      createLabel: "Créer un nouvel appareil",
+    {
+      id: "medical-device",
+      label: "Appareils Médicaux",
+      selectLabel: "Sélectionner un appareil",
       icon: Stethoscope
     },
-    { 
-      id: "accessory", 
-      label: "Accessoires", 
-      selectLabel: "Sélectionner un accessoire", 
-      createLabel: "Créer un nouvel accessoire",
+    {
+      id: "accessory",
+      label: "Accessoires",
+      selectLabel: "Sélectionner un accessoire",
       icon: Puzzle
     }
   ] as const;
@@ -305,11 +280,10 @@ export function PatientProductSelection({
       {/* Product Type Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {productTypes.map((type) => (
-          <ProductTypeButton 
-            key={type.id} 
-            type={type} 
+          <ProductTypeButton
+            key={type.id}
+            type={type}
             onSelect={() => onSelectProduct(type.id as "medical-device" | "accessory")}
-            onCreateNew={() => onCreateProduct(type.id as "medical-device" | "accessory")}
           />
         ))}
       </div>
