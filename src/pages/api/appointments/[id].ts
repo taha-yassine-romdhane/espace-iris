@@ -85,6 +85,12 @@ async function handleGetAppointment(
             lastName: true,
           },
         },
+        diagnostic: {
+          select: {
+            id: true,
+            diagnosticCode: true,
+          },
+        },
       },
     });
 
@@ -101,29 +107,35 @@ async function handleGetAppointment(
       notes: appointment.notes,
       priority: appointment.priority || 'NORMAL',
       status: appointment.status || 'SCHEDULED',
-      
+
       // Client information
       patient: appointment.patient ? {
         ...appointment.patient,
         fullName: `${appointment.patient.firstName} ${appointment.patient.lastName}`,
         detailedAddress: appointment.patient.detailedAddress,
       } : null,
-      
+
       company: appointment.company ? {
         ...appointment.company,
       } : null,
-      
+
       // Staff information
       assignedTo: appointment.assignedTo ? {
         ...appointment.assignedTo,
         fullName: `${appointment.assignedTo.firstName} ${appointment.assignedTo.lastName}`,
       } : null,
-      
+
       createdBy: appointment.createdBy ? {
         ...appointment.createdBy,
         fullName: `${appointment.createdBy.firstName} ${appointment.createdBy.lastName}`,
       } : null,
-      
+
+      // Linked records
+      diagnostic: appointment.diagnostic ? {
+        id: appointment.diagnostic.id,
+        diagnosticCode: appointment.diagnostic.diagnosticCode,
+      } : null,
+
       createdAt: appointment.createdAt,
       updatedAt: appointment.updatedAt,
     };

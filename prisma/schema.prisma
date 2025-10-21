@@ -363,42 +363,43 @@ model File {
 }
 
 model MedicalDevice {
-  id                  String                   @id @default(cuid())
-  deviceCode          String?                  @unique
-  name                String
-  type                String
-  installationDate    DateTime?
-  configuration       String?
-  patientId           String?
-  companyId           String?
-  stockQuantity       Int                      @default(1)
-  createdAt           DateTime                 @default(now())
-  updatedAt           DateTime                 @updatedAt
-  stockLocationId     String?
-  brand               String?
-  purchasePrice       Decimal?                 @db.Decimal(10, 2)
-  sellingPrice        Decimal?                 @db.Decimal(10, 2)
-  serialNumber        String?
-  technicalSpecs      String?
-  warranty            String?
-  destination         StockStatus              @default(FOR_SALE)
-  requiresMaintenance Boolean                  @default(false)
-  model               String?
-  description         String?
-  maintenanceInterval String?
-  rentalPrice         Decimal?                 @db.Decimal(10, 2)
-  location            String?
-  reservedUntil       DateTime?
-  status              DeviceStatus             @default(ACTIVE)
-  Diagnostic          Diagnostic[]
-  Company             Company?                 @relation(fields: [companyId], references: [id])
-  Patient             Patient?                 @relation(fields: [patientId], references: [id])
-  stockLocation       StockLocation?           @relation(fields: [stockLocationId], references: [id])
-  deviceParameters    MedicalDeviceParametre[]
-  Rental              Rental[]
-  RepairLog           RepairLog[]
-  saleItems           SaleItem[]
-  transferRequests    StockTransferRequest[]
+  id                       String                   @id @default(cuid())
+  deviceCode               String?                  @unique
+  name                     String
+  type                     String
+  installationDate         DateTime?
+  configuration            String?
+  patientId                String?
+  companyId                String?
+  stockQuantity            Int                      @default(1)
+  createdAt                DateTime                 @default(now())
+  updatedAt                DateTime                 @updatedAt
+  stockLocationId          String?
+  brand                    String?
+  purchasePrice            Decimal?                 @db.Decimal(10, 2)
+  sellingPrice             Decimal?                 @db.Decimal(10, 2)
+  serialNumber             String?
+  technicalSpecs           String?
+  warranty                 String?
+  destination              StockStatus              @default(FOR_SALE)
+  requiresMaintenance      Boolean                  @default(false)
+  model                    String?
+  description              String?
+  maintenanceInterval      String?
+  rentalPrice              Decimal?                 @db.Decimal(10, 2)
+  location                 String?
+  reservedUntil            DateTime?
+  status                   DeviceStatus             @default(ACTIVE)
+  reservedForDiagnosticId  String?                  // NEW: Link to diagnostic reservation
+  Diagnostic               Diagnostic[]
+  Company                  Company?                 @relation(fields: [companyId], references: [id])
+  Patient                  Patient?                 @relation(fields: [patientId], references: [id])
+  stockLocation            StockLocation?           @relation(fields: [stockLocationId], references: [id])
+  deviceParameters         MedicalDeviceParametre[]
+  Rental                   Rental[]
+  RepairLog                RepairLog[]
+  saleItems                SaleItem[]
+  transferRequests         StockTransferRequest[]
 }
 
 model DiagnosticResult {
@@ -427,10 +428,19 @@ model Diagnostic {
   followUpRequired Boolean           @default(false)
   performedById    String?
   status           DiagnosticStatus  @default(PENDING)
+
+  // NEW FIELDS for reservation and visit type
+  diagnosticType   String            @default("IN_CLINIC") // "IN_CLINIC" | "HOME_VISIT"
+  appointmentId    String?           @unique // Link to appointment if home visit
+  reservationDate  DateTime?         // When device is reserved
+  resultDueDate    DateTime?         // When results are expected
+  fileUrls         String[]          @default([]) // Document URLs
+
   Company          Company?          @relation(fields: [companyId], references: [id])
   medicalDevice    MedicalDevice     @relation(fields: [medicalDeviceId], references: [id])
   patient          Patient           @relation(fields: [patientId], references: [id])
   performedBy      User?             @relation("PerformedDiagnostics", fields: [performedById], references: [id])
+  appointment      Appointment?      @relation(fields: [appointmentId], references: [id])
   result           DiagnosticResult?
   Task             Task[]
 }
@@ -666,10 +676,15 @@ model Appointment {
   status          AppointmentStatus   @default(SCHEDULED)
   assignedToId    String?
   createdById     String
+
+  // NEW FIELD: Link back to diagnostic if this is a diagnostic visit
+  diagnosticId    String?             @unique // Link to diagnostic record
+
   assignedTo      User?               @relation("AssignedAppointments", fields: [assignedToId], references: [id])
   company         Company?            @relation(fields: [companyId], references: [id])
   createdBy       User                @relation("CreatedAppointments", fields: [createdById], references: [id])
   patient         Patient?            @relation(fields: [patientId], references: [id])
+  diagnostic      Diagnostic?         // Relation to diagnostic
 
   @@index([scheduledDate])
   @@index([status])
@@ -887,6 +902,7 @@ enum DeviceStatus {
   RETIRED
   RESERVED
   SOLD
+  EN_DIAGNOSTIC
 }
 
 enum StockStatus {

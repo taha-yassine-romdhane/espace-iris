@@ -169,7 +169,6 @@ const DiagnosticTable = React.memo(({ onViewDetails, onEnterResults, onAddDocume
   const [severityFilter, setSeverityFilter] = useState<string>("all");
   const [regionFilter, setRegionFilter] = useState<string>("all");
   const [technicianFilter, setTechnicianFilter] = useState<string>("all");
-  const [supervisorFilter, setSupervisorFilter] = useState<string>("all");
   const [dateFilter, setDateFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("date");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
@@ -213,11 +212,7 @@ const DiagnosticTable = React.memo(({ onViewDetails, onEnterResults, onAddDocume
         case 'region':
           return diagnostic.patient?.governorate as string | null;
         case 'technician':
-          return diagnostic.patient?.technician ? 
-            `${diagnostic.patient.technician.firstName} ${diagnostic.patient.technician.lastName}`.trim() : null;
-        case 'supervisor':
-          return diagnostic.patient?.supervisor ? 
-            `${diagnostic.patient.supervisor.firstName} ${diagnostic.patient.supervisor.lastName}`.trim() : null;
+          return diagnostic.performedBy || null;
         default:
           return null;
       }
@@ -228,7 +223,6 @@ const DiagnosticTable = React.memo(({ onViewDetails, onEnterResults, onAddDocume
 
   const uniqueRegions = getUniqueValues('region');
   const uniqueTechnicians = getUniqueValues('technician');
-  const uniqueSupervisors = getUniqueValues('supervisor');
 
   // Function to format date
   const formatDate = (dateString: string | null) => {
@@ -435,18 +429,7 @@ const DiagnosticTable = React.memo(({ onViewDetails, onEnterResults, onAddDocume
     // Apply technician filter
     if (technicianFilter !== "all") {
       filtered = filtered.filter((diagnostic: any) => {
-        const technicianName = diagnostic.patient?.technician ? 
-          `${diagnostic.patient.technician.firstName} ${diagnostic.patient.technician.lastName}`.trim() : null;
-        return technicianName === technicianFilter;
-      });
-    }
-
-    // Apply supervisor filter
-    if (supervisorFilter !== "all") {
-      filtered = filtered.filter((diagnostic: any) => {
-        const supervisorName = diagnostic.patient?.supervisor ? 
-          `${diagnostic.patient.supervisor.firstName} ${diagnostic.patient.supervisor.lastName}`.trim() : null;
-        return supervisorName === supervisorFilter;
+        return diagnostic.performedBy === technicianFilter;
       });
     }
 
@@ -490,7 +473,7 @@ const DiagnosticTable = React.memo(({ onViewDetails, onEnterResults, onAddDocume
 
     setFilteredDiagnostics(filtered);
     setCurrentPage(1); // Reset to first page when filtering
-  }, [diagnosticOperations, searchTerm, regionFilter, technicianFilter, supervisorFilter, dateFilter, severityFilter, sortBy, sortOrder]);
+  }, [diagnosticOperations, searchTerm, regionFilter, technicianFilter, dateFilter, severityFilter, sortBy, sortOrder]);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -626,7 +609,7 @@ const DiagnosticTable = React.memo(({ onViewDetails, onEnterResults, onAddDocume
           </div>
 
           {/* Filters - Optimized for tablets */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {/* Region Filter */}
             <select
               value={regionFilter}
@@ -651,20 +634,6 @@ const DiagnosticTable = React.memo(({ onViewDetails, onEnterResults, onAddDocume
               {uniqueTechnicians.map((technician) => (
                 <option key={technician} value={technician}>
                   {technician}
-                </option>
-              ))}
-            </select>
-
-            {/* Supervisor Filter */}
-            <select
-              value={supervisorFilter}
-              onChange={(e) => setSupervisorFilter(e.target.value)}
-              className="px-4 py-3 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-[#1e3a8a] bg-white text-sm shadow-sm hover:shadow-md transition-all duration-200"
-            >
-              <option value="all">Tous les superviseurs</option>
-              {uniqueSupervisors.map((supervisor) => (
-                <option key={supervisor} value={supervisor}>
-                  {supervisor}
                 </option>
               ))}
             </select>
@@ -908,7 +877,6 @@ const DiagnosticTable = React.memo(({ onViewDetails, onEnterResults, onAddDocume
                   <TableHead>Appareil</TableHead>
                   <TableHead>Responsable</TableHead>
                   <TableHead>Région</TableHead>
-                  <TableHead>Superviseur</TableHead>
                   <TableHead 
                     className="cursor-pointer hover:bg-slate-100 transition-colors"
                     onClick={() => handleSort("date")}
@@ -995,26 +963,7 @@ const DiagnosticTable = React.memo(({ onViewDetails, onEnterResults, onAddDocume
                           {operation.patient?.delegation || ''}
                         </div>
                       </TableCell>
-                      
-                      <TableCell>
-                        <div className="text-sm text-slate-900">
-                          {operation.patient?.supervisor ? (
-                            <div className="flex items-center space-x-2">
-                              <div className="h-6 w-6 rounded-full bg-orange-100 flex items-center justify-center">
-                                <span className="text-orange-700 text-xs">S</span>
-                              </div>
-                              <div className="text-sm">
-                                <div className="font-medium">
-                                  {`${operation.patient.supervisor.firstName} ${operation.patient.supervisor.lastName}`.trim()}
-                                </div>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="text-sm text-slate-500">Non assigné</div>
-                          )}
-                        </div>
-                      </TableCell>
-                      
+
                       <TableCell>
                         <div className="flex items-start gap-2">
                           <Clock className="h-5 w-5 text-blue-600 mt-0.5" />

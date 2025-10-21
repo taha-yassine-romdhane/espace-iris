@@ -18,6 +18,9 @@ import { TabSwitcher } from "./components/TabSwitcher";
 function DashboardPage() {
   const [selectedAction, setSelectedAction] = useState<"rdv" | "diagnostique" | "vente" | "location" | null>(null);
   const [activeTab, setActiveTab] = useState<"appointments" | "diagnostics" | "sales" | "rentals">("appointments");
+  const [diagnosticFromAppointment, setDiagnosticFromAppointment] = useState<{ patientId: string; appointmentId: string; scheduledDate: Date } | null>(null);
+  const [saleFromAppointment, setSaleFromAppointment] = useState<{ patientId?: string; companyId?: string; appointmentId: string } | null>(null);
+  const [rentalFromAppointment, setRentalFromAppointment] = useState<{ patientId?: string; companyId?: string; appointmentId: string } | null>(null);
   const router = useRouter();
 
 
@@ -68,8 +71,28 @@ function DashboardPage() {
         
         {/* Tables */}
         {activeTab === "appointments" && (
-          <AppointmentsTable 
+          <AppointmentsTable
             onViewDetails={(id) => router.push(`/roles/admin/appointments/${id}`)}
+            onCreateDiagnostic={(patientId, appointmentId, scheduledDate) => {
+              setDiagnosticFromAppointment({ patientId, appointmentId, scheduledDate });
+              setSelectedAction("diagnostique");
+            }}
+            onCreateSale={(clientId, clientType, appointmentId) => {
+              if (clientType === 'patient') {
+                setSaleFromAppointment({ patientId: clientId, appointmentId });
+              } else {
+                setSaleFromAppointment({ companyId: clientId, appointmentId });
+              }
+              setSelectedAction("vente");
+            }}
+            onCreateRental={(clientId, clientType, appointmentId) => {
+              if (clientType === 'patient') {
+                setRentalFromAppointment({ patientId: clientId, appointmentId });
+              } else {
+                setRentalFromAppointment({ companyId: clientId, appointmentId });
+              }
+              setSelectedAction("location");
+            }}
           />
         )}
         
@@ -105,22 +128,40 @@ function DashboardPage() {
         {selectedAction === "diagnostique" && (
           <DiagnosticStepperDialog
             isOpen={true}
-            onClose={() => setSelectedAction(null)}
+            onClose={() => {
+              setSelectedAction(null);
+              setDiagnosticFromAppointment(null);
+            }}
+            preSelectedPatientId={diagnosticFromAppointment?.patientId}
+            appointmentId={diagnosticFromAppointment?.appointmentId}
+            scheduledDate={diagnosticFromAppointment?.scheduledDate}
           />
         )}
 
         {selectedAction === "vente" && (
           <SaleStepperDialog
             isOpen={true}
-            onClose={() => setSelectedAction(null)}
+            onClose={() => {
+              setSelectedAction(null);
+              setSaleFromAppointment(null);
+            }}
             action={selectedAction}
+            preSelectedClientId={saleFromAppointment?.patientId || saleFromAppointment?.companyId}
+            preSelectedClientType={saleFromAppointment?.patientId ? "patient" : "societe"}
+            appointmentId={saleFromAppointment?.appointmentId}
           />
         )}
         
         {selectedAction === "location" && (
           <RentStepperDialog
             isOpen={true}
-            onClose={() => setSelectedAction(null)}
+            onClose={() => {
+              setSelectedAction(null);
+              setRentalFromAppointment(null);
+            }}
+            preSelectedClientId={rentalFromAppointment?.patientId || rentalFromAppointment?.companyId}
+            preSelectedClientType={rentalFromAppointment?.patientId ? "patient" : "societe"}
+            appointmentId={rentalFromAppointment?.appointmentId}
           />
         )}
     </div>

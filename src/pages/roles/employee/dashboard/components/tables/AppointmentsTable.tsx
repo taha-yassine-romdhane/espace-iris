@@ -244,7 +244,7 @@ export function AppointmentsTable({}: AppointmentsTableProps) {
     switch (type) {
       case "DIAGNOSTIC_VISIT":
         return {
-          label: "Visite Diagnostique",
+          label: "Diagnostic",
           badge: "bg-purple-100 text-purple-800 border-purple-200",
           icon: <Home className="h-3 w-3" />
         };
@@ -253,12 +253,6 @@ export function AppointmentsTable({}: AppointmentsTableProps) {
           label: "Consultation",
           badge: "bg-green-100 text-green-800 border-green-200",
           icon: <Stethoscope className="h-3 w-3" />
-        };
-      case "DIAGNOSTIC":
-        return {
-          label: "Diagnostic",
-          badge: "bg-teal-100 text-teal-800 border-teal-200",
-          icon: <Microscope className="h-3 w-3" />
         };
       case "LOCATION":
         return {
@@ -456,9 +450,8 @@ export function AppointmentsTable({}: AppointmentsTableProps) {
                 className="w-full px-4 py-3 pr-10 bg-white border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-700 text-sm shadow-sm hover:shadow-md transition-all duration-200 appearance-none cursor-pointer"
               >
                 <option value="all">Tous les types</option>
-                <option value="DIAGNOSTIC_VISIT">Visite Diagnostique</option>
+                <option value="DIAGNOSTIC_VISIT">Diagnostic</option>
                 <option value="CONSULTATION">Consultation</option>
-                <option value="DIAGNOSTIC">Diagnostic</option>
                 <option value="LOCATION">Location</option>
                 <option value="VENTE">Vente</option>
                 <option value="MAINTENANCE">Maintenance</option>
@@ -539,23 +532,15 @@ export function AppointmentsTable({}: AppointmentsTableProps) {
                         </div>
                       </TableCell>
                       
-                      <TableCell>
+                      <TableCell className="whitespace-nowrap">
                         {appointment.appointmentType ? (
                           <div className="flex items-center gap-2">
-                            <div className={`px-2 py-1 rounded-full text-xs font-medium border flex items-center gap-1 ${
+                            <div className={`px-2 py-1 rounded-full text-xs font-medium border flex items-center gap-1 whitespace-nowrap ${
                               getAppointmentTypeDisplay(appointment.appointmentType).badge
                             }`}>
                               {getAppointmentTypeDisplay(appointment.appointmentType).icon}
                               {getAppointmentTypeDisplay(appointment.appointmentType).label}
                             </div>
-                            {appointment.appointmentType === 'DIAGNOSTIC_VISIT' && (
-                              <div className="flex items-center gap-2">
-                                <div className="text-xs text-purple-600 font-medium flex items-center gap-1">
-                                  <Stethoscope className="h-3 w-3" />
-                                  Polygraphie
-                                </div>
-                              </div>
-                            )}
                           </div>
                         ) : (
                           <span className="text-gray-400">-</span>

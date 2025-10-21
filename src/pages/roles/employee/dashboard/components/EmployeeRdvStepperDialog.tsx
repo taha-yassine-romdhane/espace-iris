@@ -433,9 +433,8 @@ function EmployeeAppointmentTypeStep({
   const appointmentTypes = [
     { value: 'DIAGNOSTIC_VISIT', label: 'Visite Diagnostique', icon: <Stethoscope className="h-4 w-4" />, description: 'Polygraphie à domicile par un technicien' },
     { value: 'CONSULTATION', label: 'Consultation', icon: <Stethoscope className="h-4 w-4" />, description: 'Rendez-vous médical' },
-    { value: 'LOCATION', label: 'Location', icon: <FileText className="h-4 w-4" />, description: 'Location d\'équipement' },
+    { value: 'LOCATION', label: 'Location', icon: <FileText className="h-4 w-4" />, description: "Location d'équipement" },
     { value: 'VENTE', label: 'Vente', icon: <FileText className="h-4 w-4" />, description: 'Vente de produit' },
-    { value: 'DIAGNOSTIC', label: 'Diagnostic', icon: <FileText className="h-4 w-4" />, description: 'Examen en clinique' },
     { value: 'MAINTENANCE', label: 'Maintenance', icon: <FileText className="h-4 w-4" />, description: 'Maintenance équipement' },
     { value: 'RECUPERATION', label: 'Récupération', icon: <FileText className="h-4 w-4" />, description: 'Récupération matériel' }
   ];

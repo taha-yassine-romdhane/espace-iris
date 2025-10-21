@@ -5,6 +5,7 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { useSession } from 'next-auth/react';
 import { DatePicker } from '@/components/ui/date-picker';
 import { TimePicker } from '@/components/ui/time-picker';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -63,6 +64,7 @@ interface RdvStepperDialogProps {
 export function RdvStepperDialog({ isOpen, onClose }: RdvStepperDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { data: session } = useSession();
 
   // State management
   const [currentStep, setCurrentStep] = useState(1);
@@ -103,52 +105,39 @@ export function RdvStepperDialog({ isOpen, onClose }: RdvStepperDialogProps) {
     enabled: !!appointmentData.client?.id && !!appointmentData.appointmentDate,
   });
 
-  // Dynamic steps configuration based on appointment type
-  const getSteps = () => {
-    const baseSteps = [
-      { 
-        id: 1, 
-        title: 'Sélection Client', 
-        icon: <User className="h-5 w-5" />,
-        description: 'Choisir le patient ou la société'
-      },
-      { 
-        id: 2, 
-        title: 'Type de Rendez-vous', 
-        icon: <Stethoscope className="h-5 w-5" />,
-        description: 'Définir le type et motif'
-      }
-    ];
-
-    // Add technician selection step for diagnostic visits
-    if (appointmentData.appointmentType === 'DIAGNOSTIC_VISIT') {
-      baseSteps.push({
-        id: 3,
-        title: 'Sélection Technicien',
-        icon: <User className="h-5 w-5" />,
-        description: 'Assigner un employé'
-      });
+  // Steps configuration - technician selection now available for all types
+  const steps = [
+    {
+      id: 1,
+      title: 'Sélection Client',
+      icon: <User className="h-5 w-5" />,
+      description: 'Choisir le patient ou la société'
+    },
+    {
+      id: 2,
+      title: 'Type de Rendez-vous',
+      icon: <Stethoscope className="h-5 w-5" />,
+      description: 'Définir le type et motif'
+    },
+    {
+      id: 3,
+      title: 'Sélection Employé',
+      icon: <User className="h-5 w-5" />,
+      description: 'Assigner un employé (optionnel)'
+    },
+    {
+      id: 4,
+      title: 'Date et Heure',
+      icon: <Calendar className="h-5 w-5" />,
+      description: 'Planifier le rendez-vous'
+    },
+    {
+      id: 5,
+      title: 'Récapitulatif',
+      icon: <CheckCircle2 className="h-5 w-5" />,
+      description: 'Vérifier et confirmer'
     }
-
-    baseSteps.push(
-      { 
-        id: appointmentData.appointmentType === 'DIAGNOSTIC_VISIT' ? 4 : 3, 
-        title: 'Date et Heure', 
-        icon: <Calendar className="h-5 w-5" />,
-        description: 'Planifier le rendez-vous'
-      },
-      { 
-        id: appointmentData.appointmentType === 'DIAGNOSTIC_VISIT' ? 5 : 4, 
-        title: 'Récapitulatif', 
-        icon: <CheckCircle2 className="h-5 w-5" />,
-        description: 'Vérifier et confirmer'
-      }
-    );
-
-    return baseSteps;
-  };
-
-  const steps = getSteps();
+  ];
 
   // Create appointment mutation
   const createAppointmentMutation = useMutation({
@@ -225,6 +214,11 @@ export function RdvStepperDialog({ isOpen, onClose }: RdvStepperDialogProps) {
     const scheduledDate = new Date(appointmentData.appointmentDate);
     scheduledDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
 
+    // Auto-assign to current user if no technician was selected
+    const assignedToId = appointmentData.assignedTechnician
+      ? appointmentData.assignedTechnician.id
+      : (session?.user?.id || null);
+
     const payload = {
       patientId: appointmentData.client ? appointmentData.client.id : null,
       companyId: null, // Appointments are only for patients
@@ -234,7 +228,7 @@ export function RdvStepperDialog({ isOpen, onClose }: RdvStepperDialogProps) {
       notes: appointmentData.notes,
       priority: appointmentData.priority,
       status: appointmentData.status,
-      assignedToId: appointmentData.assignedTechnician ? appointmentData.assignedTechnician.id : null,
+      assignedToId: assignedToId,
       // Flag to auto-create task for diagnostic visits
       createDiagnosticTask: appointmentData.appointmentType === 'DIAGNOSTIC_VISIT'
     };
@@ -270,42 +264,29 @@ export function RdvStepperDialog({ isOpen, onClose }: RdvStepperDialogProps) {
         );
 
       case 3:
-        if (isDiagnosticVisit) {
-          return (
-            <TechnicianSelectionStep
-              selectedTechnician={appointmentData.assignedTechnician}
-              onTechnicianSelect={(technician) => 
-                setAppointmentData(prev => ({ ...prev, assignedTechnician: technician }))
-              }
-            />
-          );
-        }
+        return (
+          <TechnicianSelectionStep
+            selectedTechnician={appointmentData.assignedTechnician}
+            onTechnicianSelect={(technician) =>
+              setAppointmentData(prev => ({ ...prev, assignedTechnician: technician }))
+            }
+          />
+        );
+
+      case 4:
         return (
           <DateTimeStep
             appointmentDate={appointmentData.appointmentDate}
             appointmentTime={appointmentData.appointmentTime}
             existingAppointments={existingAppointments || []}
             patientName={appointmentData.client?.name || ''}
-            onUpdate={(updates) => 
+            onUpdate={(updates) =>
               setAppointmentData(prev => ({ ...prev, ...updates }))
             }
           />
         );
 
-      case 4:
-        if (isDiagnosticVisit) {
-          return (
-            <DateTimeStep
-              appointmentDate={appointmentData.appointmentDate}
-              appointmentTime={appointmentData.appointmentTime}
-              existingAppointments={existingAppointments || []}
-              patientName={appointmentData.client?.name || ''}
-              onUpdate={(updates) => 
-                setAppointmentData(prev => ({ ...prev, ...updates }))
-              }
-            />
-          );
-        }
+      case 5:
         return (
           <AppointmentSummaryStep
             appointmentData={appointmentData}
@@ -314,46 +295,24 @@ export function RdvStepperDialog({ isOpen, onClose }: RdvStepperDialogProps) {
           />
         );
 
-      case 5:
-        if (isDiagnosticVisit) {
-          return (
-            <AppointmentSummaryStep
-              appointmentData={appointmentData}
-              onSubmit={handleSubmit}
-              isLoading={createAppointmentMutation.isPending}
-            />
-          );
-        }
-        return null;
-
       default:
         return null;
     }
   };
 
   const isStepValid = () => {
-    const isDiagnosticVisit = appointmentData.appointmentType === 'DIAGNOSTIC_VISIT';
-    
     switch (currentStep) {
       case 1:
         return appointmentData.client !== null;
       case 2:
         return appointmentData.appointmentType && appointmentData.location;
       case 3:
-        if (isDiagnosticVisit) {
-          return appointmentData.assignedTechnician !== null;
-        }
-        return appointmentData.appointmentDate && appointmentData.appointmentTime;
-      case 4:
-        if (isDiagnosticVisit) {
-          return appointmentData.appointmentDate && appointmentData.appointmentTime;
-        }
+        // Technician assignment is optional - always valid
         return true;
+      case 4:
+        return appointmentData.appointmentDate && appointmentData.appointmentTime;
       case 5:
-        if (isDiagnosticVisit) {
-          return true;
-        }
-        return false;
+        return true;
       default:
         return false;
     }
@@ -484,9 +443,8 @@ function AppointmentTypeStep({
   const appointmentTypes = [
     { value: 'DIAGNOSTIC_VISIT', label: 'Visite Diagnostique', icon: <Stethoscope className="h-4 w-4" />, description: 'Polygraphie à domicile par un technicien' },
     { value: 'CONSULTATION', label: 'Consultation', icon: <Stethoscope className="h-4 w-4" />, description: 'Rendez-vous médical' },
-    { value: 'LOCATION', label: 'Location', icon: <FileText className="h-4 w-4" />, description: 'Location d’équipement' },
+    { value: 'LOCATION', label: 'Location', icon: <FileText className="h-4 w-4" />, description: "Location d'équipement" },
     { value: 'VENTE', label: 'Vente', icon: <FileText className="h-4 w-4" />, description: 'Vente de produit' },
-    { value: 'DIAGNOSTIC', label: 'Diagnostic', icon: <FileText className="h-4 w-4" />, description: 'Examen en clinique' },
     { value: 'MAINTENANCE', label: 'Maintenance', icon: <FileText className="h-4 w-4" />, description: 'Maintenance équipement' },
     { value: 'RECUPERATION', label: 'Récupération', icon: <FileText className="h-4 w-4" />, description: 'Récupération matériel' }
   ];

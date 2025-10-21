@@ -13,6 +13,9 @@ import { SimplifiedRentalFinalStep } from "@/components/rental/steps/SimplifiedR
 interface RentStepperDialogProps {
   isOpen: boolean;
   onClose: () => void;
+  preSelectedClientId?: string;
+  preSelectedClientType?: "patient" | "societe";
+  appointmentId?: string;
 }
 
 const steps = [
@@ -21,13 +24,13 @@ const steps = [
   { id: 3, name: "Finalisation", description: "Période et paiement initial" },
 ] as const;
 
-export function RentStepperDialog({ isOpen, onClose }: RentStepperDialogProps) {
-  // Step Management
-  const [currentStep, setCurrentStep] = useState(1);
-  
-  // Client Selection State
-  const [clientType, setClientType] = useState<"patient" | "societe" | null>(null);
-  const [selectedClient, setSelectedClient] = useState<string | null>(null);
+export function RentStepperDialog({ isOpen, onClose, preSelectedClientId, preSelectedClientType, appointmentId }: RentStepperDialogProps) {
+  // Step Management - Start at step 2 if client is pre-selected
+  const [currentStep, setCurrentStep] = useState(preSelectedClientId ? 2 : 1);
+
+  // Client Selection State - Initialize with pre-selected values
+  const [clientType, setClientType] = useState<"patient" | "societe" | null>(preSelectedClientType || null);
+  const [selectedClient, setSelectedClient] = useState<string | null>(preSelectedClientId || null);
   const [clientDetails, setClientDetails] = useState<any | null>(null);
 
   // Product Selection State

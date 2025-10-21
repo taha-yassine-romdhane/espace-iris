@@ -17,36 +17,44 @@ import { useQueryClient } from "@tanstack/react-query";
 interface DiagnosticStepperDialogProps {
   isOpen: boolean;
   onClose: () => void;
+  preSelectedPatientId?: string;
+  appointmentId?: string;
+  scheduledDate?: Date;
 }
 
 const steps = [
   { id: 1, name: "Type de Renseignement", description: "Sélectionner le patient" },
-  { id: 2, name: "Ajout Équipement", description: "Sélectionner ou créer un équipement de diagnostic" },
-  { id: 3, name: "Création de Tâches", description: "Ajouter des tâches pour le suivi du diagnostic" },
+  { id: 2, name: "Création Diagnostic", description: "Sélectionner l'équipement et finaliser" },
 ] as const;
 
-export function DiagnosticStepperDialog({ isOpen, onClose }: DiagnosticStepperDialogProps) {
+export function DiagnosticStepperDialog({
+  isOpen,
+  onClose,
+  preSelectedPatientId,
+  appointmentId,
+  scheduledDate
+}: DiagnosticStepperDialogProps) {
   const queryClient = useQueryClient();
-  
+
   // Form for file uploads
   const form = useForm();
-  
-  // Step Management
-  const [currentStep, setCurrentStep] = useState(1);
+
+  // Step Management - Start at step 2 if patient is pre-selected
+  const [currentStep, setCurrentStep] = useState(preSelectedPatientId ? 2 : 1);
 
   // Patient Selection State (diagnostics are only for patients)
-  const [selectedPatient, setSelectedPatient] = useState<string | null>(null);
+  const [selectedPatient, setSelectedPatient] = useState<string | null>(preSelectedPatientId || null);
   const [patients, setPatients] = useState<[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [manualPatientDetails, setManualPatientDetails] = useState<any>(null);
 
+  // Auto-set result due date to tomorrow if coming from RDV
+  const [resultDueDate, setResultDueDate] = useState<Date | undefined>(
+    new Date(Date.now() + 24 * 60 * 60 * 1000) // Tomorrow
+  );
+
   // Product Selection State
   const [selectedProducts, setSelectedProducts] = useState<any[]>([]);
-  
-  // Result Due Date State - for when results are expected
-  const [resultDueDate, setResultDueDate] = useState<Date | undefined>(
-    new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // Default to 7 days from now
-  );
 
   // Final Step State
   const [followUpDate, setFollowUpDate] = useState<Date | undefined>(
@@ -270,6 +278,7 @@ export function DiagnosticStepperDialog({ isOpen, onClose }: DiagnosticStepperDi
       const diagnosticData = {
         clientId: selectedPatient,
         clientType: 'patient', // Always patient for diagnostics
+        diagnosticType: 'IN_CLINIC', // Default to in-clinic
         // Important: Pass the medical device ID directly instead of in a products array
         medicalDeviceId: selectedDevice.id,
         // Still keep the products array for any additional information
@@ -282,6 +291,9 @@ export function DiagnosticStepperDialog({ isOpen, onClose }: DiagnosticStepperDi
             sellingPrice: 0 // Diagnostics are free
           };
         }),
+        appointmentId: appointmentId || null, // Link to RDV if coming from appointment
+        reservationDate: new Date().toISOString(), // Today
+        resultDueDate: resultDueDate ? resultDueDate.toISOString() : null,
         followUpDate: followUpDate,
         totalPrice: 0, // Diagnostics are always free
         notes: notes,
@@ -291,8 +303,8 @@ export function DiagnosticStepperDialog({ isOpen, onClose }: DiagnosticStepperDi
           phone: patientDetails.phone || '',
           email: patientDetails.email || ''
         } : null,
-        // Include file URLs if any were uploaded
-        fileUrls: uploadedFileUrls
+        // Include file URLs (empty for now, files moved to patient page)
+        fileUrls: []
       };
       
       // Submit the data
@@ -368,157 +380,38 @@ export function DiagnosticStepperDialog({ isOpen, onClose }: DiagnosticStepperDi
             )}
 
             {currentStep === 2 && (
-              <NewDiagnosticProductStep
-                onBack={handleBack}
-                onNext={handleNext}
-                selectedProducts={selectedProducts}
-                onRemoveProduct={handleRemoveProduct}
-                onSelectProduct={handleProductSelect}
-                onUpdateProductParameters={() => {}} // Not used for diagnostics
-                patientId={selectedPatient || undefined}
-                resultDueDate={resultDueDate}
-                onResultDueDateChange={setResultDueDate}
-              />
-            )}
-
-            {currentStep === 3 && (
-              <div className="space-y-6">
-                <h2 className="text-xl font-semibold text-[#1e3a8a]">Finaliser le Diagnostic</h2>
-                
-                {/* Summary of selected products */}
-                <div className="bg-blue-50 rounded-lg border border-blue-100 p-4 space-y-3">
-                  <h4 className="font-medium text-[#1e3a8a]">Récapitulatif du Diagnostic</h4>
-                  
-                  <div className="space-y-2">
-                    {selectedProducts.map((product, index) => (
-                      <div key={index} className="flex justify-between text-sm">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{product.name}</span>
-                          {product.resultDueDate && (
-                            <div className="text-sm text-gray-600">
-                              Résultats attendus le: {new Date(product.resultDueDate).toLocaleDateString()}
-                            </div>
-                          )}
-                        </div>
-                        <span className="text-green-600 font-medium">Gratuit</span>
-                      </div>
-                    ))}
-                  </div>
-                  
-                  <div className="pt-2 border-t border-blue-200 flex justify-between font-medium">
-                    <span>Total</span>
-                    <span>{calculateTotalPrice()} DT</span>
-                  </div>
-                </div>
-                
-                {/* Notes Section */}
-                <div className="mt-6">
-                  <div className="p-6 border border-gray-200 rounded-lg">
-                    <div className="flex items-center gap-2 mb-4">
-                      <AlertCircle className="h-5 w-5 text-blue-600" />
-                      <h3 className="font-medium text-lg">Notes</h3>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-4">
-                      Ajoutez des notes ou commentaires concernant ce diagnostic.
-                    </p>
-                    <textarea
-                      className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      rows={4}
-                      placeholder="Saisissez vos notes ici..."
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                    />
-                  </div>
-                </div>
-                
-                {/* File Upload Section */}
-                <div className="mt-6">
-                  <div className="p-6 border border-gray-200 rounded-lg">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-2">
-                        <FileUp className="h-5 w-5 text-blue-600" />
-                        <h3 className="font-medium text-lg">Documents du Patient</h3>
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-4">
-                      Ajoutez des documents liés à ce diagnostic. Les documents seront automatiquement associés au patient.
-                    </p>
-                    
-                    {selectedPatient ? (
-                      <>
-                        <FileUpload
-                          form={form}
-                          existingFiles={existingFiles}
-                          onFileChange={handleFileChange}
-                          onRemoveExistingFile={handleRemoveFile}
-                          className="w-full"
-                          maxFiles={5}
-                        />
-                        <div className="mt-4 text-sm text-gray-600">
-                          <p>Les fichiers seront automatiquement associés au diagnostic et au patient lors de la soumission.</p>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="bg-yellow-50 p-4 rounded-md border border-yellow-100">
-                        <p className="text-sm text-yellow-700">Vous devez sélectionner un patient pour ajouter des documents.</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                {/* Task Creation Section */}
-                <div className="mt-6">
-                  <div className="p-6 border border-gray-200 rounded-lg">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-2">
-                        <PlusCircle className="h-5 w-5 text-blue-600" />
-                        <h3 className="font-medium text-lg">Tâches de Suivi</h3>
-                      </div>
-                      <AddTaskButton 
-                        onClick={() => setIsTaskModalOpen(true)} 
-                        variant="outline"
-                        label="Créer une tâche"
-                      />
-                    </div>
-                    <p className="text-sm text-gray-600 mb-4">
-                      Créez des tâches associées à ce diagnostic pour suivre les actions à réaliser. 
-                      Les tâches seront automatiquement associées au patient et apparaîtront dans votre calendrier.
-                    </p>
-                    <div className="bg-blue-50 p-4 rounded-md border border-blue-100">
-                      <div className="flex items-center gap-2 text-blue-700">
-                        <CalendarIcon className="h-4 w-4" />
-                        <p className="text-sm font-medium">Conseil: Utilisez les tâches pour planifier les rendez-vous de suivi et les rappels pour les résultats.</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                {submitError && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{submitError}</AlertDescription>
+              <div className="space-y-4">
+                {/* Warning if creating diagnostic before scheduled RDV date */}
+                {scheduledDate && new Date() < new Date(scheduledDate) && (
+                  <Alert className="border-orange-200 bg-orange-50">
+                    <AlertCircle className="h-4 w-4 text-orange-600" />
+                    <AlertDescription className="text-orange-800">
+                      <strong>Attention:</strong> Le rendez-vous est prévu pour le{' '}
+                      {new Date(scheduledDate).toLocaleDateString('fr-FR', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                      . Vous créez ce diagnostic avant la date prévue.
+                    </AlertDescription>
                   </Alert>
                 )}
-                
-                <div className="flex justify-between pt-6 border-t">
-                  <Button variant="outline" onClick={handleBack}>
-                    ← Retour
-                  </Button>
-                  <Button 
-                    onClick={handleSubmit} 
-                    disabled={submitting}
-                    className="bg-[#1e3a8a] hover:bg-[#1e3a8a]/90"
-                  >
-                    {submitting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Traitement...
-                      </>
-                    ) : (
-                      "Terminer"
-                    )}
-                  </Button>
-                </div>
+
+                <NewDiagnosticProductStep
+                  onBack={preSelectedPatientId ? undefined : handleBack}
+                  onNext={handleSubmit}
+                  selectedProducts={selectedProducts}
+                  onRemoveProduct={handleRemoveProduct}
+                  onSelectProduct={handleProductSelect}
+                  onUpdateProductParameters={() => {}} // Not used for diagnostics
+                  patientId={selectedPatient || undefined}
+                  resultDueDate={resultDueDate}
+                  onResultDueDateChange={setResultDueDate}
+                  notes={notes}
+                  onNotesChange={setNotes}
+                  isLoading={submitting}
+                />
               </div>
             )}
           </div>

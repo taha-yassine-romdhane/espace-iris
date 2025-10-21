@@ -64,6 +64,12 @@ async function handleGetAppointments(req: NextApiRequest, res: NextApiResponse) 
             lastName: true,
           },
         },
+        diagnostic: {
+          select: {
+            id: true,
+            diagnosticCode: true,
+          },
+        },
       },
       orderBy: {
         scheduledDate: 'asc',
@@ -109,7 +115,13 @@ async function handleGetAppointments(req: NextApiRequest, res: NextApiResponse) 
         lastName: appointment.createdBy.lastName,
         fullName: `${appointment.createdBy.firstName} ${appointment.createdBy.lastName}`,
       } : null,
-      
+
+      // Linked records
+      diagnostic: appointment.diagnostic ? {
+        id: appointment.diagnostic.id,
+        diagnosticCode: appointment.diagnostic.diagnosticCode,
+      } : null,
+
       createdAt: appointment.createdAt,
       updatedAt: appointment.updatedAt,
     }));

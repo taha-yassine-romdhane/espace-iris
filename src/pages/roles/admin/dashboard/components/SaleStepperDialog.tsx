@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ClientSelectionStep } from "./steps/ClientSelectionStep";
 import { PaymentStep } from "@/components/steps/PaymentStep";
@@ -21,6 +21,9 @@ interface StepperDialogProps {
   isOpen: boolean;
   onClose: () => void;
   action:  "vente" | null ;
+  preSelectedClientId?: string;
+  preSelectedClientType?: "patient" | "societe";
+  appointmentId?: string;
 }
 
 const steps = [
@@ -30,13 +33,13 @@ const steps = [
   { id: 4, name: "Récapitulatif", description: "Vérifier et finaliser la vente" },
 ] as const;
 
-export function SaleStepperDialog({ isOpen, onClose, action }: StepperDialogProps) {
-  // Step Management
-  const [currentStep, setCurrentStep] = useState(1);
+export function SaleStepperDialog({ isOpen, onClose, action, preSelectedClientId, preSelectedClientType, appointmentId }: StepperDialogProps) {
+  // Step Management - Start at step 2 if client is pre-selected
+  const [currentStep, setCurrentStep] = useState(preSelectedClientId ? 2 : 1);
 
-  // Client Selection State
-  const [clientType, setClientType] = useState<"patient" | "societe" | null>(null);
-  const [selectedClient, setSelectedClient] = useState<string | null>(null);
+  // Client Selection State - Initialize with pre-selected values
+  const [clientType, setClientType] = useState<"patient" | "societe" | null>(preSelectedClientType || null);
+  const [selectedClient, setSelectedClient] = useState<string | null>(preSelectedClientId || null);
   const [clientDetails, setClientDetails] = useState<any | null>(null);
 
   // Product Selection State
@@ -118,6 +121,13 @@ export function SaleStepperDialog({ isOpen, onClose, action }: StepperDialogProp
     setSelectedClient(null);
     setClientDetails(null);
   };
+
+  // Fetch client details when pre-selected client is provided
+  useEffect(() => {
+    if (preSelectedClientId && preSelectedClientType && isOpen) {
+      fetchClientDetails(preSelectedClientId, preSelectedClientType);
+    }
+  }, [preSelectedClientId, preSelectedClientType, isOpen, fetchClientDetails]);
 
   // Product Selection Handlers
   const handleProductSelect = (products: any) => {
