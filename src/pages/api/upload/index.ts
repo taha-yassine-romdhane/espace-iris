@@ -35,7 +35,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // Create uploads directory if it doesn't exist
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads');
+    // Use environment variable for storage path
+    const baseStoragePath = process.env.FILE_STORAGE_PATH || '/var/espace-iris-files';
+    const uploadDir = path.join(baseStoragePath, 'uploads');
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }

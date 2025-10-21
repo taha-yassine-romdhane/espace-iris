@@ -6,8 +6,8 @@ import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 
-// Base storage path outside the project
-const STORAGE_BASE_PATH = '/home/taha/Desktop/projects/espace-iris-files';
+// Base storage path - configurable via environment variable
+const STORAGE_BASE_PATH = process.env.FILE_STORAGE_PATH || '/var/espace-iris-files';
 const TEMP_PATH = path.join(STORAGE_BASE_PATH, 'temp');
 
 // Ensure temp directory exists

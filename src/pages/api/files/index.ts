@@ -5,8 +5,8 @@ import prisma from '@/lib/db';
 import fs from 'fs';
 import path from 'path';
 
-// Base storage path outside the project
-const STORAGE_BASE_PATH = '/home/taha/Desktop/projects/espace-iris-files';
+// Base storage path - configurable via environment variable
+const STORAGE_BASE_PATH = process.env.FILE_STORAGE_PATH || '/var/espace-iris-files';
 
 // Helper function to delete file from filesystem
 const deleteFileFromDisk = async (filePath: string) => {

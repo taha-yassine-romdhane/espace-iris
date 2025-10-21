@@ -8,3 +8,5 @@ services:
     network_mode: "host"
     env_file:
       - .env
+    volumes:
+      - /var/espace-iris-files:/var/espace-iris-files
