@@ -12,8 +12,13 @@ const Header: React.FC = () => {
           {/* Logo */}
           <div className="flex items-center">
             <Link href="/" className="flex items-center space-x-3">
-              <div className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Espace Iris 
+              <div className="flex items-center gap-2">
+                <div className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  Espace Iris
+                </div>
+                <span className="px-2 py-0.5 text-xs font-semibold bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-full shadow-sm">
+                  BETA
+                </span>
               </div>
               <div className="hidden sm:block text-xs text-gray-500 font-medium">
                 Medical Device Management

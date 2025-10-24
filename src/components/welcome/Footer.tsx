@@ -173,6 +173,14 @@ const Footer: React.FC = () => {
             <p className="text-xs text-gray-500">
               Solution certifiée pour la gestion médicale • Hébergement sécurisé en Tunisie • Conformité RGPD garantie
             </p>
+            <div className="mt-2 flex items-center justify-center gap-2">
+              <span className="px-3 py-1 text-xs font-semibold bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-full">
+                Version BETA
+              </span>
+              <span className="text-xs text-gray-500">
+                v1.0.0-beta
+              </span>
+            </div>
           </div>
         </div>
       </div>
