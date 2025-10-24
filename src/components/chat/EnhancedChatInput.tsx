@@ -39,6 +39,7 @@ interface Props {
   disabled?: boolean;
   placeholder?: string;
   colorScheme?: 'blue' | 'green' | 'red';
+  allowedReferenceTypes?: Array<'patient' | 'device' | 'appointment' | 'rental' | 'user'>;
 }
 
 const messageTemplates: MessageTemplate[] = [
@@ -66,11 +67,14 @@ export const EnhancedChatInput: React.FC<Props> = ({
   onSend,
   disabled = false,
   placeholder = "Tapez votre message...",
-  colorScheme = 'blue'
+  colorScheme = 'blue',
+  allowedReferenceTypes = ['patient', 'device', 'appointment', 'rental', 'user']
 }) => {
   const [showReferences, setShowReferences] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
-  const [referenceType, setReferenceType] = useState<'patient' | 'device' | 'appointment' | 'rental' | 'user'>('patient');
+  const [referenceType, setReferenceType] = useState<'patient' | 'device' | 'appointment' | 'rental' | 'user'>(
+    allowedReferenceTypes[0] || 'patient'
+  );
   const [references, setReferences] = useState<Reference[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -194,24 +198,26 @@ export const EnhancedChatInput: React.FC<Props> = ({
             </div>
             
             <div className="flex space-x-1 mb-3">
-              {(Object.keys(referenceIcons) as Array<keyof typeof referenceIcons>).map((type) => {
-                const Icon = referenceIcons[type];
-                return (
-                  <button
-                    key={type}
-                    onClick={() => setReferenceType(type)}
-                    className={cn(
-                      "flex items-center px-2 py-1 rounded-md text-xs font-medium transition-colors",
-                      referenceType === type 
-                        ? `${currentColors.button} text-white` 
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    )}
-                  >
-                    <Icon className="h-3 w-3 mr-1" />
-                    {referenceLabels[type]}
-                  </button>
-                );
-              })}
+              {(Object.keys(referenceIcons) as Array<keyof typeof referenceIcons>)
+                .filter((type) => allowedReferenceTypes.includes(type))
+                .map((type) => {
+                  const Icon = referenceIcons[type];
+                  return (
+                    <button
+                      key={type}
+                      onClick={() => setReferenceType(type)}
+                      className={cn(
+                        "flex items-center px-2 py-1 rounded-md text-xs font-medium transition-colors",
+                        referenceType === type
+                          ? `${currentColors.button} text-white`
+                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      )}
+                    >
+                      <Icon className="h-3 w-3 mr-1" />
+                      {referenceLabels[type]}
+                    </button>
+                  );
+                })}
             </div>
 
             <div className="relative">

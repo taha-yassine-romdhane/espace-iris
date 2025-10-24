@@ -20,20 +20,42 @@ export default async function handler(
 
     const { type, search } = req.query;
     const searchTerm = search as string || '';
+    const userRole = session.user.role;
+    const userId = session.user.id;
 
     let results: any[] = [];
 
     switch (type) {
       case 'patients':
+        // For doctors: only show their own patients
+        const patientWhere: any = searchTerm ? {
+          OR: [
+            { firstName: { contains: searchTerm, mode: 'insensitive' } },
+            { lastName: { contains: searchTerm, mode: 'insensitive' } },
+            { cin: { contains: searchTerm, mode: 'insensitive' } },
+            { telephone: { contains: searchTerm } }
+          ]
+        } : {};
+
+        // If doctor, only show their patients
+        if (userRole === 'DOCTOR') {
+          // Get doctor record first
+          const doctorRecord = await prisma.doctor.findUnique({
+            where: { userId: userId },
+            select: { id: true }
+          });
+
+          if (doctorRecord) {
+            patientWhere.doctorId = doctorRecord.id;
+          } else {
+            // If no doctor record, return empty
+            results = [];
+            break;
+          }
+        }
+
         const patients = await prisma.patient.findMany({
-          where: searchTerm ? {
-            OR: [
-              { firstName: { contains: searchTerm, mode: 'insensitive' } },
-              { lastName: { contains: searchTerm, mode: 'insensitive' } },
-              { cin: { contains: searchTerm, mode: 'insensitive' } },
-              { telephone: { contains: searchTerm } }
-            ]
-          } : {},
+          where: patientWhere,
           select: {
             id: true,
             firstName: true,
@@ -100,58 +122,6 @@ export default async function handler(
         }));
         break;
 
-      case 'appointments':
-        const appointments = await prisma.appointment.findMany({
-          where: {
-            AND: [
-              searchTerm ? {
-                OR: [
-                  { appointmentType: { contains: searchTerm, mode: 'insensitive' } },
-                  { notes: { contains: searchTerm, mode: 'insensitive' } },
-                  { location: { contains: searchTerm, mode: 'insensitive' } },
-                  { patient: { firstName: { contains: searchTerm, mode: 'insensitive' } } },
-                  { patient: { lastName: { contains: searchTerm, mode: 'insensitive' } } }
-                ]
-              } : {},
-              { scheduledDate: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } } // Last 30 days
-            ]
-          },
-          include: {
-            patient: {
-              select: {
-                firstName: true,
-                lastName: true,
-                telephone: true
-              }
-            },
-            assignedTo: {
-              select: {
-                firstName: true,
-                lastName: true
-              }
-            }
-          },
-          take: 10,
-          orderBy: { scheduledDate: 'desc' }
-        });
-
-        results = appointments.map(appointment => ({
-          id: appointment.id,
-          type: 'appointment',
-          title: appointment.appointmentType || 'Rendez-vous',
-          subtitle: `${appointment.patient?.firstName} ${appointment.patient?.lastName} • ${new Date(appointment.scheduledDate).toLocaleDateString('fr-FR')}`,
-          metadata: {
-            scheduledDate: appointment.scheduledDate,
-            status: appointment.status,
-            patient: appointment.patient ? `${appointment.patient.firstName} ${appointment.patient.lastName}` : null,
-            assignedTo: appointment.assignedTo ? `${appointment.assignedTo.firstName} ${appointment.assignedTo.lastName}` : null,
-            notes: appointment.notes,
-            location: appointment.location,
-            priority: appointment.priority
-          }
-        }));
-        break;
-
       case 'rentals':
         const rentals = await prisma.rental.findMany({
           where: searchTerm ? {
@@ -198,19 +168,76 @@ export default async function handler(
         break;
 
       case 'users':
+        let userWhere: any = {
+          AND: [
+            { isActive: true },
+            { id: { not: userId } }, // Exclude current user
+            searchTerm ? {
+              OR: [
+                { firstName: { contains: searchTerm, mode: 'insensitive' } },
+                { lastName: { contains: searchTerm, mode: 'insensitive' } },
+                { email: { contains: searchTerm, mode: 'insensitive' } }
+              ]
+            } : {}
+          ]
+        };
+
+        // For doctors: only show employees assigned to their patients + admins
+        if (userRole === 'DOCTOR') {
+          // Get doctor record
+          const doctorRecord = await prisma.doctor.findUnique({
+            where: { userId: userId },
+            select: { id: true }
+          });
+
+          if (doctorRecord) {
+            // Get patients of this doctor
+            const doctorPatients = await prisma.patient.findMany({
+              where: { doctorId: doctorRecord.id },
+              select: { id: true }
+            });
+
+            const patientIds = doctorPatients.map(p => p.id);
+
+            // Get employees from rentals and appointments of these patients
+            const employeesFromRentals = await prisma.rental.findMany({
+              where: {
+                patientId: { in: patientIds },
+                createdById: { not: null }
+              },
+              select: { createdById: true },
+              distinct: ['createdById']
+            });
+
+            const employeesFromAppointments = await prisma.appointment.findMany({
+              where: {
+                patientId: { in: patientIds },
+                assignedToId: { not: null }
+              },
+              select: { assignedToId: true },
+              distinct: ['assignedToId']
+            });
+
+            const employeeIds = [
+              ...employeesFromRentals.map(r => r.createdById).filter(Boolean),
+              ...employeesFromAppointments.map(a => a.assignedToId).filter(Boolean)
+            ].filter((id): id is string => id !== null);
+
+            // Only show these employees + admins
+            userWhere.AND.push({
+              OR: [
+                { id: { in: employeeIds } },
+                { role: 'ADMIN' }
+              ]
+            });
+          } else {
+            // If no doctor record, only show admins
+            userWhere.AND.push({ role: 'ADMIN' });
+          }
+        }
+
         const users = await prisma.user.findMany({
-          where: {
-            AND: [
-              { isActive: true },
-              searchTerm ? {
-                OR: [
-                  { firstName: { contains: searchTerm, mode: 'insensitive' } },
-                  { lastName: { contains: searchTerm, mode: 'insensitive' } },
-                  { email: { contains: searchTerm, mode: 'insensitive' } }
-                ]
-              } : {}
-            ]
-          },
+          where: userWhere,
           select: {
             id: true,
             firstName: true,

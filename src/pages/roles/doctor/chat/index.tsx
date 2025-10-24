@@ -617,6 +617,7 @@ const DoctorChat: React.FC = () => {
                                     disabled={sendingMessage}
                                     placeholder="Tapez votre message..."
                                     colorScheme="red"
+                                    allowedReferenceTypes={['patient', 'user']}
                                 />
                             </div>
                         </>
