@@ -78,7 +78,6 @@ model StockLocation {
   createdAt         DateTime               @default(now())
   updatedAt         DateTime               @updatedAt
   medicalDevices    MedicalDevice[]
-  products          Product[]
   stocks            Stock[]
   user              User?                  @relation(fields: [userId], references: [id])
   outgoingTransfers StockTransfer[]        @relation("FromLocation")
@@ -162,12 +161,10 @@ model Product {
   model              String?
   notes              String?
   purchaseDate       DateTime?
-  stockLocationId    String?
   warrantyExpiration DateTime?
   purchasePrice      Float?
   sellingPrice       Float?
   status             ProductStatus          @default(ACTIVE)
-  stockLocation      StockLocation?         @relation(fields: [stockLocationId], references: [id])
   rentalAccessories  RentalAccessory[]
   RepairSparePart    RepairSparePart[]
   saleItems          SaleItem[]

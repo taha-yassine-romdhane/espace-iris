@@ -19,13 +19,23 @@ export interface Product {
   status: DeviceStatus;
   notes?: string;
   stocks?: Stock[];
+  // Multi-location support fields (from API response)
+  locations?: Array<{
+    id: string;
+    name: string;
+    quantity: number;
+    status: string;
+  }>;
+  totalQuantity?: number;
+  // Backwards compatibility (deprecated for accessories/spare parts)
   stockLocation?: StockLocation;
   stockLocationId?: string;
+  stockQuantity?: number;
   transfers?: StockTransfer[];
   repairSpareParts?: RepairSparePart[];
   createdAt: Date;
   updatedAt: Date;
   reservedUntil?: Date | string | null;
-    isReserved?: boolean;
+  isReserved?: boolean;
   patient?: Patient;
 }

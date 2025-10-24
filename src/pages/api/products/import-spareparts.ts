@@ -29,16 +29,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const sparePart = spareParts[i];
       
       try {
-        // Create the product first
+        // Create the product first (without stockLocation)
         const product = await prisma.product.create({
           data: {
             name: sparePart.name,
             type: 'SPARE_PART',
             brand: sparePart.brand,
             model: sparePart.model,
-            stockLocation: sparePart.stockLocationId ? {
-              connect: { id: sparePart.stockLocationId }
-            } : undefined,
             purchasePrice: sparePart.purchasePrice,
             sellingPrice: sparePart.sellingPrice,
             status: 'ACTIVE', // Products use ProductStatus enum

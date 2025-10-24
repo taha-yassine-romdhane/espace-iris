@@ -208,17 +208,36 @@ export function AccessoriesTable({
     }
   };
 
-  const getLocationName = (device: Product) => {
-    // Prefer the name from the primary stockLocation object if it exists
+  const renderLocations = (device: Product) => {
+    // Show all stock locations with quantities as badges
+    if (device.stocks && device.stocks.length > 0) {
+      return (
+        <div className="flex flex-col gap-1">
+          {device.stocks.map((stock, index) => (
+            <div key={index} className="flex items-center gap-1">
+              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 flex items-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+                <span className="font-medium">{stock.location?.name || 'Non assigné'}</span>
+              </Badge>
+              <Badge variant="secondary" className="bg-green-50 text-green-700 border-green-200">
+                {stock.quantity}
+              </Badge>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    // Fallback for backwards compatibility
     if (device.stockLocation && device.stockLocation.name) {
-      return device.stockLocation.name;
+      return (
+        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+          {device.stockLocation.name}
+        </Badge>
+      );
     }
-    // Fallback to the location name from the first entry in the stocks array
-    if (device.stocks && device.stocks.length > 0 && device.stocks[0].location && device.stocks[0].location.name) {
-      return device.stocks[0].location.name;
-    }
-    // If no location can be determined, return "Non assigné"
-    return "Non assigné";
+    return <span className="text-gray-400">Non assigné</span>;
   };
 
   if (allAccessories.length === 0) {
@@ -357,8 +376,8 @@ export function AccessoriesTable({
               <TableHead className="py-1">Nom</TableHead>
               <TableHead className="py-1">Marque</TableHead>
               <TableHead className="py-1">Modèle</TableHead>
-              <TableHead>Lieu de stockage</TableHead>
-              <TableHead>Quantité en Stock</TableHead>
+              <TableHead>Emplacements</TableHead>
+              <TableHead>Quantité Totale</TableHead>
               <TableHead>Statut</TableHead>
               <TableHead className="py-1">Prix d&apos;achat</TableHead>
               <TableHead className="py-1">Prix de vente</TableHead>
@@ -367,12 +386,16 @@ export function AccessoriesTable({
           </TableHeader>
           <TableBody>
             {paginatedData.map((device) => (
-              <TableRow key={device.id} className="h-8">
-                <TableCell className="py-1">{device.name}</TableCell>
-                <TableCell className="py-1">{device.brand || '-'}</TableCell>
-                <TableCell className="py-1">{device.model || '-'}</TableCell>
-                <TableCell className="py-1">{getLocationName(device)}</TableCell>
-                <TableCell className="py-1">{device.stocks ? device.stocks.reduce((acc, stock) => acc + stock.quantity, 0) : 0}</TableCell>
+              <TableRow key={device.id}>
+                <TableCell className="py-2">{device.name}</TableCell>
+                <TableCell className="py-2">{device.brand || '-'}</TableCell>
+                <TableCell className="py-2">{device.model || '-'}</TableCell>
+                <TableCell className="py-2">{renderLocations(device)}</TableCell>
+                <TableCell className="py-2">
+                  <Badge variant="outline" className="bg-gray-50 font-semibold">
+                    {device.stocks ? device.stocks.reduce((acc, stock) => acc + stock.quantity, 0) : 0}
+                  </Badge>
+                </TableCell>
                 <TableCell>
                   <Badge variant={getStatusBadgeVariant(device.status)}>
                     {getStatusLabel(device.status)}

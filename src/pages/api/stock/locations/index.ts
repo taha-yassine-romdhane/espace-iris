@@ -25,7 +25,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           _count: {
             select: {
               stocks: true,
-              products: true,
               medicalDevices: true,
             }
           }
@@ -116,7 +115,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           _count: {
             select: {
               stocks: true,
-              products: true,
               medicalDevices: true,
             }
           }

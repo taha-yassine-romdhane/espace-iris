@@ -74,6 +74,8 @@ export default async function handler(
           purchasePrice: product.purchasePrice,
           sellingPrice: product.sellingPrice,
           warrantyExpiration: product.warrantyExpiration,
+          stocks: product.stocks, // Include full stocks array for edit form
+          // Backwards compatibility fields
           stockLocation: product.stocks[0]?.location.name || 'Non assigné',
           stockLocationId: product.stocks[0]?.location.id,
           stockQuantity: product.stocks.reduce((acc, stock) => acc + stock.quantity, 0),
@@ -213,9 +215,9 @@ export default async function handler(
               return res.status(500).json({ error: 'Failed to update device' });
             }
           } else {
-            // Update product
+            // Update product (accessories/spare parts)
             try {
-              const { warrantyExpiration, purchasePrice, sellingPrice, status, stockLocationId, stockQuantity, ...productData } = data;
+              const { warrantyExpiration, purchasePrice, sellingPrice, status, stockLocationId, stockQuantity, stockEntries, ...productData } = data;
 
               const updatePayload: any = {
                 ...productData,
@@ -248,7 +250,60 @@ export default async function handler(
                 }
               });
 
-              if (stockLocationId) {
+              // Handle multi-location stock updates
+              if (Array.isArray(stockEntries) && stockEntries.length > 0) {
+                // Delete existing stocks
+                await prisma.stock.deleteMany({
+                  where: { productId: id as string }
+                });
+
+                // Create new stocks based on stockEntries
+                const createdStocks = await Promise.all(
+                  stockEntries.map((entry: any) =>
+                    prisma.stock.create({
+                      data: {
+                        productId: id as string,
+                        locationId: entry.locationId,
+                        quantity: parseInt(entry.quantity.toString()),
+                        status: entry.status || 'FOR_SALE'
+                      },
+                      include: {
+                        location: true
+                      }
+                    })
+                  )
+                );
+
+                // Calculate total quantity
+                const totalQuantity = createdStocks.reduce((sum, stock) => sum + stock.quantity, 0);
+
+                return res.status(200).json({
+                  id: updatedProduct.id,
+                  name: updatedProduct.name,
+                  type: updatedProduct.type,
+                  brand: updatedProduct.brand,
+                  model: updatedProduct.model,
+                  serialNumber: updatedProduct.serialNumber,
+                  purchasePrice: updatedProduct.purchasePrice,
+                  sellingPrice: updatedProduct.sellingPrice,
+                  warrantyExpiration: updatedProduct.warrantyExpiration,
+                  stocks: createdStocks,
+                  locations: createdStocks.map(stock => ({
+                    id: stock.location.id,
+                    name: stock.location.name,
+                    quantity: stock.quantity,
+                    status: stock.status
+                  })),
+                  totalQuantity: totalQuantity,
+                  // Backwards compatibility
+                  stockLocation: createdStocks[0]?.location?.name || 'Non assigné',
+                  stockLocationId: createdStocks[0]?.location?.id,
+                  stockQuantity: createdStocks[0]?.quantity || 0,
+                  status: createdStocks[0]?.status || 'FOR_SALE'
+                });
+              }
+              // Fallback to old single-location format (backwards compatibility)
+              else if (stockLocationId) {
                 const existingStock = await prisma.stock.findFirst({
                   where: {
                     productId: id as string,
@@ -275,28 +330,42 @@ export default async function handler(
                     status: status || 'FOR_SALE'
                   }
                 });
+
+                // Fetch updated product with stocks
+                const productWithStocks = await prisma.product.findUnique({
+                  where: { id: id as string },
+                  include: {
+                    stocks: {
+                      include: {
+                        location: true
+                      }
+                    }
+                  }
+                });
+
+                // Map the status back to the frontend format
+                const mappedStatus = updatedProduct.status === 'ACTIVE' ? 'FOR_SALE' :
+                  updatedProduct.status === 'SOLD' ? 'VENDU' :
+                    updatedProduct.status === 'RETIRED' ? 'HORS_SERVICE' : 'FOR_SALE';
+
+                return res.status(200).json({
+                  id: updatedProduct.id,
+                  name: updatedProduct.name,
+                  type: updatedProduct.type,
+                  brand: updatedProduct.brand,
+                  model: updatedProduct.model,
+                  serialNumber: updatedProduct.serialNumber,
+                  purchasePrice: updatedProduct.purchasePrice,
+                  sellingPrice: updatedProduct.sellingPrice,
+                  warrantyExpiration: updatedProduct.warrantyExpiration,
+                  stockLocation: productWithStocks?.stocks[0]?.location?.name || 'Non assigné',
+                  stockLocationId: productWithStocks?.stocks[0]?.location?.id,
+                  stockQuantity: productWithStocks?.stocks[0]?.quantity || 0,
+                  status: mappedStatus
+                });
+              } else {
+                throw new Error('No stock entries provided');
               }
-
-              // Map the status back to the frontend format
-              const mappedStatus = updatedProduct.status === 'ACTIVE' ? 'FOR_SALE' :
-                updatedProduct.status === 'SOLD' ? 'VENDU' :
-                  updatedProduct.status === 'RETIRED' ? 'HORS_SERVICE' : 'FOR_SALE';
-
-              return res.status(200).json({
-                id: updatedProduct.id,
-                name: updatedProduct.name,
-                type: updatedProduct.type,
-                brand: updatedProduct.brand,
-                model: updatedProduct.model,
-                serialNumber: updatedProduct.serialNumber,
-                purchasePrice: updatedProduct.purchasePrice,
-                sellingPrice: updatedProduct.sellingPrice,
-                warrantyExpiration: updatedProduct.warrantyExpiration,
-                stockLocation: updatedProduct.stocks[0]?.location?.name || 'Non assigné',
-                stockLocationId: updatedProduct.stocks[0]?.location?.id,
-                stockQuantity: updatedProduct.stocks[0]?.quantity || 0,
-                status: mappedStatus
-              });
             } catch (error) {
               console.error("Product update error:", error);
               return res.status(500).json({ error: "Failed to update product" });

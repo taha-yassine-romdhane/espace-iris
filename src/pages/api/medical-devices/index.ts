@@ -70,8 +70,7 @@ export default async function handler(
                 include: {
                   location: true
                 }
-              },
-              stockLocation: true
+              }
             }
           })
         ]);
@@ -143,22 +142,39 @@ export default async function handler(
           };
         });
 
-        // Transform products
-        const transformedProducts = products.map(product => ({
-          id: product.id,
-          name: product.name,
-          type: product.type,
-          brand: product.brand,
-          model: product.model,
-          serialNumber: product.serialNumber,
-          purchasePrice: product.purchasePrice,
-          sellingPrice: product.sellingPrice,
-          technicalSpecs: null,
-          stockLocation: product.stockLocation,
-          stockLocationId: product.stockLocationId,
-          status: product.status, // Use product's own status
-          stocks: product.stocks // Include the full stocks array
-        }));
+        // Transform products - now with multi-location support via stocks
+        const transformedProducts = products.map(product => {
+          // Calculate total quantity across all locations
+          const totalQuantity = product.stocks.reduce((sum, stock) => sum + stock.quantity, 0);
+
+          // Get all locations where this product exists
+          const locations = product.stocks.map(stock => ({
+            id: stock.location.id,
+            name: stock.location.name,
+            quantity: stock.quantity,
+            status: stock.status
+          }));
+
+          return {
+            id: product.id,
+            name: product.name,
+            type: product.type,
+            brand: product.brand,
+            model: product.model,
+            serialNumber: product.serialNumber,
+            purchasePrice: product.purchasePrice,
+            sellingPrice: product.sellingPrice,
+            technicalSpecs: null,
+            status: product.status,
+            stocks: product.stocks, // Keep full stocks array for backwards compatibility
+            locations: locations, // New: array of all locations with quantities
+            totalQuantity: totalQuantity, // New: total across all locations
+            // For backwards compatibility, use first stock location if exists
+            stockLocation: product.stocks[0]?.location || null,
+            stockLocationId: product.stocks[0]?.location?.id || null,
+            stockQuantity: product.stocks[0]?.quantity || 0
+          };
+        });
 
         // Combine both types of products
         return res.status(200).json([...transformedMedicalDevices, ...transformedProducts]);
@@ -260,42 +276,95 @@ export default async function handler(
               },
             });
 
-            // Then, create the stock entry
-            const stock = await prisma.stock.create({
-              data: {
-                product: {
-                  connect: {
-                    id: newProduct.id
-                  }
-                },
-                location: {
-                  connect: {
-                    id: data.stockLocationId
-                  }
-                },
-                quantity: parseInt(data.stockQuantity.toString()),
-                status: 'FOR_SALE'
-              },
-              include: {
-                location: true
-              }
-            });
+            // Handle multiple stock entries
+            const stockEntries = data.stockEntries || [];
 
-            return res.status(201).json({
-              id: newProduct.id,
-              name: newProduct.name,
-              type: newProduct.type,
-              brand: newProduct.brand,
-              model: newProduct.model,
-              serialNumber: newProduct.serialNumber,
-              purchasePrice: newProduct.purchasePrice,
-              sellingPrice: newProduct.sellingPrice,
-              warrantyExpiration: newProduct.warrantyExpiration,
-              stockLocation: stock.location.name,
-              stockLocationId: stock.location.id,
-              stockQuantity: stock.quantity,
-              status: stock.status
-            });
+            // If stockEntries is provided (new multi-location format), create multiple stocks
+            if (Array.isArray(stockEntries) && stockEntries.length > 0) {
+              const createdStocks = await Promise.all(
+                stockEntries.map((entry: any) =>
+                  prisma.stock.create({
+                    data: {
+                      productId: newProduct.id,
+                      locationId: entry.locationId,
+                      quantity: parseInt(entry.quantity.toString()),
+                      status: entry.status || 'FOR_SALE'
+                    },
+                    include: {
+                      location: true
+                    }
+                  })
+                )
+              );
+
+              // Calculate total quantity
+              const totalQuantity = createdStocks.reduce((sum, stock) => sum + stock.quantity, 0);
+
+              return res.status(201).json({
+                id: newProduct.id,
+                name: newProduct.name,
+                type: newProduct.type,
+                brand: newProduct.brand,
+                model: newProduct.model,
+                serialNumber: newProduct.serialNumber,
+                purchasePrice: newProduct.purchasePrice,
+                sellingPrice: newProduct.sellingPrice,
+                warrantyExpiration: newProduct.warrantyExpiration,
+                stocks: createdStocks,
+                locations: createdStocks.map(stock => ({
+                  id: stock.location.id,
+                  name: stock.location.name,
+                  quantity: stock.quantity,
+                  status: stock.status
+                })),
+                totalQuantity: totalQuantity,
+                // Backwards compatibility
+                stockLocation: createdStocks[0]?.location.name,
+                stockLocationId: createdStocks[0]?.location.id,
+                stockQuantity: createdStocks[0]?.quantity,
+                status: createdStocks[0]?.status
+              });
+            }
+            // Fallback to old single-location format (backwards compatibility)
+            else if (data.stockLocationId) {
+              const stock = await prisma.stock.create({
+                data: {
+                  product: {
+                    connect: {
+                      id: newProduct.id
+                    }
+                  },
+                  location: {
+                    connect: {
+                      id: data.stockLocationId
+                    }
+                  },
+                  quantity: parseInt(data.stockQuantity.toString()),
+                  status: 'FOR_SALE'
+                },
+                include: {
+                  location: true
+                }
+              });
+
+              return res.status(201).json({
+                id: newProduct.id,
+                name: newProduct.name,
+                type: newProduct.type,
+                brand: newProduct.brand,
+                model: newProduct.model,
+                serialNumber: newProduct.serialNumber,
+                purchasePrice: newProduct.purchasePrice,
+                sellingPrice: newProduct.sellingPrice,
+                warrantyExpiration: newProduct.warrantyExpiration,
+                stockLocation: stock.location.name,
+                stockLocationId: stock.location.id,
+                stockQuantity: stock.quantity,
+                status: stock.status
+              });
+            } else {
+              throw new Error('No stock entries provided');
+            }
           }
         } catch (error) {
           console.error('Error creating product:', error);
@@ -384,45 +453,56 @@ export default async function handler(
           });
         }
         
-        // Handle regular product update
+        // Handle regular product update (accessories/spare parts)
         else {
           const updatedProduct = await prisma.product.update({
             where: { id },
             data: {
               name: updateData.name,
               brand: updateData.brand,
+              model: updateData.model,
               serialNumber: updateData.serialNumber,
               purchasePrice: updateData.purchasePrice ? parseFloat(updateData.purchasePrice) : null,
               sellingPrice: updateData.sellingPrice ? parseFloat(updateData.sellingPrice) : null,
               warrantyExpiration: updateData.warrantyExpiration ? new Date(updateData.warrantyExpiration) : null,
             },
-          });
-
-    
-
-          const stock = await prisma.stock.findFirst({
-            where: {
-              productId: id,
-              locationId: updateData.stockLocation
-            },
             include: {
-              location: true
+              stocks: {
+                include: {
+                  location: true
+                }
+              }
             }
           });
+
+          // Calculate locations info for response
+          const locations = updatedProduct.stocks.map(stock => ({
+            id: stock.location.id,
+            name: stock.location.name,
+            quantity: stock.quantity,
+            status: stock.status
+          }));
+
+          const totalQuantity = updatedProduct.stocks.reduce((sum, stock) => sum + stock.quantity, 0);
 
           return res.status(200).json({
             id: updatedProduct.id,
             name: updatedProduct.name,
             type: updatedProduct.type,
             brand: updatedProduct.brand,
+            model: updatedProduct.model,
             serialNumber: updatedProduct.serialNumber,
             purchasePrice: updatedProduct.purchasePrice,
             sellingPrice: updatedProduct.sellingPrice,
             technicalSpecs: null,
-            stockLocation: stock?.location.name || 'Non assigné',
-            stockLocationId: stock?.location.id,
-            stockQuantity: stock?.quantity || 0,
-            status: stock?.status || 'FOR_SALE'
+            locations: locations,
+            totalQuantity: totalQuantity,
+            stocks: updatedProduct.stocks,
+            // For backwards compatibility
+            stockLocation: updatedProduct.stocks[0]?.location.name || 'Non assigné',
+            stockLocationId: updatedProduct.stocks[0]?.location.id,
+            stockQuantity: updatedProduct.stocks[0]?.quantity || 0,
+            status: updatedProduct.stocks[0]?.status || 'FOR_SALE'
           });
         }
 

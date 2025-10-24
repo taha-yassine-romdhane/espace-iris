@@ -29,16 +29,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const accessory = accessories[i];
       
       try {
-        // Create the product first
+        // Create the product first (without stockLocation)
         const product = await prisma.product.create({
           data: {
             name: accessory.name,
             type: 'ACCESSORY',
             brand: accessory.brand,
             model: accessory.model,
-            stockLocation: accessory.stockLocationId ? {
-              connect: { id: accessory.stockLocationId }
-            } : undefined,
             purchasePrice: accessory.purchasePrice,
             sellingPrice: accessory.sellingPrice,
             warrantyExpiration: accessory.warrantyExpiration,
