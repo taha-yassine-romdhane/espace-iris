@@ -27,7 +27,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     for (let i = 0; i < accessories.length; i++) {
       const accessory = accessories[i];
-      
+
       try {
         // Create the product first (without stockLocation)
         const product = await prisma.product.create({
@@ -43,21 +43,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           },
         });
 
-        // Create stock entry if stockLocationId is provided
-        if (accessory.stockLocationId && accessory.stockQuantity > 0) {
+        // Handle multi-location stock entries
+        if (accessory.stockEntries && Array.isArray(accessory.stockEntries) && accessory.stockEntries.length > 0) {
+          // Create multiple stock entries (one per location)
+          await Promise.all(
+            accessory.stockEntries.map((entry: any) =>
+              prisma.stock.create({
+                data: {
+                  productId: product.id,
+                  locationId: entry.locationId,
+                  quantity: parseInt(entry.quantity.toString()),
+                  status: entry.status || 'FOR_SALE',
+                },
+              })
+            )
+          );
+        }
+        // Backwards compatibility: single location format
+        else if (accessory.stockLocationId && accessory.stockQuantity > 0) {
           await prisma.stock.create({
             data: {
               productId: product.id,
               locationId: accessory.stockLocationId,
               quantity: accessory.stockQuantity,
-              status: accessory.status || 'FOR_SALE', // Stock uses StockStatus enum
+              status: accessory.status || 'FOR_SALE',
             },
           });
         }
 
         imported++;
         results.push({ success: true, productId: product.id });
-        
+
       } catch (error) {
         console.error(`Error importing accessory ${i + 1}:`, error);
         errors.push({

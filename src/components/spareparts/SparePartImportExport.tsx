@@ -58,15 +58,28 @@ export function SparePartImportExport({ onImportSuccess, stockLocations }: Spare
   const { toast } = useToast();
 
   // Template structure matching the SparePartForm fields
+  // Multi-location support: one row per product-location combination
   const getTemplateData = () => {
-    const firstLocationName = stockLocations.length > 0 ? stockLocations[0].name : 'Bureau Principal';
+    const location1 = stockLocations.length > 0 ? stockLocations[0].name : 'Bureau Principal';
+    const location2 = stockLocations.length > 1 ? stockLocations[1].name : 'Entrepôt';
     return [
       {
         name: 'Filtre HEPA',
         brand: 'Philips',
         model: 'DreamStation',
-        stockLocationName: firstLocationName,
+        stockLocationName: location1,
         stockQuantity: 25,
+        purchasePrice: 12.5,
+        sellingPrice: 18.0,
+        warranty: '12 mois',
+        status: 'FOR_SALE'
+      },
+      {
+        name: 'Filtre HEPA',
+        brand: 'Philips',
+        model: 'DreamStation',
+        stockLocationName: location2,
+        stockQuantity: 15,
         purchasePrice: 12.5,
         sellingPrice: 18.0,
         warranty: '12 mois',
@@ -76,7 +89,7 @@ export function SparePartImportExport({ onImportSuccess, stockLocations }: Spare
         name: 'Joint étanchéité',
         brand: 'ResMed',
         model: 'AirSense',
-        stockLocationName: firstLocationName,
+        stockLocationName: location1,
         stockQuantity: 100,
         purchasePrice: 5.0,
         sellingPrice: 8.0,
@@ -91,25 +104,33 @@ export function SparePartImportExport({ onImportSuccess, stockLocations }: Spare
     const ws = XLSX.utils.json_to_sheet(templateData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Pieces_Rechange');
-    
-    // Add headers styling and instructions
-    const locationNames = stockLocations.map(loc => loc.name).join(', ');
-    const headers = [
-      'Nom (obligatoire)',
-      'Marque',
-      'Modèle', 
-      `Lieu de Stockage (${locationNames})`,
-      'Quantité en Stock',
-      'Prix d\'Achat',
-      'Prix de Vente',
-      'Garantie',
-      'Statut (EN_VENTE, EN_LOCATION, EN_REPARATION, HORS_SERVICE)'
+
+    // Add instruction sheet
+    const instructions = [
+      ['INSTRUCTIONS POUR L\'IMPORTATION DE PIÈCES DE RECHANGE'],
+      [''],
+      ['Format Multi-Emplacements:'],
+      ['- Pour ajouter un produit dans PLUSIEURS emplacements, ajoutez UNE LIGNE par emplacement'],
+      ['- Utilisez le MÊME NOM de produit pour chaque ligne'],
+      ['- Exemple: "Filtre HEPA" au Bureau Principal (25 unités) + Entrepôt (15 unités) = 2 lignes'],
+      [''],
+      ['Colonnes Obligatoires:'],
+      ['- Nom: Nom de la pièce (obligatoire)'],
+      ['- Lieu de Stockage: Doit correspondre exactement à un emplacement existant'],
+      ['- Quantité: Nombre d\'unités dans cet emplacement'],
+      [''],
+      [`Emplacements Disponibles: ${stockLocations.map(loc => loc.name).join(', ')}`],
+      [''],
+      ['Statuts Disponibles: FOR_SALE, FOR_RENT, IN_REPAIR, OUT_OF_SERVICE'],
+      [''],
+      ['Voir l\'onglet "Pieces_Rechange" pour des exemples']
     ];
-    
-    XLSX.utils.sheet_add_aoa(wb.Sheets['Pieces_Rechange'], [headers], { origin: 'A1' });
-    
+
+    const wsInstructions = XLSX.utils.aoa_to_sheet(instructions);
+    XLSX.utils.book_append_sheet(wb, wsInstructions, 'Instructions');
+
     XLSX.writeFile(wb, 'template_pieces_rechange.xlsx');
-    
+
     toast({
       title: 'Succès',
       description: 'Template téléchargé avec succès',
@@ -274,24 +295,54 @@ export function SparePartImportExport({ onImportSuccess, stockLocations }: Spare
   const processImport = async () => {
     setIsProcessing(true);
     try {
-      const sparePartsToImport = previewData.map(row => {
+      // Group rows by product name to handle multi-location products
+      const productGroups = new Map<string, {
+        productInfo: Partial<SparePartRow>,
+        stockEntries: Array<{ locationId: string, quantity: number, status: string }>
+      }>();
+
+      previewData.forEach(row => {
+        const productKey = `${row.name.toLowerCase()}_${row.brand?.toLowerCase() || ''}_${row.model?.toLowerCase() || ''}`;
+
+        if (!productGroups.has(productKey)) {
+          productGroups.set(productKey, {
+            productInfo: {
+              name: row.name,
+              brand: row.brand,
+              model: row.model,
+              purchasePrice: row.purchasePrice,
+              sellingPrice: row.sellingPrice,
+              warranty: row.warranty,
+            },
+            stockEntries: []
+          });
+        }
+
+        const group = productGroups.get(productKey)!;
         const stockLocation = stockLocations.find(
           loc => loc.name.toLowerCase() === row.stockLocationName?.toLowerCase()
         );
 
-        return {
-          name: row.name,
-          type: 'SPARE_PART',
-          brand: row.brand || null,
-          model: row.model || null,
-          stockLocationId: stockLocation?.id || null,
-          stockQuantity: row.stockQuantity || 0,
-          purchasePrice: row.purchasePrice || null,
-          sellingPrice: row.sellingPrice || null,
-          warranty: row.warranty || null,
-          status: row.status || 'FOR_SALE',
-        };
+        if (stockLocation && row.stockQuantity && row.stockQuantity > 0) {
+          group.stockEntries.push({
+            locationId: stockLocation.id,
+            quantity: row.stockQuantity,
+            status: row.status || 'FOR_SALE'
+          });
+        }
       });
+
+      // Convert to API format
+      const sparePartsToImport = Array.from(productGroups.values()).map(group => ({
+        name: group.productInfo.name!,
+        type: 'SPARE_PART',
+        brand: group.productInfo.brand || null,
+        model: group.productInfo.model || null,
+        purchasePrice: group.productInfo.purchasePrice || null,
+        sellingPrice: group.productInfo.sellingPrice || null,
+        warranty: group.productInfo.warranty || null,
+        stockEntries: group.stockEntries
+      }));
 
       const response = await fetch('/api/products/import-spareparts', {
         method: 'POST',
@@ -306,7 +357,7 @@ export function SparePartImportExport({ onImportSuccess, stockLocations }: Spare
       }
 
       const result = await response.json();
-      
+
       toast({
         title: 'Succès',
         description: `${result.imported} pièces de rechange importées avec succès`,
@@ -316,12 +367,12 @@ export function SparePartImportExport({ onImportSuccess, stockLocations }: Spare
       setIsImportOpen(false);
       setPreviewData([]);
       onImportSuccess();
-      
+
       // Reset file input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
-      
+
     } catch (error) {
       console.error('Import error:', error);
       toast({
@@ -342,31 +393,55 @@ export function SparePartImportExport({ onImportSuccess, stockLocations }: Spare
       }
 
       const spareParts = await response.json();
-      
-      const exportData = spareParts.map((part: any) => ({
-        'Nom': part.name,
-        'Marque': part.brand || '',
-        'Modèle': part.model || '',
-        'Lieu de Stockage': part.stockLocation?.name || '',
-        'Quantité en Stock': part.stockQuantity || 0,
-        'Prix d\'Achat': part.purchasePrice || '',
-        'Prix de Vente': part.sellingPrice || '',
-        'Garantie': part.warranty || '',
-        'Statut': part.status || '',
-        'Date de Création': part.createdAt ? new Date(part.createdAt).toLocaleDateString('fr-FR') : '',
-      }));
+
+      // Export format: one row per product-location combination
+      const exportData: any[] = [];
+
+      spareParts.forEach((part: any) => {
+        if (part.stocks && part.stocks.length > 0) {
+          // Create one row for each stock location
+          part.stocks.forEach((stock: any) => {
+            exportData.push({
+              'Nom': part.name,
+              'Marque': part.brand || '',
+              'Modèle': part.model || '',
+              'Lieu de Stockage': stock.location?.name || '',
+              'Quantité en Stock': stock.quantity || 0,
+              'Prix d\'Achat': part.purchasePrice || '',
+              'Prix de Vente': part.sellingPrice || '',
+              'Garantie': part.warranty || '',
+              'Statut': stock.status || '',
+              'Date de Création': part.createdAt ? new Date(part.createdAt).toLocaleDateString('fr-FR') : '',
+            });
+          });
+        } else {
+          // Fallback for products without stock entries
+          exportData.push({
+            'Nom': part.name,
+            'Marque': part.brand || '',
+            'Modèle': part.model || '',
+            'Lieu de Stockage': '',
+            'Quantité en Stock': 0,
+            'Prix d\'Achat': part.purchasePrice || '',
+            'Prix de Vente': part.sellingPrice || '',
+            'Garantie': part.warranty || '',
+            'Statut': '',
+            'Date de Création': part.createdAt ? new Date(part.createdAt).toLocaleDateString('fr-FR') : '',
+          });
+        }
+      });
 
       const ws = XLSX.utils.json_to_sheet(exportData);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Pieces_Rechange');
-      
+
       XLSX.writeFile(wb, `pieces_rechange_export_${new Date().toISOString().split('T')[0]}.xlsx`);
-      
+
       toast({
         title: 'Succès',
-        description: 'Export terminé avec succès',
+        description: `Export terminé avec succès (${exportData.length} lignes)`,
       });
-      
+
     } catch (error) {
       console.error('Export error:', error);
       toast({
