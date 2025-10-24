@@ -71,17 +71,15 @@ export default async function handler(
           include: {
             stocks: { take: 1 },
             medicalDevices: { take: 1 },
-            products: { take: 1 },
             outgoingTransfers: { take: 1 },
             incomingTransfers: { take: 1 }
           }
         });
-        
+
         // Prevent deletion if location has associated items
         if (
           (locationWithItems?.stocks && locationWithItems.stocks.length > 0) ||
           (locationWithItems?.medicalDevices && locationWithItems.medicalDevices.length > 0) ||
-          (locationWithItems?.products && locationWithItems.products.length > 0) ||
           (locationWithItems?.outgoingTransfers && locationWithItems.outgoingTransfers.length > 0) ||
           (locationWithItems?.incomingTransfers && locationWithItems.incomingTransfers.length > 0)
         ) {

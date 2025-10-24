@@ -81,7 +81,7 @@ const AdminChat: React.FC = () => {
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // Stable function references to avoid re-renders
-    const fetchConversationsRef = useRef<() => Promise<void>>();
+    const fetchConversationsRef = useRef<(() => Promise<void>) | undefined>(undefined);
 
     useEffect(() => {
         fetchConversationsRef.current = fetchConversations;

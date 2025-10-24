@@ -136,10 +136,15 @@ export default async function handler(
               doctor: {
                 select: {
                   id: true,
-                  firstName: true,
-                  lastName: true,
-                  role: true,
-                  telephone: true
+                  user: {
+                    select: {
+                      id: true,
+                      firstName: true,
+                      lastName: true,
+                      role: true,
+                      telephone: true
+                    }
+                  }
                 }
               }
             }
@@ -157,10 +162,15 @@ export default async function handler(
               doctor: {
                 select: {
                   id: true,
-                  firstName: true,
-                  lastName: true,
-                  role: true,
-                  telephone: true
+                  user: {
+                    select: {
+                      id: true,
+                      firstName: true,
+                      lastName: true,
+                      role: true,
+                      telephone: true
+                    }
+                  }
                 }
               }
             }
@@ -186,8 +196,8 @@ export default async function handler(
 
       // Combine doctors from rentals and appointments
       const doctorsList = [
-        ...employeeRentals.map(r => r.patient?.doctor).filter(Boolean),
-        ...employeeAppointments.map(a => a.patient?.doctor).filter(Boolean)
+        ...employeeRentals.map(r => r.patient?.doctor?.user).filter(Boolean),
+        ...employeeAppointments.map(a => a.patient?.doctor?.user).filter(Boolean)
       ];
 
       const uniqueUsers = new Map();

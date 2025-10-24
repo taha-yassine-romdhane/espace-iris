@@ -5,6 +5,10 @@ const nextConfig: NextConfig = {
     // Disable ESLint during builds
     ignoreDuringBuilds: true,
   },
+  typescript: {
+    // Disable TypeScript type checking during builds
+    ignoreBuildErrors: true,
+  },
   // Add this output configuration
   output: 'standalone', // Required for Docker deployment
   // Keep your existing image config

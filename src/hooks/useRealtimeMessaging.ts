@@ -9,20 +9,24 @@ interface Message {
   senderId: string;
   receiverId: string | null;
   conversationId: string;
+  messageType: string;
   isRead: boolean;
+  readAt: string | null;
   createdAt: string;
   sender: {
     id: string;
     firstName: string;
     lastName: string;
     role: string;
+    telephone?: string;
   };
   receiver?: {
     id: string;
     firstName: string;
     lastName: string;
     role: string;
-  } | null;
+    telephone?: string;
+  };
 }
 
 interface UseRealtimeMessagingProps {
