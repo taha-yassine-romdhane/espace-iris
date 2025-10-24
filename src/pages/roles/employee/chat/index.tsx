@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { EnhancedChatInput } from '@/components/chat/EnhancedChatInput';
 import { EnhancedMessage } from '@/components/chat/EnhancedMessage';
+import { useRealtimeMessaging } from '@/hooks/useRealtimeMessaging';
 import {
     MessageCircle,
     Send,
@@ -76,11 +77,127 @@ const EmployeeChat: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [showNewChat, setShowNewChat] = useState(false);
     const [sendingMessage, setSendingMessage] = useState(false);
+    const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Stable function references to avoid re-renders
+    const fetchConversationsRef = useRef<() => Promise<void>>();
+
+    useEffect(() => {
+        fetchConversationsRef.current = fetchConversations;
+    });
+
+    // Real-time messaging handlers
+    const handleNewMessage = useCallback((data: { message: Message; conversationId: string }) => {
+        const { message, conversationId } = data;
+
+        // Add message to current conversation if it matches
+        setSelectedConversation(current => {
+            if (current?.conversationId === conversationId) {
+                setMessages(prev => {
+                    // Avoid duplicates
+                    if (prev.some(m => m.id === message.id)) return prev;
+                    return [...prev, message];
+                });
+
+                // Auto-mark as read
+                axios.post('/api/messages/mark-read', { conversationId }).catch(console.error);
+
+                // Update conversation locally without incrementing unread (already read)
+                setConversations(prev => {
+                    const updated = prev.map(conv => {
+                        if (conv.conversationId === conversationId) {
+                            return {
+                                ...conv,
+                                lastMessage: {
+                                    id: message.id,
+                                    content: message.content,
+                                    createdAt: message.createdAt,
+                                    senderId: message.senderId
+                                },
+                                lastMessageAt: message.createdAt
+                            };
+                        }
+                        return conv;
+                    });
+                    return updated.sort((a, b) =>
+                        new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime()
+                    );
+                });
+            } else {
+                // Update conversation and increment unread count
+                setConversations(prev => {
+                    const updated = prev.map(conv => {
+                        if (conv.conversationId === conversationId) {
+                            return {
+                                ...conv,
+                                lastMessage: {
+                                    id: message.id,
+                                    content: message.content,
+                                    createdAt: message.createdAt,
+                                    senderId: message.senderId
+                                },
+                                lastMessageAt: message.createdAt,
+                                unreadCount: conv.unreadCount + 1
+                            };
+                        }
+                        return conv;
+                    });
+                    return updated.sort((a, b) =>
+                        new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime()
+                    );
+                });
+            }
+            return current;
+        });
+    }, []);
+
+    const handleMessageRead = useCallback((data: { readerId: string; messageIds: string[]; conversationId: string }) => {
+        // Update read status in current messages
+        setMessages(prev => prev.map(msg => {
+            if (data.messageIds.includes(msg.id)) {
+                return { ...msg, isRead: true, readAt: new Date().toISOString() };
+            }
+            return msg;
+        }));
+
+        // No need to refresh conversations - read receipts are just UI indicators
+    }, []);
+
+    const handleTyping = useCallback((data: { userId: string; conversationId: string }) => {
+        setSelectedConversation(current => {
+            if (current?.conversationId === data.conversationId) {
+                setTypingUsers(prev => new Set(prev).add(data.userId));
+            }
+            return current;
+        });
+    }, []);
+
+    const handleStopTyping = useCallback((data: { userId: string; conversationId: string }) => {
+        setSelectedConversation(current => {
+            if (current?.conversationId === data.conversationId) {
+                setTypingUsers(prev => {
+                    const newSet = new Set(prev);
+                    newSet.delete(data.userId);
+                    return newSet;
+                });
+            }
+            return current;
+        });
+    }, []);
+
+    // Initialize real-time messaging
+    const { sendTypingIndicator, stopTypingIndicator } = useRealtimeMessaging({
+        onNewMessage: handleNewMessage,
+        onMessageRead: handleMessageRead,
+        onTyping: handleTyping,
+        onStopTyping: handleStopTyping
+    });
 
     useEffect(() => {
         if (status === 'loading') return;
-        
+
         if (!session?.user || session.user.role !== 'EMPLOYEE') {
             router.push('/auth/signin');
             return;
@@ -119,14 +236,38 @@ const EmployeeChat: React.FC = () => {
         try {
             const response = await axios.get(`/api/messages?conversationId=${conversationId}`);
             setMessages(response.data.messages);
-            
+
             // Mark messages as read
             await axios.post('/api/messages/mark-read', { conversationId });
-            
-            // Update conversation to reflect read messages
-            fetchConversations();
+
+            // Update conversation to reflect read messages locally
+            setConversations(prev => prev.map(conv => {
+                if (conv.conversationId === conversationId) {
+                    return { ...conv, unreadCount: 0 };
+                }
+                return conv;
+            }));
         } catch (error) {
             console.error('Error fetching messages:', error);
+        }
+    };
+
+    const handleMessageChange = (value: string) => {
+        setNewMessage(value);
+
+        // Send typing indicator
+        if (value.trim() && selectedConversation) {
+            sendTypingIndicator(selectedConversation.conversationId, selectedConversation.otherUser.id);
+
+            // Clear existing timeout
+            if (typingTimeoutRef.current) {
+                clearTimeout(typingTimeoutRef.current);
+            }
+
+            // Set timeout to stop typing indicator after 3 seconds of inactivity
+            typingTimeoutRef.current = setTimeout(() => {
+                stopTypingIndicator(selectedConversation.conversationId, selectedConversation.otherUser.id);
+            }, 3000);
         }
     };
 
@@ -135,6 +276,13 @@ const EmployeeChat: React.FC = () => {
 
         try {
             setSendingMessage(true);
+
+            // Stop typing indicator
+            stopTypingIndicator(selectedConversation.conversationId, selectedConversation.otherUser.id);
+            if (typingTimeoutRef.current) {
+                clearTimeout(typingTimeoutRef.current);
+            }
+
             const response = await axios.post('/api/messages', {
                 content: newMessage.trim(),
                 receiverId: selectedConversation.otherUser.id,
@@ -144,9 +292,29 @@ const EmployeeChat: React.FC = () => {
 
             setMessages(prev => [...prev, response.data.message]);
             setNewMessage('');
-            
-            // Update conversations list
-            fetchConversations();
+
+            // Update conversation list locally without refetching
+            setConversations(prev => {
+                const updated = prev.map(conv => {
+                    if (conv.conversationId === selectedConversation.conversationId) {
+                        return {
+                            ...conv,
+                            lastMessage: {
+                                id: response.data.message.id,
+                                content: response.data.message.content,
+                                createdAt: response.data.message.createdAt,
+                                senderId: response.data.message.senderId
+                            },
+                            lastMessageAt: response.data.message.createdAt
+                        };
+                    }
+                    return conv;
+                });
+                // Sort by lastMessageAt to put most recent first
+                return updated.sort((a, b) =>
+                    new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime()
+                );
+            });
         } catch (error) {
             console.error('Error sending message:', error);
         } finally {
@@ -236,6 +404,30 @@ const EmployeeChat: React.FC = () => {
         }
     };
 
+    const getMessagePreview = (content: string, maxLength: number = 50) => {
+        // Parse references from the message content
+        // @type:"Title With Spaces"{id:"123",sub:"details"}
+        const referenceRegex = /@(patient|device|appointment|rental|user):(?:"([^\"]+)"|'([^']+)'|\[([^\]]+)\]|([^\s\{]+))(?:\{([^}]*)\})?/g;
+
+        let preview = content;
+        let match;
+
+        while ((match = referenceRegex.exec(content)) !== null) {
+            const refType = match[1];
+            const refTitle = (match[2] || match[3] || match[4] || match[5] || '').trim();
+
+            // Replace the full reference with just the title
+            preview = preview.replace(match[0], refTitle);
+        }
+
+        // Truncate if too long
+        if (preview.length > maxLength) {
+            preview = preview.substring(0, maxLength) + '...';
+        }
+
+        return preview;
+    };
+
     const filteredUsers = users.filter(user =>
         getUserFullName(user).toLowerCase().includes(searchQuery.toLowerCase()) ||
         user.role.toLowerCase().includes(searchQuery.toLowerCase())
@@ -317,10 +509,15 @@ const EmployeeChat: React.FC = () => {
                                                 )}>
                                                     {conversation.otherUser.role}
                                                 </span>
-                                                <span className="text-xs text-gray-500 truncate">
-                                                    {conversation.lastMessage?.content || 'Nouvelle conversation'}
-                                                </span>
+                                                {conversation.otherUser.telephone && (
+                                                    <span className="text-xs text-gray-500 mr-2">
+                                                        {conversation.otherUser.telephone}
+                                                    </span>
+                                                )}
                                             </div>
+                                            <p className="text-xs text-gray-500 truncate mt-1">
+                                                {conversation.lastMessage?.content ? getMessagePreview(conversation.lastMessage.content) : 'Nouvelle conversation'}
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
@@ -366,10 +563,14 @@ const EmployeeChat: React.FC = () => {
                                                     {selectedConversation.otherUser.role}
                                                 </span>
                                             </div>
-                                            {selectedConversation.otherUser.telephone && (
+                                            {selectedConversation.otherUser.telephone ? (
                                                 <div className="text-sm text-gray-600 mt-1 flex items-center">
                                                     <Phone className="h-3 w-3 mr-1" />
                                                     {selectedConversation.otherUser.telephone}
+                                                </div>
+                                            ) : (
+                                                <div className="text-xs text-green-500 mt-1">
+                                                    Aucun numéro de téléphone
                                                 </div>
                                             )}
                                         </div>
@@ -394,6 +595,17 @@ const EmployeeChat: React.FC = () => {
                                         />
                                     );
                                 })}
+                                {/* Typing Indicator */}
+                                {typingUsers.size > 0 && (
+                                    <div className="flex items-center space-x-2 text-sm text-gray-500 mb-2">
+                                        <div className="flex space-x-1">
+                                            <div className="w-2 h-2 bg-green-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                                            <div className="w-2 h-2 bg-green-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                                            <div className="w-2 h-2 bg-green-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                                        </div>
+                                        <span>{selectedConversation?.otherUser.firstName} est en train d'écrire...</span>
+                                    </div>
+                                )}
                                 <div ref={messagesEndRef} />
                             </div>
 
@@ -401,7 +613,7 @@ const EmployeeChat: React.FC = () => {
                             <div className="p-4 border-t border-green-200">
                                 <EnhancedChatInput
                                     message={newMessage}
-                                    onChange={setNewMessage}
+                                    onChange={handleMessageChange}
                                     onSend={sendMessage}
                                     disabled={sendingMessage}
                                     placeholder="Tapez votre message..."

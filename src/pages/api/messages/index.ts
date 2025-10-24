@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
+import { pusherServer, PUSHER_EVENTS, getPrivateUserChannel } from '@/lib/pusher';
 
 export default async function handler(
   req: NextApiRequest,
@@ -141,6 +142,30 @@ export default async function handler(
           }
         }
       });
+
+      // Broadcast real-time event to receiver
+      if (receiverId) {
+        try {
+          const channel = getPrivateUserChannel(receiverId);
+          console.log('📡 Broadcasting message to Pusher channel:', channel);
+          console.log('📡 Event:', PUSHER_EVENTS.NEW_MESSAGE);
+          console.log('📡 Payload:', { messageId: message.id, conversationId: finalConversationId });
+
+          await pusherServer.trigger(
+            channel,
+            PUSHER_EVENTS.NEW_MESSAGE,
+            {
+              message,
+              conversationId: finalConversationId
+            }
+          );
+
+          console.log('✅ Pusher broadcast successful');
+        } catch (pusherError) {
+          console.error('❌ Pusher broadcast error:', pusherError);
+          // Don't fail the request if Pusher fails
+        }
+      }
 
       return res.status(201).json({ message });
     }
