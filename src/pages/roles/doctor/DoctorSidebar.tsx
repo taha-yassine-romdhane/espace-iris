@@ -18,9 +18,9 @@ import {
     Check,
     X,
     GripVertical,
-    FileText,
     Activity,
     Bell,
+    FileText,
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
@@ -29,6 +29,7 @@ type MenuItem = {
     icon: React.ReactNode;
     label: string;
     path: string;
+    comingSoon?: boolean;
 };
 
 const DoctorSidebar: React.FC = () => {
@@ -46,7 +47,7 @@ const DoctorSidebar: React.FC = () => {
         { id: 'dashboard', icon: <LayoutDashboard size={20} />, label: "Tableau de Bord", path: "/roles/doctor/dashboard" },
         { id: 'patients', icon: <Users size={20} />, label: "Mes Patients", path: "/roles/doctor/patients" },
         { id: 'diagnostics', icon: <Stethoscope size={20} />, label: "Diagnostics", path: "/roles/doctor/diagnostics" },
-        { id: 'reports', icon: <FileText size={20} />, label: "Rapports", path: "/roles/doctor/reports" },
+        { id: 'reports', icon: <FileText size={20} />, label: "Rapports", path: "/roles/doctor/reports", comingSoon: true },
         { id: 'notifications', icon: <Bell size={20} />, label: "Notifications", path: "/roles/doctor/notifications" },
         { id: 'chat', icon: <MessageCircle size={20} />, label: "Messages", path: "/roles/doctor/chat" },
         { id: 'help', icon: <HelpCircle size={20} />, label: "Aide & Support", path: "/roles/doctor/help" },
@@ -129,8 +130,8 @@ const DoctorSidebar: React.FC = () => {
     };
 
     // Navigation handler
-    const handleNavigation = useCallback((path: string) => {
-        if (isEditMode) return; // Prevent navigation in edit mode
+    const handleNavigation = useCallback((path: string, comingSoon?: boolean) => {
+        if (isEditMode || comingSoon) return; // Prevent navigation in edit mode or for coming soon items
 
         const now = Date.now();
 
@@ -284,14 +285,18 @@ const DoctorSidebar: React.FC = () => {
                                 onDragOver={(e) => handleDragOver(e, index)}
                                 onDragLeave={handleDragLeave}
                                 onDrop={(e) => handleDrop(e, index)}
-                                onClick={() => !isEditMode && handleNavigation(item.path)}
+                                onClick={() => !isEditMode && handleNavigation(item.path, item.comingSoon)}
                                 className={cn(
                                     "flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-all duration-200",
                                     isEditMode
                                         ? "cursor-grab active:cursor-grabbing hover:bg-red-50 border-2 border-transparent hover:border-red-200"
+                                        : item.comingSoon
+                                        ? "cursor-not-allowed opacity-60"
                                         : "cursor-pointer",
-                                    !isEditMode && (router.pathname === item.path || router.asPath === item.path)
+                                    !isEditMode && !item.comingSoon && (router.pathname === item.path || router.asPath === item.path)
                                         ? "bg-red-600 text-white shadow-md"
+                                        : item.comingSoon
+                                        ? "text-gray-500 bg-gray-50"
                                         : "text-gray-700 hover:bg-red-50 hover:text-red-700",
                                     draggedItem === item.id && "opacity-50 scale-105",
                                     dragOverIndex === index && draggedItem && draggedItem !== item.id && "border-t-4 border-red-500",
@@ -307,7 +312,16 @@ const DoctorSidebar: React.FC = () => {
                                 <span className={`${isExpanded && !isEditMode ? 'mr-3' : isExpanded ? 'mr-3' : 'mx-auto'}`}>
                                     {item.icon}
                                 </span>
-                                {isExpanded && <span className="flex-1">{item.label}</span>}
+                                {isExpanded && (
+                                    <div className="flex items-center justify-between flex-1">
+                                        <span>{item.label}</span>
+                                        {item.comingSoon && (
+                                            <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-700 rounded-full border border-yellow-200">
+                                                Bientôt
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </li>
                     ))}

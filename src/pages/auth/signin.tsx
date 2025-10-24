@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { Eye, EyeOff, Lock, Mail, Loader2, Shield, Stethoscope, Activity, Users } from 'lucide-react';
+import Image from 'next/image';
+import { Eye, EyeOff, Lock, Mail, Loader2, Shield, Stethoscope, Activity, Users, Building2, UserCheck, BarChart3, HeartPulse } from 'lucide-react';
 import Header from '@/components/welcome/Header';
 
 export default function SignIn() {
@@ -64,19 +65,38 @@ export default function SignIn() {
           {/* Logo and Title */}
           <div className="text-center">
             <div className="flex justify-center mb-6">
-              <div className="relative">
-                <div className="w-20 h-20 bg-gradient-to-br from-blue-600 to-purple-600 rounded-3xl rotate-12 absolute inset-0"></div>
-                <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-500 rounded-3xl flex items-center justify-center relative">
-                  <Stethoscope className="h-10 w-10 text-white" />
-                </div>
+              <div className="relative w-48 h-48">
+                <Image
+                  src="/logo_No_BG.png"
+                  alt="Espace Iris Logo"
+                  fill
+                  className="object-contain"
+                  priority
+                />
               </div>
             </div>
             <h2 className="text-3xl font-bold text-gray-900">
-              Bienvenue sur Espace Iris 
+              Bienvenue sur Espace Iris
             </h2>
             <p className="mt-2 text-gray-600">
-              Connectez-vous à votre espace professionnel
+              Plateforme CRM complète pour professionnels de santé
             </p>
+
+            {/* Role Badges */}
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
+              <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                <Shield className="h-3 w-3 mr-1" />
+                Administrateurs
+              </div>
+              <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+                <Users className="h-3 w-3 mr-1" />
+                Employés
+              </div>
+              <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
+                <Stethoscope className="h-3 w-3 mr-1" />
+                Médecins
+              </div>
+            </div>
           </div>
 
           {/* Error Alert */}
@@ -201,42 +221,83 @@ export default function SignIn() {
         <div className="absolute inset-0 bg-black/20"></div>
         <div className="relative z-10 flex flex-col justify-center p-12">
           <div className="max-w-lg">
-            <h1 className="text-4xl font-bold mb-6">
-              Gérez votre pratique médicale en toute simplicité
+            <h1 className="text-4xl font-bold mb-4">
+              Système CRM Complet pour la Santé
             </h1>
-            <p className="text-xl mb-8 text-blue-100">
-              Une plateforme complète pour la gestion des patients, des appareils médicaux et des processus commerciaux.
+            <p className="text-lg mb-6 text-blue-100">
+              Un écosystème intégré pour gérer l'ensemble de votre activité médicale et améliorer la vie de vos patients
             </p>
-            
-            {/* Features */}
-            <div className="space-y-4">
-              <div className="flex items-start space-x-3">
-                <div className="flex-shrink-0 w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                  <Users className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="font-semibold mb-1">Gestion des Patients</h3>
-                  <p className="text-sm text-blue-100">Suivi complet des dossiers médicaux et des traitements</p>
-                </div>
-              </div>
-              
-              <div className="flex items-start space-x-3">
-                <div className="flex-shrink-0 w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                  <Activity className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="font-semibold mb-1">Appareils CPAP/VNI</h3>
-                  <p className="text-sm text-blue-100">Gestion intelligente du parc d&apos;appareils médicaux</p>
-                </div>
-              </div>
-              
+
+            {/* CRM Benefits */}
+            <div className="mb-8 p-4 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
+              <h3 className="font-semibold text-lg mb-2 flex items-center">
+                <HeartPulse className="h-5 w-5 mr-2" />
+                Meilleur Suivi Patient
+              </h3>
+              <p className="text-sm text-blue-100">
+                Monitoring complet, historique médical centralisé, et prise en charge personnalisée pour une meilleure qualité de vie
+              </p>
+            </div>
+
+            {/* Features Grid */}
+            <div className="space-y-3">
               <div className="flex items-start space-x-3">
                 <div className="flex-shrink-0 w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
                   <Shield className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="font-semibold mb-1">Sécurité Maximale</h3>
-                  <p className="text-sm text-blue-100">Données protégées et conformité aux normes médicales</p>
+                  <h3 className="font-semibold mb-1">Pour les Administrateurs</h3>
+                  <p className="text-sm text-blue-100">Gestion complète: utilisateurs, stock, ventes, locations, analytics</p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-3">
+                <div className="flex-shrink-0 w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                  <Building2 className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-1">Pour les Employés</h3>
+                  <p className="text-sm text-blue-100">Ventes, locations, diagnostics, rendez-vous, suivi client intégré</p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-3">
+                <div className="flex-shrink-0 w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                  <Stethoscope className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-1">Pour les Médecins</h3>
+                  <p className="text-sm text-blue-100">Accès patients, résultats diagnostics, historique médical complet</p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-3">
+                <div className="flex-shrink-0 w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                  <Activity className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-1">Gestion Appareils Médicaux</h3>
+                  <p className="text-sm text-blue-100">CPAP, VNI, Oxygène - Suivi stock, maintenance, affectation</p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-3">
+                <div className="flex-shrink-0 w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                  <BarChart3 className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-1">Analytics & Rapports</h3>
+                  <p className="text-sm text-blue-100">Tableaux de bord, KPIs, statistiques temps réel</p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-3">
+                <div className="flex-shrink-0 w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                  <UserCheck className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-1">Workflow Optimisé</h3>
+                  <p className="text-sm text-blue-100">Processus automatisés, notifications, collaboration équipe</p>
                 </div>
               </div>
             </div>

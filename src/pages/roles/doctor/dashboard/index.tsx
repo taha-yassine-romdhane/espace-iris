@@ -123,6 +123,50 @@ const DoctorDashboard: React.FC = () => {
         }
     };
 
+    const getStatusBadgeStyle = (status: string) => {
+        const lowerStatus = status.toLowerCase();
+
+        if (lowerStatus.includes('scheduled') || lowerStatus.includes('planifié')) {
+            return 'bg-blue-100 text-blue-700 border-blue-200';
+        }
+        if (lowerStatus.includes('pending') || lowerStatus.includes('en attente')) {
+            return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+        }
+        if (lowerStatus.includes('completed') || lowerStatus.includes('terminé')) {
+            return 'bg-green-100 text-green-700 border-green-200';
+        }
+        if (lowerStatus.includes('cancelled') || lowerStatus.includes('annulé')) {
+            return 'bg-red-100 text-red-700 border-red-200';
+        }
+        if (lowerStatus.includes('confirmed') || lowerStatus.includes('confirmé')) {
+            return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+        }
+        return 'bg-gray-100 text-gray-700 border-gray-200';
+    };
+
+    const parseActivityDescription = (description: string) => {
+        // Split by ' - ' to separate type from status
+        const parts = description.split(' - ');
+        if (parts.length >= 2) {
+            const mainText = parts.slice(0, -1).join(' - ');
+            const status = parts[parts.length - 1];
+            return { mainText, status };
+        }
+        return { mainText: description, status: null };
+    };
+
+    const formatStatusText = (status: string) => {
+        const lowerStatus = status.toLowerCase();
+
+        if (lowerStatus === 'scheduled') return 'Planifié';
+        if (lowerStatus === 'pending') return 'En attente';
+        if (lowerStatus === 'completed') return 'Terminé';
+        if (lowerStatus === 'cancelled') return 'Annulé';
+        if (lowerStatus === 'confirmed') return 'Confirmé';
+
+        return status.charAt(0).toUpperCase() + status.slice(1);
+    };
+
     if (loading) {
         return (
             <div className="p-6 flex items-center justify-center min-h-screen">
@@ -225,20 +269,33 @@ const DoctorDashboard: React.FC = () => {
                         <CardContent>
                             <div className="space-y-3">
                                 {stats?.recentActivity && stats.recentActivity.length > 0 ? (
-                                    stats.recentActivity.map((activity, index) => (
-                                        <div key={activity.id || index} className="flex items-start space-x-3 p-3 bg-red-50 rounded-lg">
-                                            <div className="flex-shrink-0 mt-1">
-                                                <div className="p-1 bg-red-100 rounded-full text-red-600">
-                                                    {getActivityIcon(activity.type)}
+                                    stats.recentActivity.map((activity, index) => {
+                                        const { mainText, status } = parseActivityDescription(activity.description);
+                                        return (
+                                            <div key={activity.id || index} className="flex items-start space-x-3 p-3 bg-red-50 rounded-lg hover:bg-red-100 transition-colors">
+                                                <div className="flex-shrink-0 mt-1">
+                                                    <div className="p-1 bg-red-100 rounded-full text-red-600">
+                                                        {getActivityIcon(activity.type)}
+                                                    </div>
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                                                        <p className="text-sm font-semibold text-gray-900">{mainText}</p>
+                                                        {status && (
+                                                            <span className={cn(
+                                                                "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border",
+                                                                getStatusBadgeStyle(status)
+                                                            )}>
+                                                                {formatStatusText(status)}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-sm text-gray-600">{activity.patientName}</p>
+                                                    <p className="text-xs text-gray-500 mt-1">{formatDate(activity.createdAt)}</p>
                                                 </div>
                                             </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-medium text-gray-900">{activity.patientName}</p>
-                                                <p className="text-sm text-gray-600">{activity.description}</p>
-                                                <p className="text-xs text-gray-500 mt-1">{formatDate(activity.createdAt)}</p>
-                                            </div>
-                                        </div>
-                                    ))
+                                        );
+                                    })
                                 ) : (
                                     <div className="text-center py-6 text-gray-500">
                                         <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />

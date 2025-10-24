@@ -235,6 +235,30 @@ const DoctorChat: React.FC = () => {
         }
     };
 
+    const getMessagePreview = (content: string, maxLength: number = 50) => {
+        // Parse references from the message content
+        // @type:"Title With Spaces"{id:"123",sub:"details"}
+        const referenceRegex = /@(patient|device|appointment|rental|user):(?:"([^\"]+)"|'([^']+)'|\[([^\]]+)\]|([^\s\{]+))(?:\{([^}]*)\})?/g;
+
+        let preview = content;
+        let match;
+
+        while ((match = referenceRegex.exec(content)) !== null) {
+            const refType = match[1];
+            const refTitle = (match[2] || match[3] || match[4] || match[5] || '').trim();
+
+            // Replace the full reference with just the title
+            preview = preview.replace(match[0], refTitle);
+        }
+
+        // Truncate if too long
+        if (preview.length > maxLength) {
+            preview = preview.substring(0, maxLength) + '...';
+        }
+
+        return preview;
+    };
+
     const filteredUsers = users.filter(user =>
         getUserFullName(user).toLowerCase().includes(searchQuery.toLowerCase()) ||
         user.role.toLowerCase().includes(searchQuery.toLowerCase())
@@ -316,10 +340,15 @@ const DoctorChat: React.FC = () => {
                                                 )}>
                                                     {conversation.otherUser.role}
                                                 </span>
-                                                <span className="text-xs text-gray-500 truncate">
-                                                    {conversation.lastMessage?.content || 'Nouvelle conversation'}
-                                                </span>
+                                                {conversation.otherUser.telephone && (
+                                                    <span className="text-xs text-gray-500 mr-2">
+                                                        {conversation.otherUser.telephone}
+                                                    </span>
+                                                )}
                                             </div>
+                                            <p className="text-xs text-gray-500 truncate mt-1">
+                                                {conversation.lastMessage?.content ? getMessagePreview(conversation.lastMessage.content) : 'Nouvelle conversation'}
+                                            </p>
                                         </div>
                                     </div>
                                 </div>

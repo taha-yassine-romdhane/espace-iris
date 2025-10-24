@@ -174,11 +174,11 @@ const ContactSection: React.FC = () => {
               <div className="space-y-3">
                 <div className="flex items-center space-x-3">
                   <Phone className="w-5 h-5 text-blue-600" />
-                  <span className="text-gray-700">+216 71 123 456</span>
+                  <span className="text-gray-700">95 45 88 11</span>
                 </div>
                 <div className="flex items-center space-x-3">
                   <Mail className="w-5 h-5 text-blue-600" />
-                  <span className="text-gray-700">demo@Espace-Iris.tn </span>
+                  <span className="text-gray-700">hedi.baaziz@outlook.tn</span>
                 </div>
                 <div className="flex items-center space-x-3">
                   <MapPin className="w-5 h-5 text-blue-600" />
@@ -266,7 +266,7 @@ const ContactSection: React.FC = () => {
                       value={formData.phone}
                       onChange={handleInputChange}
                       className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                      placeholder="+216 XX XXX XXX"
+                      placeholder="95 45 88 11"
                     />
                   </div>
                 </div>

@@ -183,6 +183,85 @@ const PatientDetail: React.FC = () => {
         }
     };
 
+    const formatDeviceType = (type: string): string => {
+        switch (type) {
+            case 'DIAGNOSTIC_DEVICE':
+                return 'Appareil de Diagnostic';
+            case 'RENTAL_DEVICE':
+                return 'Appareil de Location';
+            case 'SALE_DEVICE':
+                return 'Appareil de Vente';
+            case 'CPAP':
+                return 'CPAP';
+            case 'BIPAP':
+                return 'BiPAP';
+            case 'OXYGEN_CONCENTRATOR':
+                return 'Concentrateur d\'Oxygène';
+            case 'VENTILATOR':
+                return 'Ventilateur';
+            default:
+                // Fallback: format the enum value (replace underscores with spaces and capitalize)
+                return type.replace(/_/g, ' ').toLowerCase()
+                    .split(' ')
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                    .join(' ');
+        }
+    };
+
+    const getDeviceTypeColor = (type: string): string => {
+        switch (type) {
+            case 'DIAGNOSTIC_DEVICE':
+                return 'bg-purple-100 text-purple-800 border-purple-200';
+            case 'RENTAL_DEVICE':
+                return 'bg-blue-100 text-blue-800 border-blue-200';
+            case 'SALE_DEVICE':
+                return 'bg-green-100 text-green-800 border-green-200';
+            case 'CPAP':
+            case 'BIPAP':
+                return 'bg-indigo-100 text-indigo-800 border-indigo-200';
+            case 'OXYGEN_CONCENTRATOR':
+                return 'bg-cyan-100 text-cyan-800 border-cyan-200';
+            case 'VENTILATOR':
+                return 'bg-teal-100 text-teal-800 border-teal-200';
+            default:
+                return 'bg-gray-100 text-gray-800 border-gray-200';
+        }
+    };
+
+    const formatBeneficiaryType = (type: string): string => {
+        switch (type) {
+            case 'ASSURE_SOCIAL':
+                return 'Assuré Social';
+            case 'AYANT_DROIT':
+                return 'Ayant Droit';
+            case 'PENSIONNAIRE':
+                return 'Pensionnaire';
+            case 'SANS_COUVERTURE':
+                return 'Sans Couverture';
+            default:
+                // Fallback: format the enum value
+                return type.replace(/_/g, ' ').toLowerCase()
+                    .split(' ')
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                    .join(' ');
+        }
+    };
+
+    const getBeneficiaryTypeColor = (type: string): string => {
+        switch (type) {
+            case 'ASSURE_SOCIAL':
+                return 'bg-blue-100 text-blue-800 border-blue-200';
+            case 'AYANT_DROIT':
+                return 'bg-green-100 text-green-800 border-green-200';
+            case 'PENSIONNAIRE':
+                return 'bg-purple-100 text-purple-800 border-purple-200';
+            case 'SANS_COUVERTURE':
+                return 'bg-orange-100 text-orange-800 border-orange-200';
+            default:
+                return 'bg-gray-100 text-gray-800 border-gray-200';
+        }
+    };
+
     if (loading) {
         return (
             <div className="p-6 flex items-center justify-center min-h-screen">
@@ -290,7 +369,15 @@ const PatientDetail: React.FC = () => {
                                         <div>IMC: {patient.imc}</div>
                                     )}
                                     {patient.beneficiaryType && (
-                                        <div>Type: {patient.beneficiaryType}</div>
+                                        <div className="flex items-center space-x-2">
+                                            <span>Type:</span>
+                                            <Badge
+                                                variant="outline"
+                                                className={cn("text-xs font-medium border", getBeneficiaryTypeColor(patient.beneficiaryType))}
+                                            >
+                                                {formatBeneficiaryType(patient.beneficiaryType)}
+                                            </Badge>
+                                        </div>
                                     )}
                                     {patient.affiliation && (
                                         <div>Caisse: {patient.affiliation}</div>
@@ -356,8 +443,14 @@ const PatientDetail: React.FC = () => {
                                         <CardContent className="p-4">
                                             <div className="flex items-start justify-between mb-3">
                                                 <div className="flex-1 min-w-0">
-                                                    <h3 className="font-medium text-gray-900 truncate">{device.name}</h3>
-                                                    <p className="text-sm text-gray-600">{device.type}</p>
+                                                    <h3 className="font-medium text-gray-900 truncate mb-2">{device.name}</h3>
+                                                    <Badge
+                                                        variant="outline"
+                                                        className={cn("text-xs font-medium border", getDeviceTypeColor(device.type))}
+                                                    >
+                                                        <Activity className="h-3 w-3 mr-1" />
+                                                        {formatDeviceType(device.type)}
+                                                    </Badge>
                                                 </div>
                                                 <Badge className={getStatusColor(device.status)}>
                                                     {getStatusIcon(device.status)}
@@ -410,9 +503,16 @@ const PatientDetail: React.FC = () => {
                                                             <span className="ml-1">{diagnostic.status}</span>
                                                         </Badge>
                                                     </div>
-                                                    <p className="text-sm text-gray-600 mb-2">
-                                                        Type: {diagnostic.medicalDevice.type}
-                                                    </p>
+                                                    <div className="flex items-center space-x-2 mb-2">
+                                                        <span className="text-sm text-gray-600">Type:</span>
+                                                        <Badge
+                                                            variant="outline"
+                                                            className={cn("text-xs font-medium border", getDeviceTypeColor(diagnostic.medicalDevice.type))}
+                                                        >
+                                                            <Stethoscope className="h-3 w-3 mr-1" />
+                                                            {formatDeviceType(diagnostic.medicalDevice.type)}
+                                                        </Badge>
+                                                    </div>
                                                     <p className="text-xs text-gray-500">
                                                         Date: {formatDate(diagnostic.diagnosticDate)}
                                                     </p>

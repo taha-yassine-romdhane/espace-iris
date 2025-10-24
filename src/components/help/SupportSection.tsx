@@ -35,7 +35,7 @@ export default function SupportSection() {
       icon: <Phone className="h-6 w-6" />,
       title: "Support Téléphonique",
       description: "Assistance technique immédiate pour les urgences",
-      contact: "+216 71 123 456",
+      contact: "95 45 88 11",
       available: "Lun-Ven, 8h-19h | Sam, 9h-13h",
       responseTime: "Immédiat",
       priority: "high",
@@ -45,7 +45,7 @@ export default function SupportSection() {
       icon: <Mail className="h-6 w-6" />,
       title: "Support par Email",
       description: "Pour les questions détaillées et non-urgentes",
-      contact: "support@Espace-Iris.tn ",
+      contact: "hedi.baaziz@outlook.tn",
       available: "24/7",
       responseTime: "< 4 heures",
       priority: "medium",
@@ -320,7 +320,7 @@ export default function SupportSection() {
                 </label>
                 <Input
                   id="phone"
-                  placeholder="+216 XX XXX XXX"
+                  placeholder="95 45 88 11"
                   value={contactForm.phone}
                   onChange={(e) => handleInputChange('phone', e.target.value)}
                   className="border-blue-200 focus:border-blue-500"

@@ -64,13 +64,13 @@ const DoctorHelp: React.FC = () => {
                 <CardContent className="space-y-4">
                     <div className="flex items-center justify-between p-4 bg-red-50 rounded-lg">
                         <div>
-                            <h3 className="font-medium text-red-900">Assistance technique 24/7</h3>
-                            <p className="text-sm text-red-700">Pour les urgences techniques</p>
+                            <h3 className="font-medium text-red-900">Support Équipe Dev</h3>
+                            <p className="text-sm text-red-700">Assistance technique pour les problèmes</p>
                         </div>
                         <div className="flex items-center space-x-2">
                             <Button className="bg-red-600 hover:bg-red-700">
                                 <Phone className="h-4 w-4 mr-2" />
-                                +216 XX XXX XXX
+                                95 45 88 11
                             </Button>
                         </div>
                     </div>
@@ -80,7 +80,7 @@ const DoctorHelp: React.FC = () => {
                             <Mail className="h-8 w-8 text-red-600" />
                             <div>
                                 <h4 className="font-medium text-gray-900">Email Support</h4>
-                                <p className="text-sm text-gray-600">support@irissante.tn</p>
+                                <p className="text-sm text-gray-600">hedi.baaziz@outlook.tn</p>
                                 <p className="text-xs text-gray-500">Réponse sous 24h</p>
                             </div>
                         </div>

@@ -102,16 +102,53 @@ const DoctorDiagnostics: React.FC = () => {
         }
     };
 
+    const formatDeviceType = (type: string): string => {
+        switch (type) {
+            case 'DIAGNOSTIC_DEVICE':
+                return 'Appareil de Diagnostic';
+            case 'RENTAL_DEVICE':
+                return 'Appareil de Location';
+            case 'SALE_DEVICE':
+                return 'Appareil de Vente';
+            case 'CPAP':
+                return 'CPAP';
+            case 'BIPAP':
+                return 'BiPAP';
+            case 'VNI':
+                return 'VNI';
+            case 'OXYGEN_CONCENTRATOR':
+            case 'CONCENTRATEUR_OXYGENE':
+                return 'Concentrateur d\'Oxygène';
+            case 'VENTILATOR':
+                return 'Ventilateur';
+            default:
+                // Fallback: format the enum value
+                return type.replace(/_/g, ' ').toLowerCase()
+                    .split(' ')
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                    .join(' ');
+        }
+    };
+
     const getDeviceTypeColor = (type: string) => {
         switch (type) {
+            case 'DIAGNOSTIC_DEVICE':
+                return 'bg-purple-100 text-purple-800 border-purple-200';
+            case 'RENTAL_DEVICE':
+                return 'bg-blue-100 text-blue-800 border-blue-200';
+            case 'SALE_DEVICE':
+                return 'bg-green-100 text-green-800 border-green-200';
             case 'CPAP':
-                return 'bg-blue-100 text-blue-800';
+            case 'BIPAP':
             case 'VNI':
-                return 'bg-green-100 text-green-800';
+                return 'bg-indigo-100 text-indigo-800 border-indigo-200';
+            case 'OXYGEN_CONCENTRATOR':
             case 'CONCENTRATEUR_OXYGENE':
-                return 'bg-purple-100 text-purple-800';
+                return 'bg-cyan-100 text-cyan-800 border-cyan-200';
+            case 'VENTILATOR':
+                return 'bg-teal-100 text-teal-800 border-teal-200';
             default:
-                return 'bg-gray-100 text-gray-800';
+                return 'bg-gray-100 text-gray-800 border-gray-200';
         }
     };
 
@@ -273,8 +310,12 @@ const DoctorDiagnostics: React.FC = () => {
                                                     {diagnostic.patientName}
                                                 </h3>
                                                 <div className="flex items-center gap-2 mb-2">
-                                                    <Badge className={getDeviceTypeColor(diagnostic.medicalDevice.type)}>
-                                                        {diagnostic.medicalDevice.type}
+                                                    <Badge
+                                                        variant="outline"
+                                                        className={cn("text-xs font-medium border", getDeviceTypeColor(diagnostic.medicalDevice.type))}
+                                                    >
+                                                        <Stethoscope className="h-3 w-3 mr-1" />
+                                                        {formatDeviceType(diagnostic.medicalDevice.type)}
                                                     </Badge>
                                                     <span className="text-sm text-gray-600">
                                                         {diagnostic.medicalDevice.name}

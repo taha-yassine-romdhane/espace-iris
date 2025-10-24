@@ -18,11 +18,20 @@ export default async function handler(
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
+    // Get doctor record
+    const doctor = await prisma.doctor.findUnique({
+      where: { userId: session.user.id }
+    });
+
+    if (!doctor) {
+      return res.status(404).json({ message: 'Doctor not found' });
+    }
+
     // Get all diagnostics for patients assigned to this doctor
     const diagnostics = await prisma.diagnostic.findMany({
       where: {
         patient: {
-          userId: session.user.id
+          doctorId: doctor.id  // Use doctor.id, not session.user.id
         }
       },
       include: {
