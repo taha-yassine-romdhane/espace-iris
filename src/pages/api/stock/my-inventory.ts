@@ -13,7 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'GET') {
     try {
-      const { search, page = '1', limit = '10', productType } = req.query;
+      const { search, page = '1', limit = '10', productType, status } = req.query;
       
       // Parse pagination parameters
       const pageNumber = parseInt(page as string, 10) || 1;
@@ -43,15 +43,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           { name: { contains: search as string, mode: 'insensitive' as const } },
           { brand: { contains: search as string, mode: 'insensitive' as const } },
           { model: { contains: search as string, mode: 'insensitive' as const } },
+          { serialNumber: { contains: search as string, mode: 'insensitive' as const } },
         ]
       } : {};
-      
+
       // Create search conditions for medical devices
       const deviceSearchCondition = search ? {
         OR: [
           { name: { contains: search as string, mode: 'insensitive' as const } },
           { brand: { contains: search as string, mode: 'insensitive' as const } },
           { model: { contains: search as string, mode: 'insensitive' as const } },
+          { serialNumber: { contains: search as string, mode: 'insensitive' as const } },
         ]
       } : {};
       
@@ -62,6 +64,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const stocksPromise = prisma.stock.findMany({
         where: {
           locationId: locationId,
+          ...(status ? { status: status as string } : {}),
           product: {
             AND: [
               searchCondition,
@@ -83,6 +86,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               model: true,
               brand: true,
               type: true,
+              serialNumber: true,
             }
           }
         },
@@ -95,12 +99,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const medicalDevicesPromise = prisma.medicalDevice.findMany({
         where: {
           stockLocationId: locationId,
+          ...(status ? { status: status as string } : {}),
           ...deviceSearchCondition,
           ...productTypeCondition,
           // If productType is specified, only include matching devices
-          ...(productType ? 
-              productType === 'DIAGNOSTIC_DEVICE' ? 
-                { type: 'DIAGNOSTIC_DEVICE' } : 
+          ...(productType ?
+              productType === 'DIAGNOSTIC_DEVICE' ?
+                { type: 'DIAGNOSTIC_DEVICE' } :
                 { type: { not: 'DIAGNOSTIC_DEVICE' } }
               : {})
         },

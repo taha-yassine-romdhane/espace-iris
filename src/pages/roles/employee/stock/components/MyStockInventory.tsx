@@ -76,6 +76,7 @@ export default function MyStockInventory() {
   
   // State for filters and pagination
   const [selectedType, setSelectedType] = useState<string>('all');
+  const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -93,15 +94,18 @@ export default function MyStockInventory() {
   // Reset pagination when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedType, debouncedSearchQuery]);
+  }, [selectedType, selectedStatus, debouncedSearchQuery]);
 
   // Fetch my stock inventory
   const { data: myStockData, isLoading } = useQuery<MyStockResponse>({
-    queryKey: ['myStockInventory', selectedType, debouncedSearchQuery, currentPage, itemsPerPage],
+    queryKey: ['myStockInventory', selectedType, selectedStatus, debouncedSearchQuery, currentPage, itemsPerPage],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (selectedType !== 'all') {
         params.append('productType', selectedType);
+      }
+      if (selectedStatus !== 'all') {
+        params.append('status', selectedStatus);
       }
       if (debouncedSearchQuery) {
         params.append('search', debouncedSearchQuery);
@@ -297,6 +301,24 @@ export default function MyStockInventory() {
               <SelectItem value={ProductType.SPARE_PART}>Pièces de rechange</SelectItem>
               <SelectItem value={ProductType.MEDICAL_DEVICE}>Appareils médicaux</SelectItem>
               <SelectItem value={ProductType.DIAGNOSTIC_DEVICE}>Équipements diagnostic</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="w-full md:w-[200px]">
+          <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+            <SelectTrigger className="border-green-200 focus:ring-green-500">
+              <SelectValue placeholder="Tous les statuts" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous les statuts</SelectItem>
+              <SelectItem value="ACTIVE">Actif</SelectItem>
+              <SelectItem value="FOR_SALE">En vente</SelectItem>
+              <SelectItem value="FOR_RENT">En location</SelectItem>
+              <SelectItem value="MAINTENANCE">En maintenance</SelectItem>
+              <SelectItem value="EN_REPARATION">En réparation</SelectItem>
+              <SelectItem value="HORS_SERVICE">Hors service</SelectItem>
+              <SelectItem value="RETIRED">Retiré</SelectItem>
             </SelectContent>
           </Select>
         </div>

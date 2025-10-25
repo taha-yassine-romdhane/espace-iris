@@ -13,7 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'GET') {
     try {
-      const { locationId, search, page = '1', limit = '10', productType } = req.query;
+      const { locationId, search, page = '1', limit = '10', productType, status } = req.query;
       
       // Parse pagination parameters
       const pageNumber = parseInt(page as string, 10) || 1;
@@ -26,15 +26,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           { name: { contains: search as string, mode: 'insensitive' as const } },
           { brand: { contains: search as string, mode: 'insensitive' as const } },
           { model: { contains: search as string, mode: 'insensitive' as const } },
+          { serialNumber: { contains: search as string, mode: 'insensitive' as const } },
         ]
       } : {};
-      
+
       // Create search conditions for medical devices
       const deviceSearchCondition = search ? {
         OR: [
           { name: { contains: search as string, mode: 'insensitive' as const } },
           { brand: { contains: search as string, mode: 'insensitive' as const } },
           { model: { contains: search as string, mode: 'insensitive' as const } },
+          { serialNumber: { contains: search as string, mode: 'insensitive' as const } },
         ]
       } : {};
       
@@ -48,6 +50,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const stocksPromise = prisma.stock.findMany({
         where: {
           ...(locationId ? { locationId: locationId as string } : {}),
+          ...(status ? { status: status as string } : {}),
           product: {
             AND: [
               searchCondition,
@@ -69,6 +72,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               model: true,
               brand: true,
               type: true,
+              serialNumber: true,
             }
           }
         },
@@ -85,10 +89,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           ...locationCondition,
           ...deviceSearchCondition,
           ...productTypeCondition,
-          // Exclude SOLD devices from transfers
-          status: {
-            not: 'SOLD'
-          },
+          // If status filter is provided, use it; otherwise exclude SOLD devices
+          ...(status ? { status: status as string } : { status: { not: 'SOLD' } }),
           // If productType is specified, only include matching devices
           ...(productType ? 
               productType === 'DIAGNOSTIC_DEVICE' ? 

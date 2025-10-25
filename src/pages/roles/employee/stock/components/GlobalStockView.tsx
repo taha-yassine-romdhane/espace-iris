@@ -77,6 +77,7 @@ export default function GlobalStockView() {
   // State for filters and pagination
   const [selectedLocation, setSelectedLocation] = useState<string>('all');
   const [selectedType, setSelectedType] = useState<string>('all');
+  const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -98,7 +99,7 @@ export default function GlobalStockView() {
   // Reset pagination when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedLocation, selectedType, debouncedSearchQuery]);
+  }, [selectedLocation, selectedType, selectedStatus, debouncedSearchQuery]);
 
   // Fetch locations for filtering
   const { data: locations } = useQuery({
@@ -112,7 +113,7 @@ export default function GlobalStockView() {
 
   // Fetch global stock inventory
   const { data: globalStockData, isLoading } = useQuery<GlobalStockResponse>({
-    queryKey: ['globalStockInventory', selectedLocation, selectedType, debouncedSearchQuery, currentPage, itemsPerPage],
+    queryKey: ['globalStockInventory', selectedLocation, selectedType, selectedStatus, debouncedSearchQuery, currentPage, itemsPerPage],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (selectedLocation !== 'all') {
@@ -120,6 +121,9 @@ export default function GlobalStockView() {
       }
       if (selectedType !== 'all') {
         params.append('productType', selectedType);
+      }
+      if (selectedStatus !== 'all') {
+        params.append('status', selectedStatus);
       }
       if (debouncedSearchQuery) {
         params.append('search', debouncedSearchQuery);
@@ -298,7 +302,7 @@ export default function GlobalStockView() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+      <div className="flex flex-col md:flex-row gap-4 items-start md:items-center flex-wrap">
         <div className="w-full md:w-[200px]">
           <Select value={selectedLocation} onValueChange={setSelectedLocation}>
             <SelectTrigger className="border-blue-200 focus:ring-blue-500">
@@ -330,7 +334,25 @@ export default function GlobalStockView() {
           </Select>
         </div>
 
-        <div className="relative flex-1">
+        <div className="w-full md:w-[200px]">
+          <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+            <SelectTrigger className="border-blue-200 focus:ring-blue-500">
+              <SelectValue placeholder="Tous les statuts" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous les statuts</SelectItem>
+              <SelectItem value="ACTIVE">Actif</SelectItem>
+              <SelectItem value="FOR_SALE">En vente</SelectItem>
+              <SelectItem value="FOR_RENT">En location</SelectItem>
+              <SelectItem value="MAINTENANCE">En maintenance</SelectItem>
+              <SelectItem value="EN_REPARATION">En réparation</SelectItem>
+              <SelectItem value="HORS_SERVICE">Hors service</SelectItem>
+              <SelectItem value="RETIRED">Retiré</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
           <Input
             className="pl-8 border-blue-200 focus:ring-blue-500"
