@@ -18,14 +18,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const doctors = await prisma.user.findMany({
       where: {
-        role: Role.DOCTOR,
-        isActive: true
+        role: Role.DOCTOR
+        // Removed isActive filter to show all doctors (active and inactive)
       },
       select: {
         id: true,
         firstName: true,
         lastName: true,
-        speciality: true
+        email: true,
+        telephone: true,
+        address: true,
+        speciality: true,
+        role: true,
+        isActive: true
       },
       orderBy: {
         firstName: 'asc'
@@ -35,7 +40,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const transformedDoctors = doctors.map(doctor => ({
       id: doctor.id,
       name: `${doctor.firstName} ${doctor.lastName}`.trim(),
-      speciality: doctor.speciality
+      email: doctor.email,
+      telephone: doctor.telephone,
+      address: doctor.address,
+      speciality: doctor.speciality,
+      role: doctor.role,
+      isActive: doctor.isActive
     }));
 
     return res.status(200).json(transformedDoctors);

@@ -201,12 +201,20 @@ const UserForm: React.FC<UserFormProps> = ({
                     </Label>
                     {restrictRole ? (
                       <div className="px-3 py-2 border border-gray-200 rounded-md bg-gray-50">
-                        <div className="flex items-center gap-2 text-sm">
-                          <div className={`w-2 h-2 rounded-full ${restrictRole === 'DOCTOR' ? 'bg-blue-500' : 'bg-gray-500'}`}></div>
-                          {restrictRole === 'DOCTOR' && 'Médecin'}
-                          {restrictRole === 'ADMIN' && 'Administrateur'}
-                          {restrictRole === 'MANAGER' && 'Manager'}
-                          {restrictRole === 'EMPLOYEE' && 'Employé'}
+                        <div className="flex items-center gap-2 text-sm text-gray-700">
+                          <div className={`w-2 h-2 rounded-full ${
+                            restrictRole === 'DOCTOR' ? 'bg-red-500' :
+                            restrictRole === 'ADMIN' ? 'bg-blue-500' :
+                            restrictRole === 'MANAGER' ? 'bg-purple-500' :
+                            'bg-green-500'
+                          }`}></div>
+                          <span className="font-medium">
+                            {restrictRole === 'DOCTOR' && 'Médecin'}
+                            {restrictRole === 'ADMIN' && 'Administrateur'}
+                            {restrictRole === 'MANAGER' && 'Manager'}
+                            {restrictRole === 'EMPLOYEE' && 'Employé'}
+                          </span>
+                          <span className="text-xs text-gray-500 ml-auto">(Rôle fixe)</span>
                         </div>
                       </div>
                     ) : (
