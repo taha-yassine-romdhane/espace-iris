@@ -391,23 +391,7 @@ export default async function handler(
           ...(currentUserId && {
             OR: [
               { assignedToId: currentUserId }, // Appointments assigned to user
-              { createdById: currentUserId },  // Appointments created by user
-              { 
-                patient: {
-                  OR: [
-                    { technicianId: currentUserId }, // Patient assigned to user as technician
-                    { userId: currentUserId }        // Patient assigned to user
-                  ]
-                }
-              },
-              { 
-                company: {
-                  OR: [
-                    { technicianId: currentUserId }, // Company assigned to user as technician
-                    { userId: currentUserId }        // Company assigned to user
-                  ]
-                }
-              }
+              { appointmentType: 'DIAGNOSTIC_VISIT' } // ALL diagnostic visit appointments (for all employees)
             ]
           })
         },
