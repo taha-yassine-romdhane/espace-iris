@@ -575,10 +575,34 @@ function EmployeeDateTimeStep({
             <ul className="list-disc list-inside space-y-1">
               {existingAppointments.map((apt: any, index: number) => {
                 const time = new Date(apt.scheduledDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+                const appointmentTypeLabel =
+                  apt.appointmentType === 'DIAGNOSTIC_VISIT' ? 'Visite Diagnostique' :
+                  apt.appointmentType === 'CONSULTATION' ? 'Consultation' :
+                  apt.appointmentType === 'LOCATION' ? 'Location' :
+                  apt.appointmentType === 'VENTE' ? 'Vente' :
+                  apt.appointmentType === 'MAINTENANCE' ? 'Maintenance' :
+                  apt.appointmentType === 'RECUPERATION' ? 'Récupération' :
+                  apt.appointmentType;
+                const statusLabel =
+                  apt.status === 'CONFIRMED' ? 'Confirmé' :
+                  apt.status === 'SCHEDULED' ? 'Planifié' :
+                  apt.status === 'COMPLETED' ? 'Terminé' :
+                  apt.status === 'CANCELLED' ? 'Annulé' :
+                  apt.status;
                 return (
                   <li key={index} className="text-sm">
-                    {time} - {apt.appointmentType} ({apt.status === 'CONFIRMED' ? 'Confirmé' : 'Planifié'})
-                    {apt.location && ` - ${apt.location}`}
+                    <div className="font-medium">{time} - {appointmentTypeLabel} ({statusLabel})</div>
+                    {apt.location && <div className="ml-5 text-xs">📍 {apt.location}</div>}
+                    {apt.assignedTo && (
+                      <div className="ml-5 text-xs">
+                        👤 Assigné à: {apt.assignedTo.fullName || `${apt.assignedTo.firstName} ${apt.assignedTo.lastName}`}
+                      </div>
+                    )}
+                    {apt.createdBy && (
+                      <div className="ml-5 text-xs">
+                        ✏️ Créé par: {apt.createdBy.fullName || `${apt.createdBy.firstName} ${apt.createdBy.lastName}`}
+                      </div>
+                    )}
                   </li>
                 );
               })}

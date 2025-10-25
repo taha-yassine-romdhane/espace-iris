@@ -35,7 +35,7 @@ async function handleGetAppointments(req: NextApiRequest, res: NextApiResponse) 
   try {
     // Get session for filtering by assignedToMe
     const session = await getServerSession(req, res, authOptions);
-    const { assignedToMe } = req.query;
+    const { assignedToMe, patientId, companyId } = req.query;
 
     // Build where clause
     const whereClause: any = {};
@@ -43,6 +43,16 @@ async function handleGetAppointments(req: NextApiRequest, res: NextApiResponse) 
     // Filter by assigned employee if assignedToMe parameter is true
     if (assignedToMe === 'true' && session?.user?.id) {
       whereClause.assignedToId = session.user.id;
+    }
+
+    // Filter by specific patient
+    if (patientId && typeof patientId === 'string') {
+      whereClause.patientId = patientId;
+    }
+
+    // Filter by specific company
+    if (companyId && typeof companyId === 'string') {
+      whereClause.companyId = companyId;
     }
 
     const appointments = await prisma.appointment.findMany({
