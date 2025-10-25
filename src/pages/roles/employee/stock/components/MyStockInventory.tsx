@@ -337,6 +337,7 @@ export default function MyStockInventory() {
               <TableHead>Produit</TableHead>
               <TableHead>Marque</TableHead>
               <TableHead>Modèle</TableHead>
+              <TableHead>Numéro de série</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Quantité</TableHead>
               <TableHead>Statut</TableHead>
@@ -348,6 +349,7 @@ export default function MyStockInventory() {
                 <TableCell className="font-medium">{item.product.name}</TableCell>
                 <TableCell>{item.product.brand || '-'}</TableCell>
                 <TableCell>{item.product.model || '-'}</TableCell>
+                <TableCell className="font-mono text-sm">{item.product.serialNumber || '-'}</TableCell>
                 <TableCell>{getTypeBadge(item.product.type)}</TableCell>
                 <TableCell className="font-semibold">{item.quantity}</TableCell>
                 <TableCell>
@@ -357,7 +359,7 @@ export default function MyStockInventory() {
             ))}
             {(!myStockData.items || myStockData.items.length === 0) && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
+                <TableCell colSpan={7} className="text-center py-8">
                   <div className="flex flex-col items-center">
                     <Package className="h-12 w-12 text-gray-400 mb-2" />
                     <span className="text-gray-500">Aucun produit trouvé dans votre stock</span>

@@ -366,6 +366,7 @@ export default function GlobalStockView() {
               <TableHead>Produit</TableHead>
               <TableHead>Marque</TableHead>
               <TableHead>Modèle</TableHead>
+              <TableHead>Numéro de série</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Emplacement</TableHead>
               <TableHead>Quantité</TableHead>
@@ -379,6 +380,7 @@ export default function GlobalStockView() {
                 <TableCell className="font-medium">{item.product.name}</TableCell>
                 <TableCell>{item.product.brand || '-'}</TableCell>
                 <TableCell>{item.product.model || '-'}</TableCell>
+                <TableCell className="font-mono text-sm">{item.product.serialNumber || '-'}</TableCell>
                 <TableCell>{getTypeBadge(item.product.type)}</TableCell>
                 <TableCell>{item.location.name}</TableCell>
                 <TableCell className="font-semibold">{item.quantity}</TableCell>
@@ -404,7 +406,7 @@ export default function GlobalStockView() {
             ))}
             {(!globalStockData?.items || globalStockData.items.length === 0) && (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8">
+                <TableCell colSpan={9} className="text-center py-8">
                   <div className="flex flex-col items-center">
                     <Package className="h-12 w-12 text-gray-400 mb-2" />
                     <span className="text-gray-500">Aucun produit trouvé</span>
