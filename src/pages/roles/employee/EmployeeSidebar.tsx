@@ -24,6 +24,7 @@ import {
     Calendar,
     FileText,
     MapPin,
+    Stethoscope,
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
@@ -49,6 +50,7 @@ const Sidebar: React.FC = () => {
         { id: 'dashboard', icon: <LayoutDashboard size={20} />, label: "Tableau de Bord", path: "/roles/employee/dashboard" },
         { id: 'rdv', icon: <Calendar size={20} />, label: "Rendez-vous", path: "/roles/employee/appointments" },
         { id: 'renseignement', icon: <Users size={20} />, label: "Renseignement", path: "/roles/employee/renseignement" },
+        { id: 'doctors', icon: <Stethoscope size={20} />, label: "Médecins", path: "/roles/employee/doctors" },
         { id: 'diagnostics', icon: <SquareActivity size={20} />, label: "Diagnostique", path: "/roles/employee/diagnostics" },
         { id: 'sales', icon: <ShoppingCart size={20} />, label: "Vente", path: "/roles/employee/sales" },
         { id: 'rentals', icon: <CalendarClock size={20} />, label: "Locations", path: "/roles/employee/rentals" },
