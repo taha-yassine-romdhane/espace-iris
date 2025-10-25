@@ -3,7 +3,9 @@ import {
   Plus,
   ChevronRight,
   ChevronLeft,
-  Stethoscope
+  Stethoscope,
+  Calendar,
+  Loader2
 } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -14,7 +16,7 @@ import { ParameterConfigurationDialog } from "./ParameterConfigurationDialog";
 import { ProductCard } from "../ProductCard";
 
 interface DiagnosticProductStepProps {
-  onBack: () => void;
+  onBack?: () => void;
   onNext: () => void;
   selectedProducts?: any[];
   onRemoveProduct: (index: number) => void;
@@ -23,6 +25,9 @@ interface DiagnosticProductStepProps {
   patientId?: string;
   resultDueDate?: Date;
   onResultDueDateChange?: (date: Date | undefined) => void;
+  notes?: string;
+  onNotesChange?: (notes: string) => void;
+  isLoading?: boolean;
 }
 
 export function NewDiagnosticProductStep({
@@ -32,7 +37,10 @@ export function NewDiagnosticProductStep({
   onRemoveProduct,
   onSelectProduct,
   resultDueDate,
-  onResultDueDateChange = () => {}
+  onResultDueDateChange = () => {},
+  notes = "",
+  onNotesChange = () => {},
+  isLoading: submitting
 }: DiagnosticProductStepProps) {
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [isParameterDialogOpen, setIsParameterDialogOpen] = useState(false);
@@ -83,21 +91,6 @@ export function NewDiagnosticProductStep({
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-semibold text-gray-900">Équipements de Diagnostic</h2>
-      </div>
-
-      <div className="flex justify-between">
-        <Button variant="outline" onClick={onBack}>
-          <ChevronLeft className="h-4 w-4 mr-2" />
-          Retour
-        </Button>
-        <Button 
-          onClick={onNext}
-          disabled={selectedProducts.length === 0}
-          className="bg-green-600 hover:bg-green-700 text-white"
-        >
-          Suivant
-          <ChevronRight className="h-4 w-4 ml-2" />
-        </Button>
       </div>
 
       {/* Selected Products */}
@@ -158,6 +151,53 @@ export function NewDiagnosticProductStep({
           onResultDueDateChange={onResultDueDateChange}
         />
       )}
+
+      {/* Notes Section */}
+      <div className="mt-6">
+        <div className="p-6 border border-gray-200 rounded-lg">
+          <div className="flex items-center gap-2 mb-4">
+            <Stethoscope className="h-5 w-5 text-green-600" />
+            <h3 className="font-medium text-lg">Notes</h3>
+          </div>
+          <p className="text-sm text-gray-600 mb-4">
+            Ajoutez des notes ou commentaires concernant ce diagnostic.
+          </p>
+          <textarea
+            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            rows={4}
+            placeholder="Saisissez vos notes ici..."
+            value={notes}
+            onChange={(e) => onNotesChange(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex justify-between pt-6 border-t">
+        {onBack && (
+          <Button variant="outline" onClick={onBack}>
+            <ChevronLeft className="h-4 w-4 mr-2" />
+            Retour
+          </Button>
+        )}
+        <Button
+          onClick={onNext}
+          disabled={selectedProducts.length === 0 || submitting}
+          className="bg-green-600 hover:bg-green-700 text-white ml-auto"
+        >
+          {submitting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Traitement...
+            </>
+          ) : (
+            <>
+              Terminer
+              <ChevronRight className="h-4 w-4 ml-2" />
+            </>
+          )}
+        </Button>
+      </div>
     </div>
   );
 }

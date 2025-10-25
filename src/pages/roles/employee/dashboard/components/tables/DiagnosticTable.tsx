@@ -91,25 +91,13 @@ export function DiagnosticTable({ onViewDetails, onEnterResults, onAddDocuments 
     queryKey: ["employee-diagnostic-operations", session?.user?.id],
     queryFn: async () => {
       try {
-        // Use the regular diagnostics endpoint but the data will be filtered server-side for employees
-        const response = await fetch("/api/diagnostics");
+        // Use assignedToMe parameter for server-side filtering
+        const response = await fetch("/api/diagnostics?assignedToMe=true");
         if (!response.ok) {
           throw new Error("Failed to fetch diagnostic operations");
         }
         const data = await response.json();
         console.log("Employee diagnostic data:", data);
-
-        // For employees, filter to only show their assigned diagnostics
-        if (session?.user?.role === 'EMPLOYEE') {
-          const filtered = data.diagnostics?.filter((diag: any) => {
-            // Check if employee is assigned as technician to the patient
-            return diag.patient?.technicianId === session.user.id ||
-                   diag.patient?.technician?.id === session.user.id ||
-                   diag.performedById === session.user.id;
-          });
-          return filtered || [];
-        }
-
         return data.diagnostics || [];
       } catch (error) {
         console.error("Error fetching diagnostic operations:", error);

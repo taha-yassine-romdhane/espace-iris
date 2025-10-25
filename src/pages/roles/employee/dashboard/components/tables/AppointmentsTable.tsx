@@ -53,13 +53,17 @@ import {
   Wrench,
   RotateCcw,
   ClipboardCheck,
+  Plus,
 } from "lucide-react";
 
 interface AppointmentsTableProps {
-  // Employee appointments table - shows appointments assigned to logged-in employee
+  onViewDetails?: (id: string) => void;
+  onCreateDiagnostic?: (patientId: string, appointmentId: string, scheduledDate: Date) => void;
+  onCreateSale?: (clientId: string, clientType: 'patient' | 'company', appointmentId: string) => void;
+  onCreateRental?: (clientId: string, clientType: 'patient' | 'company', appointmentId: string) => void;
 }
 
-export function AppointmentsTable({}: AppointmentsTableProps) {
+export function AppointmentsTable({ onViewDetails, onCreateDiagnostic, onCreateSale, onCreateRental }: AppointmentsTableProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -104,12 +108,12 @@ export function AppointmentsTable({}: AppointmentsTableProps) {
       const response = await fetch(`/api/appointments/${id}`, {
         method: 'DELETE',
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to delete appointment');
       }
-      
+
       return await response.json();
     },
     onSuccess: () => {
@@ -140,12 +144,12 @@ export function AppointmentsTable({}: AppointmentsTableProps) {
         },
         body: JSON.stringify({ status }),
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to update appointment status');
       }
-      
+
       return await response.json();
     },
     onSuccess: () => {
@@ -308,18 +312,18 @@ export function AppointmentsTable({}: AppointmentsTableProps) {
   // Filter appointments
   useEffect(() => {
     if (!appointments) return;
-    
+
     let filtered = appointments;
 
     // Apply search filter
     if (searchTerm.trim()) {
       filtered = filtered.filter((appointment: any) => {
-        const clientName = appointment.patient 
+        const clientName = appointment.patient
           ? `${appointment.patient.firstName} ${appointment.patient.lastName}`
           : appointment.company?.companyName || "";
-        
+
         const appointmentTypeLabel = getAppointmentTypeDisplay(appointment.appointmentType || '').label;
-        
+
         return (
           clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
           appointment.appointmentType?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -344,7 +348,7 @@ export function AppointmentsTable({}: AppointmentsTableProps) {
     if (dateFilter !== "all") {
       const today = new Date();
       const filterDate = new Date();
-      
+
       switch (dateFilter) {
         case "today":
           filterDate.setHours(0, 0, 0, 0);
@@ -482,7 +486,7 @@ export function AppointmentsTable({}: AppointmentsTableProps) {
           </div>
         ) : currentAppointments && currentAppointments.length > 0 ? (
           <div className="overflow-x-auto">
-            <Table>
+            <Table className="min-w-[1000px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Client</TableHead>
@@ -497,12 +501,12 @@ export function AppointmentsTable({}: AppointmentsTableProps) {
               </TableHeader>
               <TableBody>
                 {currentAppointments.map((appointment: any, index: number) => {
-                  const clientName = appointment.patient 
+                  const clientName = appointment.patient
                     ? `${appointment.patient.firstName} ${appointment.patient.lastName}`
                     : appointment.company?.companyName || "Client inconnu";
-                      
+
                   const clientType = appointment.patient ? "patient" : "company";
-                  
+
                   return (
                     <TableRow key={appointment.id} className={`hover:bg-slate-50 transition-colors duration-150 ${index % 2 === 0 ? 'bg-white' : 'bg-slate-25'}`}>
                       <TableCell>
@@ -531,44 +535,61 @@ export function AppointmentsTable({}: AppointmentsTableProps) {
                           </div>
                         </div>
                       </TableCell>
-                      
+
                       <TableCell className="whitespace-nowrap">
                         {appointment.appointmentType ? (
-                          <div className="flex items-center gap-2">
-                            <div className={`px-2 py-1 rounded-full text-xs font-medium border flex items-center gap-1 whitespace-nowrap ${
+                          <div className="space-y-1">
+                            <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${
                               getAppointmentTypeDisplay(appointment.appointmentType).badge
                             }`}>
                               {getAppointmentTypeDisplay(appointment.appointmentType).icon}
-                              {getAppointmentTypeDisplay(appointment.appointmentType).label}
+                              <span className="hidden sm:inline whitespace-nowrap">
+                                {getAppointmentTypeDisplay(appointment.appointmentType).label}
+                                {appointment.appointmentCode && (
+                                  <span className="ml-1 font-normal opacity-75">
+                                    ({appointment.appointmentCode})
+                                  </span>
+                                )}
+                              </span>
+                              <span className="sm:hidden">
+                                {/* Abbreviated labels for mobile */}
+                                {appointment.appointmentType === 'DIAGNOSTIC_VISIT' ? 'Diagn.' :
+                                 appointment.appointmentType === 'CONSULTATION' ? 'Consult.' :
+                                 appointment.appointmentType === 'LOCATION' ? 'Loc.' :
+                                 appointment.appointmentType === 'VENTE' ? 'Vente' :
+                                 appointment.appointmentType === 'MAINTENANCE' ? 'Maint.' :
+                                 appointment.appointmentType === 'RECUPERATION' ? 'Récup.' :
+                                 'Autre'}
+                              </span>
                             </div>
                           </div>
                         ) : (
                           <span className="text-gray-400">-</span>
                         )}
                       </TableCell>
-                      
+
                       <TableCell>
                         <div className="flex items-center space-x-1">
                           <Calendar className="h-4 w-4 text-green-700" />
                           <span className="text-sm">{formatDate(appointment.scheduledDate)}</span>
                         </div>
                       </TableCell>
-                      
+
                       <TableCell>
                         <div className="flex items-center space-x-1">
                           <MapPin className="h-4 w-4 text-green-700" />
                           <span className="text-sm">{appointment.location || '-'}</span>
                         </div>
                       </TableCell>
-                      
+
                       <TableCell>
                         {getPriorityBadge(appointment.priority)}
                       </TableCell>
-                      
+
                       <TableCell>
                         {getStatusBadge(appointment.status)}
                       </TableCell>
-                      
+
                       <TableCell>
                         <div className="max-w-xs">
                           {appointment.notes ? (
@@ -580,59 +601,132 @@ export function AppointmentsTable({}: AppointmentsTableProps) {
                           )}
                         </div>
                       </TableCell>
-                      
+
                       <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button 
-                              variant="ghost" 
+                        <div className="flex flex-wrap gap-1">
+                          {/* Diagnostic Button for DIAGNOSTIC_VISIT */}
+                          {onCreateDiagnostic && appointment.appointmentType === 'DIAGNOSTIC_VISIT' && appointment.patient && (
+                            appointment.diagnostic ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled
+                                className="flex items-center gap-1 text-xs min-h-[36px] px-3 touch-manipulation border-green-200 text-green-700 bg-green-50"
+                              >
+                                <CheckCircle2 className="h-4 w-4" />
+                                <span className="hidden lg:inline">Diagnostic Créé</span>
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="default"
+                                size="sm"
+                                onClick={() => onCreateDiagnostic(appointment.patient!.id, appointment.id, new Date(appointment.scheduledDate))}
+                                className="flex items-center gap-1 text-xs min-h-[36px] px-3 touch-manipulation bg-green-600 hover:bg-green-700"
+                              >
+                                <Plus className="h-4 w-4" />
+                                <span className="hidden lg:inline">Créer Diagnostic</span>
+                              </Button>
+                            )
+                          )}
+
+                          {/* Sale Button for VENTE */}
+                          {onCreateSale && appointment.appointmentType === 'VENTE' && (appointment.patient || appointment.company) && (
+                            <Button
+                              variant="default"
                               size="sm"
-                              className="h-8 w-8 p-0"
+                              onClick={() => {
+                                const clientId = appointment.patient?.id || appointment.company?.id || '';
+                                const clientType = appointment.patient ? 'patient' : 'company';
+                                onCreateSale(clientId, clientType as 'patient' | 'company', appointment.id);
+                              }}
+                              className="flex items-center gap-1 text-xs min-h-[36px] px-3 touch-manipulation bg-blue-600 hover:bg-blue-700"
                             >
-                              <MoreVertical className="h-4 w-4" />
+                              <Plus className="h-4 w-4" />
+                              <span className="hidden lg:inline">Créer Vente</span>
                             </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => updateAppointmentStatus.mutate({ id: appointment.id, status: 'SCHEDULED' })}
-                              disabled={appointment.status === 'SCHEDULED'}
+                          )}
+
+                          {/* Rental Button for LOCATION */}
+                          {onCreateRental && appointment.appointmentType === 'LOCATION' && (appointment.patient || appointment.company) && (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={() => {
+                                const clientId = appointment.patient?.id || appointment.company?.id || '';
+                                const clientType = appointment.patient ? 'patient' : 'company';
+                                onCreateRental(clientId, clientType as 'patient' | 'company', appointment.id);
+                              }}
+                              className="flex items-center gap-1 text-xs min-h-[36px] px-3 touch-manipulation bg-orange-600 hover:bg-orange-700"
                             >
-                              <Clock className="h-4 w-4 mr-2" />
-                              Marquer comme planifié
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => updateAppointmentStatus.mutate({ id: appointment.id, status: 'CONFIRMED' })}
-                              disabled={appointment.status === 'CONFIRMED'}
-                            >
-                              <CheckCircle2 className="h-4 w-4 mr-2" />
-                              Marquer comme confirmé
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => updateAppointmentStatus.mutate({ id: appointment.id, status: 'COMPLETED' })}
-                              disabled={appointment.status === 'COMPLETED'}
-                            >
-                              <CheckCircle2 className="h-4 w-4 mr-2" />
-                              Marquer comme terminé
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => updateAppointmentStatus.mutate({ id: appointment.id, status: 'CANCELLED' })}
-                              disabled={appointment.status === 'CANCELLED'}
-                            >
-                              <XCircle className="h-4 w-4 mr-2" />
-                              Marquer comme annulé
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => handleDeleteClick(appointment.id)}
-                              className="text-red-600"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Supprimer
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                              <Plus className="h-4 w-4" />
+                              <span className="hidden lg:inline">Créer Location</span>
+                            </Button>
+                          )}
+
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-10 w-10 p-0 touch-manipulation"
+                              >
+                                <MoreVertical className="h-5 w-5" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              {onViewDetails && (
+                                <>
+                                  <DropdownMenuItem
+                                    onClick={() => onViewDetails(appointment.id)}
+                                    className="text-green-600"
+                                  >
+                                    <FileText className="h-4 w-4 mr-2" />
+                                    Voir les détails
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                </>
+                              )}
+                              <DropdownMenuItem
+                                onClick={() => updateAppointmentStatus.mutate({ id: appointment.id, status: 'SCHEDULED' })}
+                                disabled={appointment.status === 'SCHEDULED'}
+                              >
+                                <Clock className="h-4 w-4 mr-2" />
+                                Marquer comme planifié
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => updateAppointmentStatus.mutate({ id: appointment.id, status: 'CONFIRMED' })}
+                                disabled={appointment.status === 'CONFIRMED'}
+                              >
+                                <CheckCircle2 className="h-4 w-4 mr-2" />
+                                Marquer comme confirmé
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => updateAppointmentStatus.mutate({ id: appointment.id, status: 'COMPLETED' })}
+                                disabled={appointment.status === 'COMPLETED'}
+                              >
+                                <CheckCircle2 className="h-4 w-4 mr-2" />
+                                Marquer comme terminé
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => updateAppointmentStatus.mutate({ id: appointment.id, status: 'CANCELLED' })}
+                                disabled={appointment.status === 'CANCELLED'}
+                              >
+                                <XCircle className="h-4 w-4 mr-2" />
+                                Marquer comme annulé
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => handleDeleteClick(appointment.id)}
+                                className="text-red-600"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Supprimer
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -673,20 +767,20 @@ export function AppointmentsTable({}: AppointmentsTableProps) {
               >
                 Précédent
               </button>
-              
+
               {Array.from({ length: Math.min(totalPages, 10) }, (_, i) => {
                 const page = i + 1;
-                const shouldShow = page === 1 || page === totalPages || 
+                const shouldShow = page === 1 || page === totalPages ||
                   (page >= currentPage - 2 && page <= currentPage + 2);
-                
+
                 if (!shouldShow && page !== 2 && page !== totalPages - 1) {
                   return null;
                 }
-                
+
                 if ((page === 2 && currentPage > 4) || (page === totalPages - 1 && currentPage < totalPages - 3)) {
                   return <span key={page} className="px-2 text-gray-400">...</span>;
                 }
-                
+
                 return (
                   <button
                     key={page}
@@ -701,7 +795,7 @@ export function AppointmentsTable({}: AppointmentsTableProps) {
                   </button>
                 );
               })}
-              
+
               <button
                 onClick={() => setCurrentPage(currentPage + 1)}
                 disabled={currentPage === totalPages}
@@ -713,7 +807,7 @@ export function AppointmentsTable({}: AppointmentsTableProps) {
           </div>
         </div>
       )}
-      
+
       {/* Delete confirmation dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
@@ -728,7 +822,7 @@ export function AppointmentsTable({}: AppointmentsTableProps) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={handleCancelDelete}>Annuler</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={handleConfirmDelete}
               className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
             >

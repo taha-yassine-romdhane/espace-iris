@@ -50,7 +50,29 @@ export default async function handler(
 
   try {
     if (req.method === 'GET') {
+      // Get query parameters for filtering
+      const { assignedToMe } = req.query;
+
+      // Build where clause for filtering
+      const whereClause: any = {};
+
+      // Filter diagnostics for employees - show only diagnostics assigned to them
+      if (assignedToMe === 'true' && session?.user?.id) {
+        // Check if user is assigned as technician to the patient OR performed the diagnostic
+        whereClause.OR = [
+          {
+            patient: {
+              technicianId: session.user.id
+            }
+          },
+          {
+            performedById: session.user.id
+          }
+        ];
+      }
+
       const diagnostics = await prisma.diagnostic.findMany({
+        where: whereClause,
         include: {
           medicalDevice: {
             select: {
@@ -71,6 +93,7 @@ export default async function handler(
               governorate: true,
               delegation: true,
               detailedAddress: true,
+              technicianId: true,
               technician: {
                 select: {
                   id: true,

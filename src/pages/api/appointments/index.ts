@@ -33,7 +33,20 @@ export default async function handler(
 
 async function handleGetAppointments(req: NextApiRequest, res: NextApiResponse) {
   try {
+    // Get session for filtering by assignedToMe
+    const session = await getServerSession(req, res, authOptions);
+    const { assignedToMe } = req.query;
+
+    // Build where clause
+    const whereClause: any = {};
+
+    // Filter by assigned employee if assignedToMe parameter is true
+    if (assignedToMe === 'true' && session?.user?.id) {
+      whereClause.assignedToId = session.user.id;
+    }
+
     const appointments = await prisma.appointment.findMany({
+      where: whereClause,
       include: {
         patient: {
           select: {

@@ -123,10 +123,10 @@ export default function InsuranceDetailsBlock({ form, onInputChange }: Insurance
                     name="identifiantCNAM"
                     label="Identifiant CNAM"
                     form={form}
-                    placeholder="Entrez l'identifiant CNAM"
-                    pattern={{ value: /[^0-9A-Z]/g, replace: '', maxLength: 12 }}
+                    placeholder="Ex: 9612876-287"
+                    pattern={{ value: /[^0-9A-Z\-]/g, replace: '', maxLength: 20 }}
                     onParentChange={onInputChange}
-                    maxLength={12}
+                    maxLength={20}
                   />
                 </div>
 
