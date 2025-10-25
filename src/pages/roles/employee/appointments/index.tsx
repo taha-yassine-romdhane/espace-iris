@@ -3,7 +3,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
+import {
   Calendar,
   Clock,
   MapPin,
@@ -20,18 +20,40 @@ import {
   Trash2,
   CalendarDays
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/components/ui/use-toast";
 import EmployeeLayout from '../EmployeeLayout';
 import { EmployeeRdvStepperDialog } from '../dashboard/components/EmployeeRdvStepperDialog';
 
 const AppointmentsPage = () => {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { toast } = useToast();
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
   const [isRdvDialogOpen, setIsRdvDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [appointmentToDelete, setAppointmentToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -49,11 +71,14 @@ const AppointmentsPage = () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
-      
+
+      // Filter to show only appointments assigned to current employee
+      params.append('assignedToMe', 'true');
+
       if (searchTerm) params.append('search', searchTerm);
       if (filterStatus) params.append('status', filterStatus);
       if (selectedDate) params.append('date', selectedDate);
-      
+
       const response = await fetch(`/api/appointments?${params}`);
       if (response.ok) {
         const data = await response.json();
@@ -115,6 +140,75 @@ const AppointmentsPage = () => {
       default:
         return 'border-l-gray-300';
     }
+  };
+
+  const handleStatusUpdate = async (appointmentId: string, newStatus: string) => {
+    try {
+      const response = await fetch(`/api/appointments/${appointmentId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Statut mis à jour",
+          description: "Le statut du rendez-vous a été mis à jour avec succès.",
+        });
+        fetchAppointments();
+      } else {
+        throw new Error('Failed to update status');
+      }
+    } catch (error) {
+      console.error('Error updating appointment status:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de mettre à jour le statut. Veuillez réessayer.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteClick = (appointmentId: string) => {
+    setAppointmentToDelete(appointmentId);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!appointmentToDelete) return;
+
+    try {
+      const response = await fetch(`/api/appointments/${appointmentToDelete}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Rendez-vous supprimé",
+          description: "Le rendez-vous a été supprimé avec succès.",
+        });
+        fetchAppointments();
+      } else {
+        throw new Error('Failed to delete appointment');
+      }
+    } catch (error) {
+      console.error('Error deleting appointment:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer le rendez-vous. Veuillez réessayer.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setAppointmentToDelete(null);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setAppointmentToDelete(null);
+    setIsDeleteDialogOpen(false);
   };
 
   if (status === 'loading') {
@@ -281,9 +375,53 @@ const AppointmentsPage = () => {
                     </div>
 
                     <div className="ml-4">
-                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                        <MoreVertical className="h-5 w-5 text-gray-400" />
-                      </button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                            <MoreVertical className="h-5 w-5 text-gray-400" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => handleStatusUpdate(appointment.id, 'SCHEDULED')}
+                            disabled={appointment.status === 'SCHEDULED'}
+                          >
+                            <Clock className="h-4 w-4 mr-2" />
+                            Marquer comme planifié
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleStatusUpdate(appointment.id, 'CONFIRMED')}
+                            disabled={appointment.status === 'CONFIRMED'}
+                          >
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Marquer comme confirmé
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleStatusUpdate(appointment.id, 'COMPLETED')}
+                            disabled={appointment.status === 'COMPLETED'}
+                          >
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Marquer comme terminé
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleStatusUpdate(appointment.id, 'CANCELLED')}
+                            disabled={appointment.status === 'CANCELLED'}
+                          >
+                            <XCircle className="h-4 w-4 mr-2" />
+                            Marquer comme annulé
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => handleDeleteClick(appointment.id)}
+                            className="text-red-600"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Supprimer
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                 </div>
@@ -307,8 +445,35 @@ const AppointmentsPage = () => {
       {/* RDV Stepper Dialog */}
       <EmployeeRdvStepperDialog
         isOpen={isRdvDialogOpen}
-        onClose={() => setIsRdvDialogOpen(false)}
+        onClose={() => {
+          setIsRdvDialogOpen(false);
+          fetchAppointments(); // Refresh appointments list after creating new one
+        }}
       />
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-red-600" />
+              Êtes-vous sûr de vouloir supprimer ce rendez-vous?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est irréversible. Le rendez-vous sera définitivement supprimé.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelDelete}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            >
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
