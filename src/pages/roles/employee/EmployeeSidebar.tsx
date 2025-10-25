@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { useSession, signOut } from 'next-auth/react';
+import { useQuery } from '@tanstack/react-query';
 import {
     LayoutDashboard,
     Clipboard,
@@ -37,13 +38,27 @@ type MenuItem = {
 
 const Sidebar: React.FC = () => {
     const router = useRouter();
-    const { } = useSession();
+    const { data: session } = useSession();
     const [isExpanded, setIsExpanded] = useState(true);
     const [isNavigating, setIsNavigating] = useState(false);
     const [lastNavigationTime, setLastNavigationTime] = useState(0);
     const [isEditMode, setIsEditMode] = useState(false);
     const [draggedItem, setDraggedItem] = useState<string | null>(null);
     const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+    // Fetch unread message count
+    const { data: unreadData } = useQuery({
+        queryKey: ['unread-messages-count'],
+        queryFn: async () => {
+            const response = await fetch('/api/messages/unread-count');
+            if (!response.ok) throw new Error('Failed to fetch unread count');
+            return response.json();
+        },
+        enabled: !!session?.user,
+        refetchInterval: 10000, // Refetch every 10 seconds
+    });
+
+    const unreadCount = unreadData?.unreadCount || 0;
 
     // Default menu items with unique IDs
     const defaultMenuItems: MenuItem[] = [
@@ -305,10 +320,24 @@ const Sidebar: React.FC = () => {
                                 {isEditMode && isExpanded && (
                                     <GripVertical size={16} className="mr-2 text-gray-400" />
                                 )}
-                                <span className={`${isExpanded && !isEditMode ? 'mr-3' : isExpanded ? 'mr-3' : 'mx-auto'}`}>
+                                <span className={`${isExpanded && !isEditMode ? 'mr-3' : isExpanded ? 'mr-3' : 'mx-auto'} relative`}>
                                     {item.icon}
+                                    {item.id === 'chat' && unreadCount > 0 && (
+                                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-4 w-4 flex items-center justify-center">
+                                            {unreadCount > 9 ? '9+' : unreadCount}
+                                        </span>
+                                    )}
                                 </span>
-                                {isExpanded && <span className="flex-1">{item.label}</span>}
+                                {isExpanded && (
+                                    <span className="flex-1 flex items-center justify-between">
+                                        <span>{item.label}</span>
+                                        {item.id === 'chat' && unreadCount > 0 && (
+                                            <span className="bg-red-500 text-white text-xs font-bold rounded-full px-2 py-0.5 min-w-[20px] text-center">
+                                                {unreadCount > 99 ? '99+' : unreadCount}
+                                            </span>
+                                        )}
+                                    </span>
+                                )}
                             </div>
                         </li>
                     ))}
