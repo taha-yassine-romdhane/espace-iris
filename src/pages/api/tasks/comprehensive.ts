@@ -391,7 +391,7 @@ export default async function handler(
           ...(currentUserId && {
             OR: [
               { assignedToId: currentUserId }, // Appointments assigned to user
-              { appointmentType: 'DIAGNOSTIC_VISIT' } // ALL diagnostic visit appointments (for all employees)
+              { appointmentType: 'POLYGRAPHIE' } // ALL polygraphie appointments (for all employees)
             ]
           })
         },

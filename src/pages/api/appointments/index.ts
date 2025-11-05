@@ -288,7 +288,7 @@ async function handleCreateAppointment(
     }
 
     // Create diagnostic task if this is a diagnostic visit
-    if (createDiagnosticTask && appointmentType === 'DIAGNOSTIC_VISIT' && appointment.patientId && appointment.assignedToId) {
+    if (createDiagnosticTask && appointmentType === 'POLYGRAPHIE' && appointment.patientId && appointment.assignedToId) {
       try {
         const patientName = `${appointment.patient!.firstName} ${appointment.patient!.lastName}`;
         const taskTitle = `Diagnostic polygraphie - ${patientName}`;

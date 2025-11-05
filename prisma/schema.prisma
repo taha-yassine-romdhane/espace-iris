@@ -1020,7 +1020,7 @@ enum CNAMBonType {
   VNI
   CONCENTRATEUR_OXYGENE
 
-  @@map("CNAMBonType")
+  @@map("CNAMBondType")
 }
 
 enum CNAMBonCategory {

@@ -77,7 +77,6 @@ const Sidebar: React.FC = () => {
         { id: 'rentals', icon: <KeyRound size={20} />, label: "Gestion des Locations", path: "/roles/admin/location" },
         { id: 'manual-tasks', icon: <ListTodo size={20} />, label: "Tâches Manuelles", path: "/roles/admin/manual-tasks" },
         { id: 'calendar', icon: <CalendarCheck size={20} />, label: "Calendrier & Tâches", path: "/roles/admin/calendar" },
-        { id: 'tasks', icon: <CalendarCheck size={20} />, label: "Gestion des taches", path: "/roles/admin/tasks/modern" },
         { id: 'kanban', icon: <Kanban size={20} />, label: "Vue Kanban", path: "/roles/admin/kanban" },
         { id: 'notifications', icon: <ClipboardCheck size={20} />, label: "Gestion des Notifications", path: "/roles/admin/notifications" },
         { id: 'chat', icon: <MessageCircle size={20} />, label: "Messages", path: "/roles/admin/chat" },
