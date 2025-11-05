@@ -187,9 +187,9 @@ export function SaleStepperSidebar({
                           </div>
                           {payment.type === 'cnam' && payment.cnamInfo && (
                             <div className="text-xs text-gray-500">
-                              {payment.cnamInfo.bondType === 'cpap' && 'Bond CPAP'}
-                              {payment.cnamInfo.bondType === 'masque' && 'Bond Masque'}
-                              {payment.cnamInfo.bondType === 'autre' && 'Autre Bond'}
+                              {payment.cnamInfo.bonType === 'cpap' && 'Bond CPAP'}
+                              {payment.cnamInfo.bonType === 'masque' && 'Bond Masque'}
+                              {payment.cnamInfo.bonType === 'autre' && 'Autre Bond'}
                             </div>
                           )}
                           {payment.chequeNumber && (

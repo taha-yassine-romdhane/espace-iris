@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
-import { createPortal } from 'react-dom';
 import { useRouter } from 'next/router';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import PatientForm from '@/components/forms/PatientForm';
 import SocieteForm from '@/components/forms/SocieteForm';
 // Lazy load heavy components
-const RenseignementTable = lazy(() => import('./components/RenseignementTable'));
+const SimpleRenseignementTables = lazy(() => import('./components/SimpleRenseignementTables'));
 const FileViewer = lazy(() => import('./components/FileViewer'));
 
 // Loading fallback component
@@ -366,7 +365,6 @@ export default function RenseignementPage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    console.log(`Updating form field: ${name} = ${value}`);
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -374,7 +372,6 @@ export default function RenseignementPage() {
   };
 
   const handleEdit = (item: Renseignement) => {
-    console.log('Editing item:', item); // Debug log
 
     if (item.type === 'Société') {
       const formData: RenseignementFormData = {
@@ -405,7 +402,6 @@ export default function RenseignementPage() {
         existingFiles: item.files || [],
       };
 
-      console.log('Setting société form data:', formData);
       setFormData(formData);
     } else {
       // Map patient data to form fields
@@ -439,8 +435,6 @@ export default function RenseignementPage() {
         existingFiles: item.files || []
       };
 
-      console.log('Patient data from API:', item);
-      console.log('Transformed form data:', formData);
       setFormData(formData);
     }
     setIsEdit(true);
@@ -563,12 +557,6 @@ export default function RenseignementPage() {
         formDataObj.append('id', formData.id);
       }
 
-      console.log('Submitting form data:', {
-        ...formData,
-        files: formData.files?.length || 0,
-        existingFiles: formData.existingFiles?.length || 0
-      });
-
       const response = await fetch(endpoint, {
         method: isEdit ? 'PUT' : 'POST',
         body: formDataObj,
@@ -580,7 +568,6 @@ export default function RenseignementPage() {
       }
 
       const result = await response.json();
-      console.log('Server response:', result);
 
       toast({
         title: "Succès",
@@ -600,35 +587,9 @@ export default function RenseignementPage() {
   };
      return (
      <div className="container mx-auto py-6 space-y-6">
-       {/* Header with Statistics */}
+       {/* Header */}
        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg p-6 text-white">
-         <div className="flex justify-between items-center mb-4">
-           <h1 className="text-3xl font-bold">Renseignements</h1>
-           <div className="text-sm opacity-90">
-             {filteredRenseignements.length} résultat{filteredRenseignements.length > 1 ? 's' : ''}
-             {filteredRenseignements.length !== renseignements.length && (
-               <span> sur {renseignements.length}</span>
-             )}
-           </div>
-         </div>
-         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-           <div className="bg-white/20 rounded-lg p-3">
-             <div className="text-2xl font-bold">{renseignements.filter(r => r.type === 'Patient').length}</div>
-             <div className="text-sm opacity-90">Patients</div>
-           </div>
-           <div className="bg-white/20 rounded-lg p-3">
-             <div className="text-2xl font-bold">{renseignements.filter(r => r.type === 'Société').length}</div>
-             <div className="text-sm opacity-90">Sociétés</div>
-           </div>
-           <div className="bg-white/20 rounded-lg p-3">
-             <div className="text-2xl font-bold">{renseignements.filter(r => r.identifiantCNAM && r.identifiantCNAM.trim().length > 0).length}</div>
-             <div className="text-sm opacity-90">Avec CNAM</div>
-           </div>
-           <div className="bg-white/20 rounded-lg p-3">
-             <div className="text-2xl font-bold">{renseignements.filter(r => r.files && r.files.length > 0).length}</div>
-             <div className="text-sm opacity-90">Avec Documents</div>
-           </div>
-         </div>
+         <h1 className="text-3xl font-bold">Renseignements</h1>
        </div>
        
        <div className="bg-white rounded-lg shadow-sm border p-4">
@@ -746,7 +707,7 @@ export default function RenseignementPage() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <h4 className="font-medium text-sm">Tranche d&apos;age</h4>
+                    <h4 className="font-medium text-sm">Tranche d'âge</h4>
                     <Select
                       value={filters.ageRange}
                       onValueChange={(value) => handleFilterChange('ageRange', value)}
@@ -901,21 +862,22 @@ export default function RenseignementPage() {
            </div>
          ) : (
            <Suspense fallback={<div className="p-8"><LoadingFallback /></div>}>
-             <RenseignementTable
+             <SimpleRenseignementTables
                data={filteredRenseignements}
                onEdit={handleEdit}
                onDelete={handleDelete}
-               onViewFiles={(files) => handleViewFiles(files)}
                onViewDetails={handleViewDetails}
+               isLoading={isLoading}
+               initialItemsPerPage={100}
              />
            </Suspense>
          )}
        </div>
 
-      {isOpen && typeof document !== 'undefined' && createPortal(
-        <div className="fixed inset-0 flex items-center justify-center z-[200]">
+      {isOpen && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
           {/* Modal backdrop with blur effect */}
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsOpen(false)}></div>
 
           {/* Modal container */}
           <div className="relative bg-white rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col m-4">
@@ -956,8 +918,7 @@ export default function RenseignementPage() {
               )}
             </div>
           </div>
-        </div>,
-        document.body
+        </div>
       )}
 
       <Suspense fallback={<LoadingFallback />}>

@@ -41,14 +41,16 @@ interface CompanyProductSelectionProps {
 }
 
 // Product Type Button Component
-const ProductTypeButton = ({ type, onSelect }: {
+const ProductTypeButton = ({ type, onSelect, onCreateNew }: {
   type: {
     id: string;
     label: string;
     selectLabel: string;
+    createLabel: string;
     icon: React.ElementType;
   };
   onSelect: () => void;
+  onCreateNew: () => void;
 }) => {
   return (
     <div className="space-y-2">
@@ -68,6 +70,22 @@ const ProductTypeButton = ({ type, onSelect }: {
           <type.icon className="h-4 w-4 flex-shrink-0" />
           <span className="text-sm font-medium flex-1 text-left">{type.selectLabel}</span>
           <Info className="h-4 w-4 text-green-600 opacity-50" />
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className={cn(
+            "w-full h-10 flex items-center gap-2 px-4",
+            "border-green-600 border-opacity-20 hover:border-opacity-100",
+            "bg-green-50/30 text-green-600",
+            "hover:bg-green-50 transition-all duration-200",
+            "rounded-md"
+          )}
+          onClick={onCreateNew}
+        >
+          <type.icon className="h-4 w-4 flex-shrink-0" />
+          <span className="text-sm font-medium flex-1 text-left">{type.createLabel}</span>
+          <Plus className="h-4 w-4 text-green-600 opacity-50" />
         </Button>
       </div>
     </div>
@@ -200,28 +218,32 @@ export function CompanyProductSelection({
   
   // Define the available product types for companies (all types)
   const productTypes = [
-    {
-      id: "medical-device",
-      label: "Appareil",
-      selectLabel: "Select Appareil",
+    { 
+      id: "medical-device", 
+      label: "Appareil", 
+      selectLabel: "Select Appareil", 
+      createLabel: "Créer Appareil",
       icon: Stethoscope
     },
-    {
-      id: "accessory",
-      label: "Accessoire",
-      selectLabel: "Select Accessoire",
+    { 
+      id: "accessory", 
+      label: "Accessoire", 
+      selectLabel: "Select Accessoire", 
+      createLabel: "Créer Accessoire",
       icon: Puzzle
     },
-    {
-      id: "spare-part",
-      label: "Pièce",
-      selectLabel: "Select Pièce",
+    { 
+      id: "spare-part", 
+      label: "Pièce", 
+      selectLabel: "Select Pièce", 
+      createLabel: "Créer Pièce",
       icon: Cog
     },
-    {
-      id: "diagnostic",
-      label: "Diagnostic",
-      selectLabel: "Select Diagnostic",
+    { 
+      id: "diagnostic", 
+      label: "Diagnostic", 
+      selectLabel: "Select Diagnostic", 
+      createLabel: "Créer Diagnostic",
       icon: Activity
     }
   ] as const;
@@ -281,10 +303,11 @@ export function CompanyProductSelection({
       {/* Product Type Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {productTypes.map((type) => (
-          <ProductTypeButton
-            key={type.id}
-            type={type}
+          <ProductTypeButton 
+            key={type.id} 
+            type={type} 
             onSelect={() => onSelectProduct(type.id as any)}
+            onCreateNew={() => onCreateProduct(type.id as any)}
           />
         ))}
       </div>

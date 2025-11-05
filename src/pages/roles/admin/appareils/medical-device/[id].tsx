@@ -115,11 +115,10 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       include: {
         stockLocation: { select: { name: true } },
         deviceParameters: { orderBy: { updatedAt: 'desc' } },
-        Rental: { 
-          orderBy: { startDate: 'desc' }, 
+        Rental: {
+          orderBy: { startDate: 'desc' },
           include: {
-            patient: { select: { firstName: true, lastName: true, patientCode: true } },
-            Company: { select: { companyName: true } }
+            patient: { select: { firstName: true, lastName: true, patientCode: true } }
           }
         },
         Diagnostic: {
@@ -148,35 +147,11 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       return { notFound: true };
     }
 
-    console.log('--- [DEBUG] --- Initial device fetched:', { id: device.id, patientId: device.patientId, companyId: device.companyId });
-
-    const fullDevice: any = { ...device };
-
-    if (device.patientId) {
-      console.log(`--- [DEBUG] --- Fetching patient with ID: ${device.patientId}`);
-      fullDevice.Patient = await prisma.patient.findUnique({
-        where: { id: device.patientId },
-        select: { id: true, firstName: true, lastName: true },
-      });
-      console.log('--- [DEBUG] --- Fetched Patient data:', fullDevice.Patient);
-    }
-
-    if (device.companyId) {
-      console.log(`--- [DEBUG] --- Fetching company with ID: ${device.companyId}`);
-      fullDevice.Company = await prisma.company.findUnique({
-        where: { id: device.companyId },
-        select: { id: true, companyName: true },
-      });
-      console.log('--- [DEBUG] --- Fetched Company data:', fullDevice.Company);
-    }
-    
     const stockLocations = await stockLocationsPromise;
-
-    console.log('--- [DEBUG] --- Final device object being sent to client:', { deviceId: fullDevice.id, hasPatient: !!fullDevice.Patient, hasCompany: !!fullDevice.Company });
 
     return {
       props: {
-        device: JSON.parse(JSON.stringify(fullDevice)),
+        device: JSON.parse(JSON.stringify(device)),
         stockLocations: JSON.parse(JSON.stringify(stockLocations)),
       },
     };

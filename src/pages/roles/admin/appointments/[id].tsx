@@ -8,9 +8,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
-import { DiagnosticStepperDialog } from '../dashboard/components/DiagnosticStepperDialog';
-import { SaleStepperDialog } from '../dashboard/components/SaleStepperDialog';
-import { RentStepperDialog } from '../dashboard/components/RentStepperDialog';
 import {
   Select,
   SelectContent,
@@ -18,13 +15,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Calendar,
-  Clock,
-  MapPin,
-  User,
-  Phone,
-  FileText,
+import { 
+  Calendar, 
+  Clock, 
+  MapPin, 
+  User, 
+  Phone, 
+  FileText, 
   AlertCircle,
   ArrowLeft,
   Edit,
@@ -44,9 +41,7 @@ import {
   XCircle,
   AlertTriangle,
   History,
-  Loader2,
-  Plus,
-  CheckCircle2
+  Loader2
 } from 'lucide-react';
 
 interface Employee {
@@ -85,10 +80,6 @@ interface Appointment {
     fiscalNumber?: string;
     address?: string;
   };
-  diagnostic?: {
-    id: string;
-    diagnosticCode: string;
-  } | null;
   createdAt: string;
   updatedAt: string;
   createdBy?: Employee;
@@ -111,6 +102,7 @@ const priorityOptions = [
 const appointmentTypes = [
   { value: 'DIAGNOSTIC_VISIT', label: 'Visite Diagnostique', icon: Home, color: 'purple' },
   { value: 'CONSULTATION', label: 'Consultation', icon: Stethoscope, color: 'blue' },
+  { value: 'DIAGNOSTIC', label: 'Diagnostic', icon: Microscope, color: 'teal' },
   { value: 'LOCATION', label: 'Location', icon: Package, color: 'orange' },
   { value: 'VENTE', label: 'Vente', icon: ShoppingCart, color: 'green' },
   { value: 'MAINTENANCE', label: 'Maintenance', icon: Wrench, color: 'yellow' },
@@ -123,12 +115,7 @@ function AppointmentDetailPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
-
-  // Stepper dialog state
-  const [diagnosticDialogOpen, setDiagnosticDialogOpen] = useState(false);
-  const [saleDialogOpen, setSaleDialogOpen] = useState(false);
-  const [rentalDialogOpen, setRentalDialogOpen] = useState(false);
-
+  
   // Edit form state
   const [editedData, setEditedData] = useState({
     appointmentType: '',
@@ -699,63 +686,6 @@ function AppointmentDetailPage() {
                 )}
               </CardContent>
             </Card>
-
-            {/* Actions Card */}
-            {!isEditing && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <AlertCircle className="h-5 w-5" />
-                    Actions Rapides
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {/* Diagnostic Action */}
-                  {appointment.appointmentType === 'DIAGNOSTIC_VISIT' && appointment.patient && (
-                    appointment.diagnostic ? (
-                      <Button
-                        variant="outline"
-                        className="w-full border-green-200 text-green-700 bg-green-50"
-                        disabled
-                      >
-                        <CheckCircle2 className="h-4 w-4 mr-2" />
-                        Diagnostic Créé
-                      </Button>
-                    ) : (
-                      <Button
-                        className="w-full bg-green-600 hover:bg-green-700 text-white"
-                        onClick={() => setDiagnosticDialogOpen(true)}
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Créer Diagnostic
-                      </Button>
-                    )
-                  )}
-
-                  {/* Sale Action */}
-                  {appointment.appointmentType === 'VENTE' && (appointment.patient || appointment.company) && (
-                    <Button
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                      onClick={() => setSaleDialogOpen(true)}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Créer Vente
-                    </Button>
-                  )}
-
-                  {/* Rental Action */}
-                  {appointment.appointmentType === 'LOCATION' && (appointment.patient || appointment.company) && (
-                    <Button
-                      className="w-full bg-orange-600 hover:bg-orange-700 text-white"
-                      onClick={() => setRentalDialogOpen(true)}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Créer Location
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            )}
           </div>
 
           {/* Right Column - Notes & History */}
@@ -833,47 +763,6 @@ function AppointmentDetailPage() {
             </Card>
           </div>
         </div>
-
-        {/* Stepper Dialogs */}
-        {diagnosticDialogOpen && appointment.patient && (
-          <DiagnosticStepperDialog
-            isOpen={diagnosticDialogOpen}
-            onClose={() => {
-              setDiagnosticDialogOpen(false);
-              queryClient.invalidateQueries({ queryKey: ['appointment', id] });
-            }}
-            preSelectedPatientId={appointment.patient.id}
-            appointmentId={appointment.id}
-            scheduledDate={new Date(appointment.scheduledDate)}
-          />
-        )}
-
-        {saleDialogOpen && (
-          <SaleStepperDialog
-            isOpen={saleDialogOpen}
-            onClose={() => {
-              setSaleDialogOpen(false);
-              queryClient.invalidateQueries({ queryKey: ['appointment', id] });
-            }}
-            action="vente"
-            preSelectedClientId={appointment.patient?.id || appointment.company?.id}
-            preSelectedClientType={appointment.patient ? "patient" : "societe"}
-            appointmentId={appointment.id}
-          />
-        )}
-
-        {rentalDialogOpen && (
-          <RentStepperDialog
-            isOpen={rentalDialogOpen}
-            onClose={() => {
-              setRentalDialogOpen(false);
-              queryClient.invalidateQueries({ queryKey: ['appointment', id] });
-            }}
-            preSelectedClientId={appointment.patient?.id || appointment.company?.id}
-            preSelectedClientType={appointment.patient ? "patient" : "societe"}
-            appointmentId={appointment.id}
-          />
-        )}
       </div>
   );
 }

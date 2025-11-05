@@ -234,7 +234,7 @@ const MapPreview: React.FC = () => {
                       <path d="M3 21h18M4 21V7l8-4v18M20 21V11l-8-4"/>
                     </svg>
                   </div>
-                  <span className="text-xs text-gray-700 font-medium">Siège Iris Medical</span>
+                  <span className="text-xs text-gray-700 font-medium">Siège Elite Medical</span>
                 </div>
               </div>
               

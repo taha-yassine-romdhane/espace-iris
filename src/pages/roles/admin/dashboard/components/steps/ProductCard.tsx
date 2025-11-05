@@ -14,11 +14,9 @@ interface ProductCardProps {
   index: number;
   onRemove: (index: number) => void;
   onConfigure: (index: number) => void;
-  showConfigureButton?: boolean;
-  resultDueDate?: Date;
 }
 
-export function ProductCard({ product, index, onRemove, onConfigure, showConfigureButton = true, resultDueDate }: ProductCardProps) {
+export function ProductCard({ product, index, onRemove, onConfigure }: ProductCardProps) {
   // Helper function to determine if parameters are configured
   const isParametersConfigured = (product: any) => {
     // In the new simplified approach, we only check for the resultDueDate directly on the product
@@ -27,16 +25,17 @@ export function ProductCard({ product, index, onRemove, onConfigure, showConfigu
   };
 
   const renderParameterStatus = () => {
-    // Use resultDueDate prop if provided, otherwise check product
-    const dateToDisplay = resultDueDate || product?.resultDueDate || product?.reservedUntil;
-
-    if (dateToDisplay) {
-      const dateDisplay = new Date(dateToDisplay).toLocaleDateString('fr-FR');
-
+    const configured = isParametersConfigured(product);
+    
+    if (configured) {
+      // Format the date if available
+      const dateStr = product?.resultDueDate || product?.reservedUntil;
+      const dateDisplay = dateStr ? new Date(dateStr).toLocaleDateString() : '';
+      
       return (
-        <div className="flex items-center text-blue-600 text-sm mt-1">
+        <div className="flex items-center text-green-600 text-sm mt-1">
           <CheckCircle2 className="h-4 w-4 mr-1" />
-          <span>Résultats disponibles le {dateDisplay}</span>
+          <span>Date des résultats configurée: {dateDisplay}</span>
         </div>
       );
     } else {
@@ -75,18 +74,16 @@ export function ProductCard({ product, index, onRemove, onConfigure, showConfigu
           </div>
           
           <div className="flex gap-2">
-            {showConfigureButton && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 px-2"
-                onClick={() => onConfigure(index)}
-              >
-                <Sliders className="h-4 w-4 mr-1" />
-                <span>Configurer</span>
-              </Button>
-            )}
-
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 px-2"
+              onClick={() => onConfigure(index)}
+            >
+              <Sliders className="h-4 w-4 mr-1" />
+              <span>Configurer</span>
+            </Button>
+            
             <Button
               variant="outline"
               size="sm"

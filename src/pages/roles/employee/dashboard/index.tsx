@@ -1,172 +1,117 @@
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { SaleStepperDialog } from "./components/SaleStepperDialog";
-import { DiagnosticStepperDialog } from "./components/DiagnosticStepperDialog";
-import { RentStepperDialog } from "./components/RentStepperDialog";
-import { EmployeeRdvStepperDialog } from "./components/EmployeeRdvStepperDialog";
-import { Building2, ShoppingCart, Stethoscope, Calendar } from "lucide-react";
+import { Building2, ShoppingCart, Stethoscope, Calendar, ListTodo } from "lucide-react";
 import { useRouter } from "next/router";
 import EmployeeLayout from '../EmployeeLayout';
-
-// Import table components
-import { AppointmentsTable } from "./components/tables/AppointmentsTable";
-import { DiagnosticTable } from "./components/tables/DiagnosticTable";
-import { RentalTable } from "./components/tables/RentalTable";
-import { SalesTable } from "./components/tables/SalesTable";
 import { TabSwitcher } from "./components/TabSwitcher";
+import { Card, CardContent } from "@/components/ui/card";
+import RentalStatistics from '../rentals/components/RentalStatistics';
 
-export default function DashboardPage() {
-  const [selectedAction, setSelectedAction] = useState<"location" | "vente" | "diagnostique" | "rdv" | null>(null);
-  const [activeTab, setActiveTab] = useState<"appointments" | "diagnostics" | "rentals" | "sales">("appointments");
-  const [diagnosticFromAppointment, setDiagnosticFromAppointment] = useState<{ patientId: string; appointmentId: string; scheduledDate: Date } | null>(null);
-  const [saleFromAppointment, setSaleFromAppointment] = useState<{ patientId?: string; companyId?: string; appointmentId: string } | null>(null);
-  const [rentalFromAppointment, setRentalFromAppointment] = useState<{ patientId?: string; companyId?: string; appointmentId: string } | null>(null);
+// Import new Excel table components
+import AppointmentsExcelTable from "./components/tables/AppointmentsExcelTable";
+import DiagnosticsExcelTable from "./components/tables/DiagnosticsExcelTable";
+import SalesExcelTable from "./components/tables/SalesExcelTable";
+import EmployeeManualTasksTable from "../manual-tasks/index";
+
+function DashboardPage() {
+  const [activeTab, setActiveTab] = useState<"appointments" | "diagnostics" | "sales" | "rentals" | "manual-tasks">("manual-tasks");
   const router = useRouter();
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto py-10 px-4">
-        <h1 className="text-3xl font-bold mb-8 text-green-900">Tableau de Bord</h1>
-        
-        {/* Action Buttons Row */}
-        <div className="grid grid-cols-1 tablet:grid-cols-2 tablet-lg:grid-cols-4 gap-4 mb-8">
-        <Button 
+    <div className="container mx-auto py-6 px-4">
+      <h1 className="text-3xl font-bold mb-8 text-green-900">Tableau de Bord</h1>
+
+      {/* Action Buttons Row - 5 per line, same color */}
+      <div className="mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          <Button
             className="w-full bg-green-700 hover:bg-green-600 text-white flex items-center justify-start gap-2"
-            onClick={() => setSelectedAction("rdv")}
+            onClick={() => router.push("/roles/employee/manual-tasks")}
+          >
+            <ListTodo className="h-5 w-5" />
+            <span>Mes Tâches</span>
+          </Button>
+
+          <Button
+            className="w-full bg-green-700 hover:bg-green-600 text-white flex items-center justify-start gap-2"
+            onClick={() => router.push("/roles/employee/appointments")}
           >
             <Calendar className="h-5 w-5" />
-            <span>Créer un Rendez-vous</span>
+            <span>Nouveau Rendez-vous</span>
           </Button>
-          
-          <Button 
+
+          <Button
             className="w-full bg-green-700 hover:bg-green-600 text-white flex items-center justify-start gap-2"
-            onClick={() => setSelectedAction("diagnostique")}
+            onClick={() => router.push("/roles/employee/diagnostics")}
           >
             <Stethoscope className="h-5 w-5" />
             <span>Commencer un Diagnostic</span>
           </Button>
-          
-          <Button 
+
+          <Button
             className="w-full bg-green-700 hover:bg-green-600 text-white flex items-center justify-start gap-2"
-            onClick={() => setSelectedAction("vente")}
+            onClick={() => router.push("/roles/employee/sales")}
           >
             <ShoppingCart className="h-5 w-5" />
             <span>Commencer une Vente</span>
           </Button>
-          
-          <Button 
+
+          <Button
             className="w-full bg-green-700 hover:bg-green-600 text-white flex items-center justify-start gap-2"
-            onClick={() => setSelectedAction("location")}
+            onClick={() => router.push("/roles/employee/rentals")}
           >
             <Building2 className="h-5 w-5" />
-            <span>Commencer une Location</span>
+            <span>Gestion des Locations</span>
           </Button>
-          
-        
         </div>
-
-        {/* Tab Switcher */}
-        <TabSwitcher activeTab={activeTab} onTabChange={(tab) => setActiveTab(tab as any)} />
-        
-        {/* Tables */}
-        {activeTab === "appointments" && (
-          <AppointmentsTable
-            onViewDetails={(id) => router.push(`/roles/employee/appointments/${id}`)}
-            onCreateDiagnostic={(patientId, appointmentId, scheduledDate) => {
-              setDiagnosticFromAppointment({ patientId, appointmentId, scheduledDate });
-              setSelectedAction("diagnostique");
-            }}
-            onCreateSale={(clientId, clientType, appointmentId) => {
-              if (clientType === 'patient') {
-                setSaleFromAppointment({ patientId: clientId, appointmentId });
-              } else {
-                setSaleFromAppointment({ companyId: clientId, appointmentId });
-              }
-              setSelectedAction("vente");
-            }}
-            onCreateRental={(clientId, clientType, appointmentId) => {
-              if (clientType === 'patient') {
-                setRentalFromAppointment({ patientId: clientId, appointmentId });
-              } else {
-                setRentalFromAppointment({ companyId: clientId, appointmentId });
-              }
-              setSelectedAction("location");
-            }}
-          />
-        )}
-
-        {activeTab === "diagnostics" && (
-          <DiagnosticTable 
-            onViewDetails={(id) => router.push(`/roles/employee/diagnostics/${id}`)} 
-            onEnterResults={(id) => router.push(`/roles/employee/diagnostics/${id}/results`)}
-          />
-        )}
-        
-        {activeTab === "rentals" && (
-          <RentalTable 
-            onViewDetails={(id) => router.push(`/roles/employee/rentals/${id}`)}
-            onEdit={(id) => router.push(`/roles/employee/rentals/${id}/edit`)}
-          />
-        )}
-        
-        {activeTab === "sales" && (
-          <SalesTable 
-            onViewDetails={(id) => router.push(`/roles/employee/sales/${id}`)}
-            onEdit={(id) => router.push(`/roles/employee/sales/${id}/edit`)}
-          />
-        )}
-
-        {/* Stepper Dialogs */}
-        {selectedAction === "rdv" && (
-          <EmployeeRdvStepperDialog
-            isOpen={true}
-            onClose={() => setSelectedAction(null)}
-          />
-        )}
-
-        {selectedAction === "diagnostique" && (
-          <DiagnosticStepperDialog
-            isOpen={true}
-            onClose={() => {
-              setSelectedAction(null);
-              setDiagnosticFromAppointment(null);
-            }}
-            preSelectedPatientId={diagnosticFromAppointment?.patientId}
-            appointmentId={diagnosticFromAppointment?.appointmentId}
-            scheduledDate={diagnosticFromAppointment?.scheduledDate}
-          />
-        )}
-
-        {selectedAction === "vente" && (
-          <SaleStepperDialog
-            isOpen={true}
-            onClose={() => {
-              setSelectedAction(null);
-              setSaleFromAppointment(null);
-            }}
-            action={selectedAction}
-            preSelectedClientId={saleFromAppointment?.patientId || saleFromAppointment?.companyId}
-            preSelectedClientType={saleFromAppointment?.patientId ? "patient" : "societe"}
-            appointmentId={saleFromAppointment?.appointmentId}
-          />
-        )}
-
-        {selectedAction === "location" && (
-          <RentStepperDialog
-            isOpen={true}
-            onClose={() => {
-              setSelectedAction(null);
-              setRentalFromAppointment(null);
-            }}
-            preSelectedClientId={rentalFromAppointment?.patientId || rentalFromAppointment?.companyId}
-            preSelectedClientType={rentalFromAppointment?.patientId ? "patient" : "societe"}
-            appointmentId={rentalFromAppointment?.appointmentId}
-          />
-        )}
       </div>
+
+      {/* Tab Switcher */}
+      <TabSwitcher activeTab={activeTab} onTabChange={(tab) => setActiveTab(tab as any)} />
+
+      {/* Tables */}
+      {activeTab === "appointments" && (
+        <Card>
+          <CardContent className="pt-6">
+            <AppointmentsExcelTable />
+          </CardContent>
+        </Card>
+      )}
+
+      {activeTab === "diagnostics" && (
+        <Card>
+          <CardContent className="pt-6">
+            <DiagnosticsExcelTable />
+          </CardContent>
+        </Card>
+      )}
+
+      {activeTab === "sales" && (
+        <Card>
+          <CardContent className="pt-6">
+            <SalesExcelTable />
+          </CardContent>
+        </Card>
+      )}
+
+      {activeTab === "rentals" && (
+        <RentalStatistics />
+      )}
+
+      {activeTab === "manual-tasks" && (
+        <Card>
+          <CardContent className="pt-6">
+            <EmployeeManualTasksTable />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
+
+// Add layout wrapper
 DashboardPage.getLayout = function getLayout(page: React.ReactElement) {
   return <EmployeeLayout>{page}</EmployeeLayout>;
 };
+
+export default DashboardPage;

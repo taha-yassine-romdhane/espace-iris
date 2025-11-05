@@ -1,92 +1,61 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useRouter } from 'next/router';
+import Head from 'next/head';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
-import { ChevronRight, Plus, Stethoscope } from 'lucide-react';
-import DiagnosticTable from '@/pages/roles/employee/dashboard/components/tables/DiagnosticTable';
-import { DiagnosticStepperDialog } from '../dashboard/components/DiagnosticStepperDialog';
+import { Card, CardContent } from '@/components/ui/card';
+import { Plus, Stethoscope } from 'lucide-react';
+import DiagnosticsExcelTable from '../dashboard/components/tables/DiagnosticsExcelTable';
 import EmployeeLayout from '../EmployeeLayout';
 
 export default function DiagnosticsPage() {
   const router = useRouter();
-  const [isDiagnosticStepperOpen, setIsDiagnosticStepperOpen] = useState(false);
-
-  const handleViewDetails = (id: string) => {
-    router.push(`/roles/employee/diagnostics/${id}`);
-  };
-
-  const handleEnterResults = (id: string) => {
-    router.push(`/roles/employee/diagnostics/${id}/results`);
-  };
-
-  const handleAddDocuments = (id: string) => {
-    router.push(`/roles/employee/diagnostics/${id}/documents`);
-  };
-
-  const handleNewDiagnostic = () => {
-    setIsDiagnosticStepperOpen(true);
-  };
-
-  const handleDialogClose = () => {
-    setIsDiagnosticStepperOpen(false);
-    router.reload(); // Reload to see the new diagnostic
-  };
 
   return (
     <>
-      <DiagnosticStepperDialog 
-        isOpen={isDiagnosticStepperOpen} 
-        onClose={handleDialogClose} 
-      />
-      <div className="container mx-auto py-6 space-y-6">
-        {/* Breadcrumb */}
-        <Breadcrumb className="mb-6">
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink href="/roles/employee/dashboard">Tableau de bord</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator>
-              <ChevronRight className="h-4 w-4" />
-            </BreadcrumbSeparator>
-            <BreadcrumbItem>
-              <BreadcrumbLink>Diagnostics</BreadcrumbLink>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
+      <Head>
+        <title>Diagnostics - Espace Elite</title>
+        <meta name="description" content="Gestion des diagnostics employé" />
+      </Head>
 
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Stethoscope className="h-6 w-6" />
-            Diagnostics
-          </h1>
-          <Button 
-            onClick={handleNewDiagnostic}
-            className="flex items-center gap-1"
-          >
-            <Plus className="h-4 w-4" />
-            Nouveau diagnostic
-          </Button>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        {/* Header Section */}
+        <div className="bg-gradient-to-r from-green-600 to-green-700 text-white px-6 py-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div>
+                <h1 className="text-3xl font-bold flex items-center gap-3">
+                  <Stethoscope className="h-8 w-8" />
+                  Mes Diagnostics
+                </h1>
+                <p className="text-green-100 mt-2">
+                  Consultez et gérez vos diagnostics
+                </p>
+              </div>
+              <Button
+                onClick={() => router.push('/roles/employee/diagnostics/create')}
+                className="bg-white text-green-700 hover:bg-green-50 font-semibold shadow-lg flex items-center gap-2"
+              >
+                <Plus className="h-5 w-5" />
+                Nouveau Diagnostic
+              </Button>
+            </div>
+          </div>
         </div>
 
-        {/* Diagnostics Table Card */}
-        <Card>
-          <CardHeader className="bg-muted/50">
-            <CardTitle>Liste des diagnostics</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <DiagnosticTable 
-              onViewDetails={handleViewDetails}
-              onEnterResults={handleEnterResults}
-              onAddDocuments={handleAddDocuments}
-            />
-          </CardContent>
-        </Card>
+        {/* Content */}
+        <div className="w-full px-4 -mt-6 space-y-6">
+          {/* Diagnostics Table Card */}
+          <Card className="bg-white rounded-xl shadow-sm">
+            <CardContent className="p-6">
+              <DiagnosticsExcelTable />
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </>
   );
 }
+
 DiagnosticsPage.getLayout = function getLayout(page: React.ReactElement) {
   return <EmployeeLayout>{page}</EmployeeLayout>;
 };

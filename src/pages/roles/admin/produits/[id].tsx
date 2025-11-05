@@ -79,7 +79,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       where: { id },
       include: {
         stocks: true,
-        stockLocation: true,
         transfers: {
           orderBy: {
             transferDate: 'desc',

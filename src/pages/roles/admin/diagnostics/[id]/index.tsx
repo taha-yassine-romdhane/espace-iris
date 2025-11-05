@@ -39,8 +39,6 @@ export default function DiagnosticDetailsPage() {
         throw new Error("Failed to fetch diagnostic details");
       }
       const data = await response.json();
-      console.log("Diagnostic data:", data);
-      console.log("Parameter values:", data.parameterValues);
       return data;
     },
     enabled: !!id,

@@ -89,9 +89,9 @@ export function ProductDialog({ isOpen, onClose, type, onSelect }: ProductDialog
         // Ensure we only get true medical devices, not products with the same name
         data = data.filter((item: any) => 
           // Explicitly check the type is MEDICAL_DEVICE and the source is the medicalDevice table
-          item.type === "MEDICAL_DEVICE" && 
+          item.type === "MEDICAL_DEVICE" &&
           // We can check for properties that only exist on medical devices
-          ("availableForRent" in item || "technicalSpecs" in item)
+          "technicalSpecs" in item
         );
       } 
       else if (type === "diagnostic") {
@@ -104,8 +104,8 @@ export function ProductDialog({ isOpen, onClose, type, onSelect }: ProductDialog
         
         // Ensure we only get true diagnostic devices
         data = data.filter((item: any) => 
-          item.type === "DIAGNOSTIC_DEVICE" && 
-          ("availableForRent" in item || "technicalSpecs" in item)
+          item.type === "DIAGNOSTIC_DEVICE" &&
+          "technicalSpecs" in item
         );
       } 
       else if (type === "accessory") {

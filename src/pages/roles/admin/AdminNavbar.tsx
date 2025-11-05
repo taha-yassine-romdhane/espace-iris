@@ -147,7 +147,7 @@ const Navbar: React.FC<NavbarProps> = ({ onSidebarToggle, sidebarExpanded = true
             '/roles/admin/help': 'Aide',
             '/roles/admin/settings': 'Paramètres',
         };
-        return titleMap[path] || 'Iris Medicale Services';
+        return titleMap[path] || 'Elite Medicale Services';
     };
 
     // Get notification icon based on type
@@ -219,7 +219,7 @@ const Navbar: React.FC<NavbarProps> = ({ onSidebarToggle, sidebarExpanded = true
                                 {getPageTitle()}
                             </h1>
                             <div className="text-xs text-gray-500 flex items-center space-x-1">
-                                <span>Iris Medicale Services</span>
+                                <span>Elite Medicale Services</span>
                                 <span>•</span>
                                 <span className="font-medium">{currentTime ? formatTime(currentTime) : '--:--'}</span>
                             </div>

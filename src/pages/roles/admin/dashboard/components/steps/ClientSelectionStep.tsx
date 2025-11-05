@@ -706,13 +706,8 @@ export function ClientSelectionStep({
       </div>
 
       {/* Create Client Form Dialog */}
-      <Dialog open={isCreateFormOpen} onOpenChange={(open) => !open && setIsCreateFormOpen(false)} modal>
-        <DialogContent
-          className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
-          onInteractOutside={(e) => e.preventDefault()}
-          onPointerDownOutside={(e) => e.preventDefault()}
-          onEscapeKeyDown={(e) => e.preventDefault()}
-        >
+      <Dialog open={isCreateFormOpen} onOpenChange={setIsCreateFormOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader className="flex-shrink-0 border-b pb-4">
             <DialogTitle className="flex items-center gap-2 text-[#1e3a8a]">
               {clientType === "patient" ? (

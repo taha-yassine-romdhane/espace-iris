@@ -76,7 +76,6 @@ export default function MyStockInventory() {
   
   // State for filters and pagination
   const [selectedType, setSelectedType] = useState<string>('all');
-  const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -94,18 +93,15 @@ export default function MyStockInventory() {
   // Reset pagination when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedType, selectedStatus, debouncedSearchQuery]);
+  }, [selectedType, debouncedSearchQuery]);
 
   // Fetch my stock inventory
   const { data: myStockData, isLoading } = useQuery<MyStockResponse>({
-    queryKey: ['myStockInventory', selectedType, selectedStatus, debouncedSearchQuery, currentPage, itemsPerPage],
+    queryKey: ['myStockInventory', selectedType, debouncedSearchQuery, currentPage, itemsPerPage],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (selectedType !== 'all') {
         params.append('productType', selectedType);
-      }
-      if (selectedStatus !== 'all') {
-        params.append('status', selectedStatus);
       }
       if (debouncedSearchQuery) {
         params.append('search', debouncedSearchQuery);
@@ -181,9 +177,9 @@ export default function MyStockInventory() {
           return <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">En vente</Badge>;
         case 'FOR_RENT':
           return <Badge variant="secondary">En location</Badge>;
-        case 'EN_REPARATION':
+        case 'IN_REPAIR':
           return <Badge variant="destructive">En réparation</Badge>;
-        case 'HORS_SERVICE':
+        case 'OUT_OF_SERVICE':
           return <Badge variant="outline">Hors service</Badge>;
         default:
           return <Badge>{status}</Badge>;
@@ -305,24 +301,6 @@ export default function MyStockInventory() {
           </Select>
         </div>
 
-        <div className="w-full md:w-[200px]">
-          <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-            <SelectTrigger className="border-green-200 focus:ring-green-500">
-              <SelectValue placeholder="Tous les statuts" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tous les statuts</SelectItem>
-              <SelectItem value="ACTIVE">Actif</SelectItem>
-              <SelectItem value="FOR_SALE">En vente</SelectItem>
-              <SelectItem value="FOR_RENT">En location</SelectItem>
-              <SelectItem value="MAINTENANCE">En maintenance</SelectItem>
-              <SelectItem value="EN_REPARATION">En réparation</SelectItem>
-              <SelectItem value="HORS_SERVICE">Hors service</SelectItem>
-              <SelectItem value="RETIRED">Retiré</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
           <Input
@@ -359,7 +337,6 @@ export default function MyStockInventory() {
               <TableHead>Produit</TableHead>
               <TableHead>Marque</TableHead>
               <TableHead>Modèle</TableHead>
-              <TableHead>Numéro de série</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Quantité</TableHead>
               <TableHead>Statut</TableHead>
@@ -371,7 +348,6 @@ export default function MyStockInventory() {
                 <TableCell className="font-medium">{item.product.name}</TableCell>
                 <TableCell>{item.product.brand || '-'}</TableCell>
                 <TableCell>{item.product.model || '-'}</TableCell>
-                <TableCell className="font-mono text-sm">{item.product.serialNumber || '-'}</TableCell>
                 <TableCell>{getTypeBadge(item.product.type)}</TableCell>
                 <TableCell className="font-semibold">{item.quantity}</TableCell>
                 <TableCell>
@@ -381,7 +357,7 @@ export default function MyStockInventory() {
             ))}
             {(!myStockData.items || myStockData.items.length === 0) && (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8">
+                <TableCell colSpan={6} className="text-center py-8">
                   <div className="flex flex-col items-center">
                     <Package className="h-12 w-12 text-gray-400 mb-2" />
                     <span className="text-gray-500">Aucun produit trouvé dans votre stock</span>

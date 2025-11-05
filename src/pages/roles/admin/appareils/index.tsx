@@ -25,11 +25,11 @@ import { MedicalDeviceForm } from "@/components/appareils/forms/MedicalDeviceFor
 import { DiagnosticDeviceForm } from "@/components/appareils/forms/DiagnosticDeviceForm";
 import { AccessoryForm } from "@/components/appareils/forms/AccessoryForm";
 import { SparePartForm } from "@/components/appareils/forms/SparePartForm";
-import { MedicalDevicesTable } from "@/components/appareils/MedicalDevicesTable";
-import { DiagnosticDevicesTable } from "@/components/appareils/DiagnosticDevicesTable";
-import { AccessoriesTable } from "@/components/appareils/AccessoriesTable";
-import { SparePartsTable } from "@/components/appareils/SparePartsTable";
-import { StockLocationsTable } from "@/components/appareils/StockLocationsTable";
+import { MedicalDevicesExcelTable } from "@/components/appareils/MedicalDevicesExcelTable";
+import { DiagnosticDevicesExcelTable } from "@/components/appareils/DiagnosticDevicesExcelTable";
+import { AccessoriesExcelTable } from "@/components/appareils/AccessoriesExcelTable";
+import { SparePartsExcelTable } from "@/components/appareils/SparePartsExcelTable";
+import { StockLocationsExcelTable } from "@/components/appareils/StockLocationsExcelTable";
 import { LocationForm } from "@/components/appareils/LocationForm";
 import { ParametersViewDialog } from "@/components/appareils/ParametersViewDialog";
 import { Product, ProductType } from "@/types";
@@ -86,7 +86,6 @@ export default function AppareilsPage() {
   // Add device mutation
   const addDeviceMutation = useMutation({
     mutationFn: async (newProduct: Product) => {
-      console.log('Adding device with data:', JSON.stringify(newProduct, null, 2));
       const response = await fetch("/api/medical-devices", {
         method: "POST",
         headers: {
@@ -194,14 +193,7 @@ export default function AppareilsPage() {
         // Use the medical-devices endpoint for all device types
         const apiEndpoint = '/api/medical-devices';
 
-        console.log(`Updating ${currentProduct.type} with ID ${currentProduct.id} using endpoint: ${apiEndpoint}`);
-        console.log('Form data being sent:', JSON.stringify({
-          ...data,
-          type: currentProduct.type,
-        }, null, 2));
-
         // Update existing product
-        console.log(`Sending PUT request to ${apiEndpoint}/${currentProduct.id}`);
         const response = await fetch(`${apiEndpoint}/${currentProduct.id}`, {
           method: "PUT",
           headers: {
@@ -213,10 +205,8 @@ export default function AppareilsPage() {
           }),
         });
 
-        console.log('Response status:', response.status);
 
         const responseData = await response.json();
-        console.log('Response data:', responseData);
 
         if (!response.ok) {
           console.error("Update error:", responseData);
@@ -355,242 +345,191 @@ export default function AppareilsPage() {
       <div className="mt-4">
         {activeTab === "medical-devices" && (
           <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-semibold">Appareils Médicaux</h2>
-              <div className="flex items-center gap-2">
-                <MedicalDeviceImportExport 
+            <MedicalDevicesExcelTable
+              devices={products?.filter((p: any) => p.type === 'MEDICAL_DEVICE') || []}
+              stockLocations={stockLocations || []}
+              onDeviceCreate={async (device) => {
+                await addDeviceMutation.mutateAsync({ ...device, type: 'MEDICAL_DEVICE' } as any);
+              }}
+              onDeviceUpdate={async (device) => {
+                const response = await fetch(`/api/medical-devices/${device.id}`, {
+                  method: "PUT",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ ...device, type: 'MEDICAL_DEVICE' }),
+                });
+                if (!response.ok) throw new Error("Failed to update");
+                await queryClient.invalidateQueries({ queryKey: ["medical-devices"] });
+              }}
+              onDeviceDelete={async (id) => {
+                const response = await fetch(`/api/medical-devices/${id}`, {
+                  method: "DELETE",
+                });
+                if (!response.ok) throw new Error("Failed to delete");
+                await queryClient.invalidateQueries({ queryKey: ["medical-devices"] });
+              }}
+              importExportComponent={
+                <MedicalDeviceImportExport
                   onImportSuccess={() => {
                     queryClient.invalidateQueries({ queryKey: ["medical-devices"] });
                   }}
                   stockLocations={stockLocations || []}
                 />
-                <Dialog
-                  open={isOpen}
-                  onOpenChange={(open) => {
-                    setIsOpen(open);
-                    if (!open) {
-                      setCurrentProduct(null);
-                      setIsEditMode(false);
-                    }
-                  }}
-                >
-                  <DialogTrigger asChild>
-                    <Button onClick={() => { setIsEditMode(false); setCurrentProduct(null); }}>
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      Ajouter un appareil médical
-                    </Button>
-                  </DialogTrigger>
-                <DialogContent className="max-w-4xl" onInteractOutside={(e) => e.preventDefault()}>
-                  <DialogHeader>
-                    <DialogTitle>
-                      {isEditMode ? "Modifier l'appareil médical" : "Ajouter un appareil médical"}
-                    </DialogTitle>
-                    <DialogDescription>
-                      {isEditMode ? "Modifier les informations de l'appareil médical" : "Ajouter un nouvel appareil médical au système"}
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="mt-4">
-                    {getFormComponent()}
-                  </div>
-                </DialogContent>
-                </Dialog>
-              </div>
-            </div>
-            <MedicalDevicesTable
-              products={products || []}
-              onViewHistory={(product) => {
-                setProductToViewHistory(product);
-                setIsHistoryDialogOpen(true);
-              }}
-              renderActionButtons={renderActionButtons}
+              }
             />
           </div>
         )}
         {activeTab === "diagnostic-devices" && (
           <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-semibold">Appareils de Diagnostic</h2>
-              <div className="flex items-center gap-2">
-                <DiagnosticDeviceImportExport 
+            <DiagnosticDevicesExcelTable
+              devices={products?.filter((p: any) => p.type === 'DIAGNOSTIC_DEVICE') || []}
+              stockLocations={stockLocations || []}
+              onDeviceCreate={async (device) => {
+                await addDeviceMutation.mutateAsync({ ...device, type: 'DIAGNOSTIC_DEVICE' } as any);
+              }}
+              onDeviceUpdate={async (device) => {
+                const response = await fetch(`/api/medical-devices/${device.id}`, {
+                  method: "PUT",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ ...device, type: 'DIAGNOSTIC_DEVICE' }),
+                });
+                if (!response.ok) throw new Error("Failed to update");
+                await queryClient.invalidateQueries({ queryKey: ["medical-devices"] });
+              }}
+              onDeviceDelete={async (id) => {
+                const response = await fetch(`/api/medical-devices/${id}`, {
+                  method: "DELETE",
+                });
+                if (!response.ok) throw new Error("Failed to delete");
+                await queryClient.invalidateQueries({ queryKey: ["medical-devices"] });
+              }}
+              importExportComponent={
+                <DiagnosticDeviceImportExport
                   onImportSuccess={() => {
                     queryClient.invalidateQueries({ queryKey: ["medical-devices"] });
                   }}
                   stockLocations={stockLocations || []}
                 />
-                <Dialog
-                  open={isOpen}
-                  onOpenChange={(open) => {
-                    setIsOpen(open);
-                    if (!open) {
-                      setCurrentProduct(null);
-                      setIsEditMode(false);
-                    }
-                  }}
-                >
-                  <DialogTrigger asChild>
-                    <Button onClick={() => { setIsEditMode(false); setCurrentProduct(null); }}>
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      Ajouter un appareil de diagnostic
-                    </Button>
-                  </DialogTrigger>
-                <DialogContent className="max-w-4xl" onInteractOutside={(e) => e.preventDefault()}>
-                  <DialogHeader>
-                    <DialogTitle>
-                      {isEditMode ? "Modifier l'appareil de diagnostic" : "Ajouter un appareil de diagnostic"}
-                    </DialogTitle>
-                    <DialogDescription>
-                      {isEditMode ? "Modifier les informations de l'appareil de diagnostic" : "Ajouter un nouvel appareil de diagnostic au système"}
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="mt-4">
-                    {getFormComponent()}
-                  </div>
-                </DialogContent>
-                </Dialog>
-              </div>
-            </div>
-            <DiagnosticDevicesTable
-              products={products || []}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onViewHistory={(product) => {
-                setProductToViewHistory(product);
-                setIsHistoryDialogOpen(true);
-              }}
-              onViewParameters={handleViewParameters}
-              renderActionButtons={renderActionButtons}
+              }
             />
           </div>
         )}
         {activeTab === "accessories" && (
           <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-semibold">Accessoires</h2>
-              <div className="flex items-center gap-2">
-                <AccessoryImportExport 
-                  onImportSuccess={() => {
-                    queryClient.invalidateQueries({ queryKey: ["medical-devices"] });
-                  }}
-                  stockLocations={stockLocations || []}
-                />
-                <Dialog
-                  open={isOpen}
-                  onOpenChange={(open) => {
-                    setIsOpen(open);
-                    if (!open) {
-                      setCurrentProduct(null);
-                      setIsEditMode(false);
-                    }
-                  }}
-                >
-                  <DialogTrigger asChild>
-                    <Button onClick={() => { setIsEditMode(false); setCurrentProduct(null); }}>
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      Ajouter un accessoire
-                    </Button>
-                  </DialogTrigger>
-                <DialogContent className="max-w-4xl" onInteractOutside={(e) => e.preventDefault()}>
-                  <DialogHeader>
-                    <DialogTitle>
-                      {isEditMode ? "Modifier l'accessoire" : "Ajouter un accessoire"}
-                    </DialogTitle>
-                    <DialogDescription>
-                      {isEditMode ? "Modifier les informations de l'accessoire" : "Ajouter un nouvel accessoire au système"}
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="mt-4">
-                    {getFormComponent()}
-                  </div>
-                </DialogContent>
-                </Dialog>
-              </div>
+            <div className="flex justify-end items-center">
+              <AccessoryImportExport
+                onImportSuccess={() => {
+                  queryClient.invalidateQueries({ queryKey: ["medical-devices"] });
+                }}
+                stockLocations={stockLocations || []}
+              />
             </div>
-            <AccessoriesTable
-              products={products || []}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onViewHistory={(product) => {
-                setProductToViewHistory(product);
-                setIsHistoryDialogOpen(true);
+            <AccessoriesExcelTable
+              accessories={products?.filter((p: any) => p.type === 'ACCESSORY') || []}
+              stockLocations={stockLocations || []}
+              onAccessoryCreate={async (accessory) => {
+                const cleanData = {
+                  name: accessory.name,
+                  type: 'ACCESSORY',
+                  brand: accessory.brand,
+                  model: accessory.model,
+                  description: accessory.description,
+                  purchasePrice: accessory.purchasePrice,
+                  sellingPrice: accessory.sellingPrice,
+                  status: accessory.status,
+                  stockLocationId: accessory.stockLocationId,
+                  stockQuantity: accessory.stockQuantity || 0,
+                  minQuantity: accessory.minQuantity
+                };
+                await addDeviceMutation.mutateAsync(cleanData as any);
               }}
-              renderActionButtons={renderActionButtons}
+              onAccessoryUpdate={async (accessory) => {
+                // Table already sends clean data, just pass it through with type
+                const response = await fetch(`/api/medical-devices/${accessory.id}`, {
+                  method: "PUT",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ ...accessory, type: 'ACCESSORY' }),
+                });
+                if (!response.ok) {
+                  const error = await response.json();
+                  console.error('Update failed:', error);
+                  throw new Error("Failed to update");
+                }
+                await queryClient.invalidateQueries({ queryKey: ["medical-devices"] });
+              }}
+              onAccessoryDelete={async (id) => {
+                const response = await fetch(`/api/medical-devices/${id}`, {
+                  method: "DELETE",
+                });
+                if (!response.ok) throw new Error("Failed to delete");
+                await queryClient.invalidateQueries({ queryKey: ["medical-devices"] });
+              }}
+              onRefresh={() => {
+                queryClient.invalidateQueries({ queryKey: ["medical-devices"] });
+              }}
             />
           </div>
         )}
         {activeTab === "spare-parts" && (
           <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-semibold">Pièces de Rechange</h2>
-              <div className="flex items-center gap-2">
-                <SparePartImportExport 
-                  onImportSuccess={() => {
-                    queryClient.invalidateQueries({ queryKey: ["medical-devices"] });
-                  }}
-                  stockLocations={stockLocations || []}
-                />
-                <Dialog
-                  open={isOpen}
-                  onOpenChange={(open) => {
-                    setIsOpen(open);
-                    if (!open) {
-                      setCurrentProduct(null);
-                      setIsEditMode(false);
-                    }
-                  }}
-                >
-                  <DialogTrigger asChild>
-                    <Button onClick={() => { setIsEditMode(false); setCurrentProduct(null); }}>
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      Ajouter une pièce de rechange
-                    </Button>
-                  </DialogTrigger>
-                <DialogContent className="max-w-4xl" onInteractOutside={(e) => e.preventDefault()}>
-                  <DialogHeader>
-                    <DialogTitle>
-                      {isEditMode ? "Modifier la pièce de rechange" : "Ajouter une pièce de rechange"}
-                    </DialogTitle>
-                    <DialogDescription>
-                      {isEditMode ? "Modifier les informations de la pièce de rechange" : "Ajouter une nouvelle pièce de rechange au système"}
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="mt-4">
-                    {getFormComponent()}
-                  </div>
-                </DialogContent>
-                </Dialog>
-              </div>
+            <div className="flex justify-end items-center">
+              <SparePartImportExport
+                onImportSuccess={() => {
+                  queryClient.invalidateQueries({ queryKey: ["medical-devices"] });
+                }}
+                stockLocations={stockLocations || []}
+              />
             </div>
-            <SparePartsTable
-              products={products || []}
-              onViewHistory={(product) => {
-                setProductToViewHistory(product);
-                setIsHistoryDialogOpen(true);
+            <SparePartsExcelTable
+              spareParts={products?.filter((p: any) => p.type === 'SPARE_PART') || []}
+              stockLocations={stockLocations || []}
+              onSparePartCreate={async (sparePart) => {
+                const cleanData = {
+                  name: sparePart.name,
+                  type: 'SPARE_PART',
+                  brand: sparePart.brand,
+                  model: sparePart.model,
+                  partNumber: sparePart.partNumber,
+                  compatibleWith: sparePart.compatibleWith,
+                  description: sparePart.description,
+                  purchasePrice: sparePart.purchasePrice,
+                  sellingPrice: sparePart.sellingPrice,
+                  status: sparePart.status,
+                  stockLocationId: sparePart.stockLocationId,
+                  stockQuantity: sparePart.stockQuantity || 0,
+                  minQuantity: sparePart.minQuantity
+                };
+                await addDeviceMutation.mutateAsync(cleanData as any);
               }}
-              renderActionButtons={renderActionButtons}
+              onSparePartUpdate={async (sparePart) => {
+                // Table already sends clean data, just pass it through with type
+                const response = await fetch(`/api/medical-devices/${sparePart.id}`, {
+                  method: "PUT",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ ...sparePart, type: 'SPARE_PART' }),
+                });
+                if (!response.ok) {
+                  const error = await response.json();
+                  console.error('Update failed:', error);
+                  throw new Error("Failed to update");
+                }
+                await queryClient.invalidateQueries({ queryKey: ["medical-devices"] });
+              }}
+              onSparePartDelete={async (id) => {
+                const response = await fetch(`/api/medical-devices/${id}`, {
+                  method: "DELETE",
+                });
+                if (!response.ok) throw new Error("Failed to delete");
+                await queryClient.invalidateQueries({ queryKey: ["medical-devices"] });
+              }}
+              onRefresh={() => {
+                queryClient.invalidateQueries({ queryKey: ["medical-devices"] });
+              }}
             />
           </div>
         )}
         {activeTab === "locations" && (
           <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-semibold">Emplacements</h2>
-              <Dialog open={isLocationFormOpen} onOpenChange={setIsLocationFormOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline">
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Ajouter un emplacement
-                  </Button>
-                </DialogTrigger>
-                <DialogContent onInteractOutside={(e) => e.preventDefault()}>
-                  <DialogHeader>
-                    <DialogTitle>Ajouter un emplacement</DialogTitle>
-                  </DialogHeader>
-                  <LocationForm onSuccess={() => setIsLocationFormOpen(false)} />
-                </DialogContent>
-              </Dialog>
-            </div>
-            <StockLocationsTable
-            />
+            <StockLocationsExcelTable />
           </div>
         )}
       </div>
@@ -611,7 +550,7 @@ export default function AppareilsPage() {
       </AlertDialog>
 
       <Dialog open={isRepairDialogOpen} onOpenChange={setIsRepairDialogOpen}>
-        <DialogContent className="max-w-[600px] max-h-[800px] rounded-lg overflow-y-auto" onInteractOutside={(e) => e.preventDefault()}>
+        <DialogContent className="max-w-[600px] max-h-[800px] rounded-lg overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Enregistrer une réparation</DialogTitle>
             <DialogDescription>

@@ -2,6 +2,7 @@ import React from 'react';
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import {
   Dialog,
@@ -909,9 +910,20 @@ export default function StockTransfers() {
         </Dialog>
       </div>
 
-      <PendingTransferRequests />
-      
-      <TransferHistory />
+      <Tabs defaultValue="pending" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="pending">Demandes en attente</TabsTrigger>
+          <TabsTrigger value="history">Historique des transferts</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="pending">
+          <PendingTransferRequests />
+        </TabsContent>
+
+        <TabsContent value="history">
+          <TransferHistory />
+        </TabsContent>
+      </Tabs>
 
     </div>
   );

@@ -33,7 +33,9 @@ model User {
   assignedPatients     Patient[]              @relation("AssignedPatients")
   patientHistories     PatientHistory[]
   processedSales       Sale[]
+  assignedSales        Sale[]                 @relation("AssignedSales")
   createdRentals       Rental[]               @relation("CreatedRentals")
+  assignedRentals      Rental[]               @relation("AssignedRentals")
   stockLocation        StockLocation?
   receivedTransfers    StockTransfer[]        @relation("ReceivedTransfers")
   sentTransfers        StockTransfer[]        @relation("SentTransfers")
@@ -47,6 +49,8 @@ model User {
   userActions          UserActionHistory[]
   sentMessages         Message[]              @relation("SentMessages")
   receivedMessages     Message[]              @relation("ReceivedMessages")
+  createdManualTasks   ManualTask[]           @relation("CreatedManualTasks")
+  assignedManualTasks  ManualTask[]           @relation("AssignedManualTasks")
 }
 
 model Task {
@@ -154,16 +158,21 @@ model Product {
   id                 String                 @id @default(cuid())
   name               String
   type               ProductType
+  productCode        String?                @unique // Auto-generated code: ACC-001, SPR-001, etc.
   brand              String?
   serialNumber       String?                @unique
   createdAt          DateTime               @default(now())
   updatedAt          DateTime               @updatedAt
   model              String?
+  description        String? // Description for accessories and spare parts
   notes              String?
   purchaseDate       DateTime?
   warrantyExpiration DateTime?
   purchasePrice      Float?
   sellingPrice       Float?
+  minQuantity        Int? // Minimum quantity alert threshold
+  partNumber         String? // Part number for spare parts
+  compatibleWith     String? // Compatible devices for spare parts
   status             ProductStatus          @default(ACTIVE)
   rentalAccessories  RentalAccessory[]
   RepairSparePart    RepairSparePart[]
@@ -202,11 +211,10 @@ model Patient {
   governorate        String?
   supervisorId       String?
   appointments       Appointment[]
-  cnamBondRentals    CNAMBondRental[]
+  cnamBonRentals     CNAMBonRental[]
   cnamDossiers       CNAMDossier[]
   diagnostics        Diagnostic[]
   files              File[]
-  medicalDevices     MedicalDevice[]
   deviceParameters   MedicalDeviceParametre[]
   notifications      Notification[]
   doctor             Doctor?                  @relation(fields: [doctorId], references: [id])
@@ -217,32 +225,31 @@ model Patient {
   payments           Payment[]
   rentals            Rental[]
   sales              Sale[]
+  manualTasks        ManualTask[]         @relation("PatientManualTasks")
 }
 
 model Company {
-  id                  String          @id @default(cuid())
-  companyCode         String?         @unique
+  id                  String         @id @default(cuid())
+  companyCode         String?        @unique
   companyName         String
-  telephone           String          @unique
+  telephone           String         @unique
   telephoneSecondaire String?
   taxId               String?
   generalNote         String?
   technicianId        String?
   userId              String
-  createdAt           DateTime        @default(now())
-  updatedAt           DateTime        @updatedAt
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
   delegation          String?
   detailedAddress     String?
   governorate         String?
   appointments        Appointment[]
-  technician          User?           @relation("TechnicianCompanies", fields: [technicianId], references: [id])
-  assignedTo          User            @relation("AssignedCompanies", fields: [userId], references: [id])
+  technician          User?          @relation("TechnicianCompanies", fields: [technicianId], references: [id])
+  assignedTo          User           @relation("AssignedCompanies", fields: [userId], references: [id])
   diagnostics         Diagnostic[]
-  files               File[]          @relation("CompanyFiles")
-  medicalDevices      MedicalDevice[]
+  files               File[]         @relation("CompanyFiles")
   notifications       Notification[]
   payments            Payment[]
-  rentals             Rental[]
   sales               Sale[]
 }
 
@@ -289,6 +296,10 @@ model RepairLocation {
 model Payment {
   id               String          @id @default(cuid())
   paymentCode      String?         @unique
+  paymentType      PaymentType     @default(RENTAL)
+  source           PaymentSource   @default(AUTRE) // Source of payment: SALE, RENTAL, DIAGNOSTIC, AUTRE
+  rentalPeriodId   String?
+  cnamBonId        String?         @map("cnamBondId") // Link to CNAM bon for CNAM payments
   amount           Decimal         @db.Decimal(10, 2)
   method           PaymentMethod
   status           PaymentStatus   @default(PENDING)
@@ -296,7 +307,7 @@ model Payment {
   bankName         String?
   companyId        String?
   patientId        String?
-  rentalId         String?         @unique
+  rentalId         String?
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
   FileId           String?
@@ -305,28 +316,25 @@ model Payment {
   dueDate          DateTime?
   notes            String?
   paymentDate      DateTime        @default(now())
+  periodStartDate  DateTime? // Start date of payment period
+  periodEndDate    DateTime? // End date of payment period
   referenceNumber  String?
   saleId           String?
   cNAMDossierId    String?
   cnamApprovalDate DateTime?
-  cnamBondNumber   String?
-  cnamBondType     CNAMBondType?
+  cnamBonNumber    String?         @map("cnamBondNumber")
+  cnamBonType      CNAMBonType?    @map("cnamBondType")
   cnamEndDate      DateTime?
   cnamStartDate    DateTime?
   cnamStatus       CNAMStatus?
   gapReason        String?
-  isDepositPayment Boolean         @default(false)
-  isGapPeriod      Boolean         @default(false)
-  isRentalPayment  Boolean         @default(false)
-  periodEndDate    DateTime?
-  periodId         String?
-  periodStartDate  DateTime?
+  cnamBon          CNAMBonRental?  @relation(fields: [cnamBonId], references: [id])
   cnamDossier      CNAMDossier?    @relation(fields: [cNAMDossierId], references: [id])
   company          Company?        @relation(fields: [companyId], references: [id])
   patient          Patient?        @relation(fields: [patientId], references: [id])
   rental           Rental?         @relation(fields: [rentalId], references: [id])
+  rentalPeriod     RentalPeriod?   @relation(fields: [rentalPeriodId], references: [id])
   paymentDetails   PaymentDetail[]
-  rentalPeriods    RentalPeriod[]
   sale             Sale?
 }
 
@@ -360,43 +368,35 @@ model File {
 }
 
 model MedicalDevice {
-  id                       String                   @id @default(cuid())
-  deviceCode               String?                  @unique
-  name                     String
-  type                     String
-  installationDate         DateTime?
-  configuration            String?
-  patientId                String?
-  companyId                String?
-  stockQuantity            Int                      @default(1)
-  createdAt                DateTime                 @default(now())
-  updatedAt                DateTime                 @updatedAt
-  stockLocationId          String?
-  brand                    String?
-  purchasePrice            Decimal?                 @db.Decimal(10, 2)
-  sellingPrice             Decimal?                 @db.Decimal(10, 2)
-  serialNumber             String?
-  technicalSpecs           String?
-  warranty                 String?
-  destination              StockStatus              @default(FOR_SALE)
-  requiresMaintenance      Boolean                  @default(false)
-  model                    String?
-  description              String?
-  maintenanceInterval      String?
-  rentalPrice              Decimal?                 @db.Decimal(10, 2)
-  location                 String?
-  reservedUntil            DateTime?
-  status                   DeviceStatus             @default(ACTIVE)
-  reservedForDiagnosticId  String?                  // NEW: Link to diagnostic reservation
-  Diagnostic               Diagnostic[]
-  Company                  Company?                 @relation(fields: [companyId], references: [id])
-  Patient                  Patient?                 @relation(fields: [patientId], references: [id])
-  stockLocation            StockLocation?           @relation(fields: [stockLocationId], references: [id])
-  deviceParameters         MedicalDeviceParametre[]
-  Rental                   Rental[]
-  RepairLog                RepairLog[]
-  saleItems                SaleItem[]
-  transferRequests         StockTransferRequest[]
+  id                  String                   @id @default(cuid())
+  deviceCode          String?                  @unique
+  name                String
+  type                String
+  configuration       String?
+  stockQuantity       Int                      @default(1)
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  stockLocationId     String?
+  brand               String?
+  purchasePrice       Decimal?                 @db.Decimal(10, 2)
+  sellingPrice        Decimal?                 @db.Decimal(10, 2)
+  serialNumber        String?
+  technicalSpecs      String?
+  warranty            String?
+  destination         StockStatus              @default(FOR_SALE)
+  model               String?
+  description         String?
+  maintenanceInterval String?
+  rentalPrice         Decimal?                 @db.Decimal(10, 2)
+  location            String?
+  status              DeviceStatus             @default(ACTIVE)
+  Diagnostic          Diagnostic[]
+  stockLocation       StockLocation?           @relation(fields: [stockLocationId], references: [id])
+  deviceParameters    MedicalDeviceParametre[]
+  Rental              Rental[]
+  RepairLog           RepairLog[]
+  saleItems           SaleItem[]
+  transferRequests    StockTransferRequest[]
 }
 
 model DiagnosticResult {
@@ -425,19 +425,10 @@ model Diagnostic {
   followUpRequired Boolean           @default(false)
   performedById    String?
   status           DiagnosticStatus  @default(PENDING)
-
-  // NEW FIELDS for reservation and visit type
-  diagnosticType   String            @default("IN_CLINIC") // "IN_CLINIC" | "HOME_VISIT"
-  appointmentId    String?           @unique // Link to appointment if home visit
-  reservationDate  DateTime?         // When device is reserved
-  resultDueDate    DateTime?         // When results are expected
-  fileUrls         String[]          @default([]) // Document URLs
-
   Company          Company?          @relation(fields: [companyId], references: [id])
   medicalDevice    MedicalDevice     @relation(fields: [medicalDeviceId], references: [id])
   patient          Patient           @relation(fields: [patientId], references: [id])
   performedBy      User?             @relation("PerformedDiagnostics", fields: [performedById], references: [id])
-  appointment      Appointment?      @relation(fields: [appointmentId], references: [id])
   result           DiagnosticResult?
   Task             Task[]
 }
@@ -487,30 +478,37 @@ model UserActionHistory {
 }
 
 model Rental {
-  id              String               @id @default(cuid())
-  rentalCode      String?              @unique
+  id              String       @id @default(cuid())
+  rentalCode      String?      @unique
   medicalDeviceId String
   patientId       String
   startDate       DateTime
   endDate         DateTime?
-  notes           String?
-  paymentId       String?
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
-  companyId       String?
+  status          RentalStatus @default(PENDING)
   invoiceNumber   String?
-  status          RentalStatus         @default(PENDING)
   createdById     String?
-  cnamBonds       CNAMBondRental[]
-  payment         Payment?
-  Company         Company?             @relation(fields: [companyId], references: [id])
-  medicalDevice   MedicalDevice        @relation(fields: [medicalDeviceId], references: [id])
-  patient         Patient              @relation(fields: [patientId], references: [id])
-  createdBy       User?                @relation("CreatedRentals", fields: [createdById], references: [id])
-  accessories     RentalAccessory[]
-  configuration   RentalConfiguration?
-  gaps            RentalGap[]
-  rentalPeriods   RentalPeriod[]
+  assignedToId    String? // User assigned to manage this rental
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  // Statistics dashboard fields
+  alertDate             DateTime? // DATE RAPPEL - Alert/reminder date for follow-up
+  titrationReminderDate DateTime? // DATE RAPPEL TITRATION - Titration reminder date
+  appointmentDate       DateTime? // RENDEZ-VOUS - Next appointment date
+  notes                 String? // General notes for the rental
+
+  cnamBons      CNAMBonRental[]
+  payments      Payment[]
+  medicalDevice MedicalDevice        @relation(fields: [medicalDeviceId], references: [id])
+  patient       Patient              @relation(fields: [patientId], references: [id])
+  createdBy     User?                @relation("CreatedRentals", fields: [createdById], references: [id])
+  assignedTo    User?                @relation("AssignedRentals", fields: [assignedToId], references: [id])
+  accessories   RentalAccessory[]
+  configuration RentalConfiguration?
+  gaps          RentalGap[]
+  rentalPeriods RentalPeriod[]
+
+  @@index([assignedToId])
 }
 
 model Notification {
@@ -560,26 +558,29 @@ model MedicalDeviceParametre {
 }
 
 model Sale {
-  id            String        @id @default(cuid())
-  saleCode      String?       @unique
-  invoiceNumber String?       @unique
+  id            String          @id @default(cuid())
+  saleCode      String?         @unique
+  invoiceNumber String?         @unique
   saleDate      DateTime
-  totalAmount   Decimal       @db.Decimal(10, 2)
-  discount      Decimal?      @db.Decimal(10, 2)
-  finalAmount   Decimal       @db.Decimal(10, 2)
-  status        SaleStatus    @default(PENDING)
+  totalAmount   Decimal         @db.Decimal(10, 2)
+  discount      Decimal?        @db.Decimal(10, 2)
+  finalAmount   Decimal         @db.Decimal(10, 2)
+  status        SaleStatus      @default(PENDING)
   notes         String?
   processedById String
+  assignedToId  String? // Employee responsible for managing this sale
   patientId     String?
   companyId     String?
-  paymentId     String?       @unique
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  paymentId     String?         @unique
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
   cnamDossiers  CNAMDossier[]
-  company       Company?      @relation(fields: [companyId], references: [id])
-  patient       Patient?      @relation(fields: [patientId], references: [id])
-  payment       Payment?      @relation(fields: [paymentId], references: [id])
-  processedBy   User          @relation(fields: [processedById], references: [id])
+  cnamBons      CNAMBonRental[] // CNAM Bons for sales (category: ACHAT)
+  company       Company?        @relation(fields: [companyId], references: [id])
+  patient       Patient?        @relation(fields: [patientId], references: [id])
+  payment       Payment?        @relation(fields: [paymentId], references: [id])
+  processedBy   User            @relation(fields: [processedById], references: [id])
+  assignedTo    User?           @relation("AssignedSales", fields: [assignedToId], references: [id])
   items         SaleItem[]
 }
 
@@ -594,6 +595,7 @@ model SaleItem {
   itemTotal       Decimal            @db.Decimal(10, 2)
   serialNumber    String?
   warranty        String?
+  description     String?
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
   medicalDevice   MedicalDevice?     @relation(fields: [medicalDeviceId], references: [id])
@@ -666,22 +668,17 @@ model Appointment {
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
   companyId       String?
-  appointmentType String
+  appointmentType AppointmentType     @default(CONSULTATION)
   scheduledDate   DateTime
   location        String
   priority        AppointmentPriority @default(NORMAL)
   status          AppointmentStatus   @default(SCHEDULED)
   assignedToId    String?
   createdById     String
-
-  // NEW FIELD: Link back to diagnostic if this is a diagnostic visit
-  diagnosticId    String?             @unique // Link to diagnostic record
-
   assignedTo      User?               @relation("AssignedAppointments", fields: [assignedToId], references: [id])
   company         Company?            @relation(fields: [companyId], references: [id])
   createdBy       User                @relation("CreatedAppointments", fields: [createdById], references: [id])
   patient         Patient?            @relation(fields: [patientId], references: [id])
-  diagnostic      Diagnostic?         // Relation to diagnostic
 
   @@index([scheduledDate])
   @@index([status])
@@ -693,8 +690,8 @@ model Appointment {
 model CNAMDossier {
   id               String            @id @default(cuid())
   dossierNumber    String            @unique
-  bondType         CNAMBondType
-  bondAmount       Decimal           @db.Decimal(10, 2)
+  bonType          CNAMBonType       @map("bondType")
+  bondAmount       Decimal           @map("bondAmount") @db.Decimal(10, 2)
   devicePrice      Decimal           @db.Decimal(10, 2)
   complementAmount Decimal?          @default(0) @db.Decimal(10, 2)
   currentStep      Int               @default(1)
@@ -733,57 +730,99 @@ model CNAMStepHistory {
   @@index([dossierId])
 }
 
-model CNAMBondRental {
-  id                  String         @id @default(cuid())
-  bondNumber          String?
-  bondType            CNAMBondType
-  status              CNAMStatus     @default(EN_ATTENTE_APPROBATION)
-  dossierNumber       String?
-  submissionDate      DateTime?
-  approvalDate        DateTime?
-  startDate           DateTime?
-  endDate             DateTime?
-  monthlyAmount       Decimal        @db.Decimal(10, 2)
-  coveredMonths       Int
-  totalAmount         Decimal        @db.Decimal(10, 2)
+// CNAM Nomenclature - Fixed pricing per bond type
+model CNAMNomenclature {
+  id            String          @id @default(cuid())
+  bonType       CNAMBonType     @unique @map("bondType")
+  category      CNAMBonCategory @default(LOCATION) @map("bondCategory") // Location (rental) or Achat (purchase)
+  amount        Decimal         @default(0) @db.Decimal(10, 2) // Monthly rate for Location, or total for Achat
+  description   String?
+  isActive      Boolean         @default(true)
+  effectiveDate DateTime        @default(now())
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  // Keep monthlyRate for backward compatibility
+  monthlyRate Decimal @default(0) @db.Decimal(10, 2)
+
+  @@index([bonType])
+  @@index([isActive])
+  @@index([category])
+}
+
+model CNAMBonRental {
+  id             String          @id @default(cuid())
+  bonNumber      String?         @map("bondNumber")
+  bonType        CNAMBonType     @map("bondType")
+  category       CNAMBonCategory @default(LOCATION) @map("bondCategory") // LOCATION (rental) or ACHAT (sale)
+  status         CNAMStatus      @default(EN_ATTENTE_APPROBATION)
+  dossierNumber  String?
+  submissionDate DateTime?
+  approvalDate   DateTime?
+  startDate      DateTime?
+  endDate        DateTime?
+
+  // CNAM fixed amount (from nomenclature)
+  cnamMonthlyRate Decimal @db.Decimal(10, 2) // Fixed rate from nomenclature
+
+  // Actual device pricing
+  deviceMonthlyRate Decimal @db.Decimal(10, 2) // Actual rental rate
+
+  // Auto-calculated fields
+  coveredMonths    Int
+  bonAmount        Decimal @map("bondAmount") @db.Decimal(10, 2) // Total CNAM covers (cnamMonthlyRate × months)
+  devicePrice      Decimal @db.Decimal(10, 2) // Total device cost (deviceMonthlyRate × months)
+  complementAmount Decimal @db.Decimal(10, 2) // Patient pays (devicePrice - bonAmount)
+
+  currentStep         Int            @default(1) // Current step in CNAM process (1-7)
   renewalReminderDays Int            @default(30)
   notes               String?
   rentalId            String?
+  saleId              String? // Link to sale for ACHAT type
   patientId           String
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
   patient             Patient        @relation(fields: [patientId], references: [id])
   rental              Rental?        @relation(fields: [rentalId], references: [id])
+  sale                Sale?          @relation(fields: [saleId], references: [id])
   rentalPeriods       RentalPeriod[]
+  payments            Payment[] // Link CNAM payments to bons
 
   @@index([patientId])
   @@index([rentalId])
+  @@index([saleId])
   @@index([status])
   @@index([endDate])
+  @@index([category])
+  @@index([bonType(sort: Asc)], map: "CNAMBondRental_bondType_idx")
+  @@map("CNAMBonRental")
 }
 
 model RentalPeriod {
-  id            String          @id @default(cuid())
-  rentalId      String
-  startDate     DateTime
-  endDate       DateTime
-  amount        Decimal         @db.Decimal(10, 2)
-  paymentMethod PaymentMethod
-  isGapPeriod   Boolean         @default(false)
-  gapReason     String?
-  notes         String?
-  paymentId     String?
-  cnamBondId    String?
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  cnamBond      CNAMBondRental? @relation(fields: [cnamBondId], references: [id])
-  payment       Payment?        @relation(fields: [paymentId], references: [id])
-  rental        Rental          @relation(fields: [rentalId], references: [id], onDelete: Cascade)
+  id                    String         @id @default(cuid())
+  rentalId              String
+  periodNumber          Int? // Sequential period number (1, 2, 3, etc.)
+  gapDays               Int? // Number of days between this period and previous period
+  startDate             DateTime
+  endDate               DateTime
+  expectedAmount        Decimal        @db.Decimal(10, 2)
+  cnamExpectedAmount    Decimal?       @db.Decimal(10, 2) // CNAM portion (e.g., 570 DT)
+  patientExpectedAmount Decimal?       @db.Decimal(10, 2) // Patient portion/complement (e.g., 100 DT)
+  isGapPeriod           Boolean        @default(false)
+  gapReason             String?
+  notes                 String?
+  cnamBonId             String?        @map("cnamBondId")
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  cnamBon               CNAMBonRental? @relation(fields: [cnamBonId], references: [id])
+  payments              Payment[]
+  rental                Rental         @relation(fields: [rentalId], references: [id], onDelete: Cascade)
 
   @@index([rentalId])
   @@index([startDate])
   @@index([endDate])
   @@index([isGapPeriod])
+  @@index([periodNumber])
 }
 
 model RentalAccessory {
@@ -803,18 +842,18 @@ model RentalAccessory {
 }
 
 model RentalConfiguration {
-  id                 String         @id @default(cuid())
-  rentalId           String         @unique
-  isGlobalOpenEnded  Boolean        @default(false)
-  urgentRental       Boolean        @default(false)
-  cnamEligible       Boolean        @default(false)
-  depositAmount      Decimal?       @db.Decimal(10, 2)
-  depositMethod      PaymentMethod?
-  totalPaymentAmount Decimal?       @db.Decimal(10, 2)
-  notes              String?
-  createdAt          DateTime       @default(now())
-  updatedAt          DateTime       @updatedAt
-  rental             Rental         @relation(fields: [rentalId], references: [id], onDelete: Cascade)
+  id                 String       @id @default(cuid())
+  rentalId           String       @unique
+  rentalRate         Decimal      @default(0) @db.Decimal(10, 2)
+  billingCycle       BillingCycle @default(DAILY)
+  isGlobalOpenEnded  Boolean      @default(false)
+  cnamEligible       Boolean      @default(false)
+  totalPaymentAmount Decimal?     @db.Decimal(10, 2)
+  deliveryNotes      String?
+  internalNotes      String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  rental             Rental       @relation(fields: [rentalId], references: [id], onDelete: Cascade)
 
   @@index([rentalId])
 }
@@ -887,6 +926,27 @@ enum PaymentStatus {
   CANCELLED
 }
 
+enum PaymentType {
+  DEPOSIT
+  RENTAL
+  REFUND
+  PENALTY
+  ADJUSTMENT
+}
+
+enum PaymentSource {
+  SALE // Payment from a sale
+  RENTAL // Payment from a rental
+  DIAGNOSTIC // Payment from a diagnostic
+  AUTRE // Other/miscellaneous payments
+}
+
+enum BillingCycle {
+  DAILY
+  MONTHLY
+  WEEKLY
+}
+
 enum ProductStatus {
   ACTIVE
   RETIRED
@@ -899,7 +959,6 @@ enum DeviceStatus {
   RETIRED
   RESERVED
   SOLD
-  EN_DIAGNOSTIC
 }
 
 enum StockStatus {
@@ -954,12 +1013,21 @@ enum CNAMStatus {
   REFUSE
 }
 
-enum CNAMBondType {
+enum CNAMBonType {
   MASQUE
   CPAP
   AUTRE
   VNI
   CONCENTRATEUR_OXYGENE
+
+  @@map("CNAMBonType")
+}
+
+enum CNAMBonCategory {
+  LOCATION // Bon de Location (rental) - monthly rate
+  ACHAT // Bon d'Achat (purchase) - one-time amount
+
+  @@map("CNAMBonCategory")
 }
 
 enum NotificationStatus {
@@ -976,6 +1044,15 @@ enum NotificationType {
   PAYMENT_DUE
   OTHER
   TRANSFER
+}
+
+enum AppointmentType {
+  POLYGRAPHIE
+  CONSULTATION
+  LOCATION
+  VENTE
+  MAINTENANCE
+  RECUPERATION
 }
 
 enum AppointmentStatus {
@@ -1051,4 +1128,34 @@ enum MessageType {
   BROADCAST
   GROUP
   SYSTEM
+}
+
+model ManualTask {
+  id               String               @id @default(cuid())
+  taskCode         String?              @unique
+  taskType         AppointmentType      // Using same enum as appointments
+  patientId        String
+  assignedToId     String
+  createdById      String
+  adminNotes       String?              // Notes added by admin
+  employeeNotes    String?              // Notes added by employee when completing
+  status           ManualTaskStatus     @default(PENDING)
+  completedAt      DateTime?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  patient          Patient              @relation("PatientManualTasks", fields: [patientId], references: [id])
+  assignedTo       User                 @relation("AssignedManualTasks", fields: [assignedToId], references: [id])
+  createdBy        User                 @relation("CreatedManualTasks", fields: [createdById], references: [id])
+
+  @@index([patientId])
+  @@index([assignedToId])
+  @@index([createdById])
+  @@index([status])
+}
+
+enum ManualTaskStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
 }

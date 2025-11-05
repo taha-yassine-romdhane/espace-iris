@@ -1,16 +1,12 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import UserForm from '@/components/forms/UserForm';
 import { useToast } from "@/components/ui/use-toast";
-import { UserPlus, Loader2, Upload, Download, FileUp, Users, FileSpreadsheet } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { UserPlus, Loader2, Upload, Download, Shield, Users as UsersIcon, Stethoscope, Briefcase, Lock } from "lucide-react";
+import { Card, CardContent } from '@/components/ui/card';
 import { Role as PrismaRole } from '@prisma/client';
-import { columns } from './components/columns';
-import { UsersTable } from './components/UsersTable';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import * as XLSX from 'xlsx';
+import UsersExcelTable from './components/UsersExcelTable';
 
 export interface User {
   id: string;
@@ -26,44 +22,12 @@ export interface User {
 type Role = 'ADMIN' | 'MANAGER' | 'DOCTOR' | 'EMPLOYEE';
 
 const UsersPage = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
-  const [userRelations, setUserRelations] = useState<Record<string, number> | null>(null);
-  const [hasRelations, setHasRelations] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('admin');
   const { toast } = useToast();
 
-  const [formData, setFormData] = useState({
-    id: '',
-    firstName: '',
-    lastName: '',
-    email: '',
-    password: '',
-    telephone: '',
-    role: '' as Role,
-    isActive: true,
-    address: '',
-    speciality: '',
-  });
-
-  const resetForm = () => {
-    setFormData({
-      id: '',
-      firstName: '',
-      lastName: '',
-      email: '',
-      password: '',
-      telephone: '',
-      role: '' as Role,
-      isActive: true,
-      address: '',
-      speciality: '',
-    });
-    setIsEditMode(false);
-  };
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -92,112 +56,20 @@ const UsersPage = () => {
     fetchUsers();
   }, [fetchUsers]);
 
-  const handleEdit = useCallback((user: User) => {
-    const [firstName = '', ...lastNameParts] = user.name.split(' ');
-    const lastName = lastNameParts.join(' ');
-
-    setFormData({
-      id: user.id,
-      firstName,
-      lastName,
-      email: user.email,
-      password: '',
-      telephone: user.telephone || '',
-      role: user.role as Role,
-      isActive: user.isActive,
-      address: user.address || '',
-      speciality: user.speciality || '',
-    });
-    setIsEditMode(true);
-    setIsOpen(true);
-  }, []);
-
-  const handleDelete = useCallback(async (id: string) => {
-    setDeleteUserId(id);
+  const handleExport = useCallback(async () => {
     try {
-      const response = await fetch(`/api/users/${id}/relations`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch user relations');
+      // Fetch default password from API
+      const passwordResponse = await fetch('/api/users/default-password');
+      if (!passwordResponse.ok) {
+        throw new Error('Failed to fetch default password');
       }
-      const data = await response.json();
-      setUserRelations(data.relations);
-      setHasRelations(data.hasRelations);
-      setIsDeleteDialogOpen(true);
-    } catch (error) {
-      console.error('Error checking user relations:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de vérifier les relations de l'utilisateur.",
-        variant: "destructive",
-      });
-    }
-  }, [toast]);
+      const { defaultPassword } = await passwordResponse.json();
 
-  const confirmAction = useCallback(async (action: 'soft-delete' | 'hard-delete') => {
-    if (!deleteUserId) return;
-
-    if (action === 'soft-delete') {
-      try {
-        const userToUpdate = users.find(user => user.id === deleteUserId);
-        if (!userToUpdate) throw new Error("User not found");
-
-        const nameParts = userToUpdate.name.split(' ');
-        const updatedUserPayload = {
-          ...userToUpdate,
-          firstName: nameParts[0],
-          lastName: nameParts.slice(1).join(' '),
-          isActive: false,
-        };
-        delete (updatedUserPayload as any).name;
-
-        const response = await fetch(`/api/users`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updatedUserPayload),
-        });
-
-        if (!response.ok) throw new Error((await response.json()).error || 'Failed to deactivate user');
-
-        toast({ title: "Succès", description: "Utilisateur désactivé avec succès" });
-        fetchUsers();
-        setIsDeleteDialogOpen(false);
-      } catch (error) {
-        console.error('Error deactivating user:', error);
-        toast({ title: "Erreur", description: error instanceof Error ? error.message : "Échec de la désactivation", variant: "destructive" });
-      }
-    } else if (action === 'hard-delete') {
-      try {
-        const response = await fetch(`/api/users?id=${deleteUserId}`, { method: 'DELETE' });
-
-        if (!response.ok) throw new Error((await response.json()).error || 'Failed to delete user');
-
-        toast({ title: "Succès", description: "Utilisateur supprimé définitivement" });
-        fetchUsers();
-        setIsDeleteDialogOpen(false);
-      } catch (error) {
-        console.error('Error deleting user permanently:', error);
-        toast({ title: "Erreur", description: error instanceof Error ? error.message : "Échec de la suppression définitive", variant: "destructive" });
-      }
-    }
-  }, [deleteUserId, users, toast, fetchUsers]);
-
-  const cancelDelete = useCallback(() => {
-    setIsDeleteDialogOpen(false);
-    setDeleteUserId(null);
-    setUserRelations(null);
-    setHasRelations(false);
-  }, []);
-
-  const userColumns = useMemo(() => columns(handleEdit, handleDelete), [handleEdit, handleDelete]);
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleExport = useCallback(() => {
-    try {
       const exportData = users.map(user => ({
         'Prénom': user.name.split(' ')[0],
         'Nom': user.name.split(' ').slice(1).join(' '),
         'Email': user.email,
+        'Mot de passe': defaultPassword,
         'Rôle': user.role,
         'Téléphone': user.telephone || '',
         'Adresse': user.address || '',
@@ -321,54 +193,6 @@ const UsersPage = () => {
     }
   }, [toast, fetchUsers]);
 
-  const handleSubmit = async () => {
-    try {
-      const method = isEditMode ? 'PUT' : 'POST';
-      const response = await fetch('/api/users', {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...formData,
-          password: formData.password || undefined,
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || `Failed to ${isEditMode ? 'update' : 'create'} user`);
-      }
-
-      toast({
-        title: "Success",
-        description: `User ${isEditMode ? 'updated' : 'created'} successfully`,
-      });
-
-      setIsOpen(false);
-      resetForm();
-      fetchUsers();
-    } catch (error) {
-      console.error('Error saving user:', error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : `Failed to ${isEditMode ? 'update' : 'create'} user`,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleCancel = () => {
-    setIsOpen(false);
-    resetForm();
-  };
-
-  const handleInputChange = (name: string, value: string | boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
 
   if (loading) {
     return (
@@ -394,179 +218,147 @@ const UsersPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      <div className="container mx-auto p-6 space-y-6">
+      <div className="mx-auto py-6 px-4 max-w-[98vw]">
         {/* Header Section */}
-        <Card className="border-0 shadow-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
-          <CardHeader className="pb-4">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <div>
-                <CardTitle className="text-3xl font-bold flex items-center gap-2">
-                  <Users className="h-8 w-8" />
-                  Gestion des Utilisateurs
-                </CardTitle>
-                <CardDescription className="text-blue-100 mt-2">
-                  Gérez les comptes utilisateurs, leurs rôles et permissions
-                </CardDescription>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button 
-                  onClick={handleExport}
-                  variant="secondary"
-                  className="bg-white/20 hover:bg-white/30 text-white border-white/30"
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  Exporter
-                </Button>
-                <Button
-                  onClick={() => fileInputRef.current?.click()}
-                  variant="secondary"
-                  className="bg-white/20 hover:bg-white/30 text-white border-white/30"
-                >
-                  <Upload className="mr-2 h-4 w-4" />
-                  Importer
-                </Button>
-                <Button 
-                  onClick={() => {
-                    resetForm();
-                    setIsOpen(true);
-                  }} 
-                  className="bg-white text-blue-600 hover:bg-blue-50"
-                >
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Nouveau
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-        </Card>
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-blue-900 flex items-center gap-2">
+              <UsersIcon className="h-8 w-8" />
+              Gestion des Utilisateurs
+            </h1>
+            <p className="text-slate-600 mt-1">Gérez les comptes utilisateurs par rôle dans des tableaux séparés</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              onClick={handleExport}
+              variant="outline"
+              className="gap-2"
+            >
+              <Download className="h-4 w-4" />
+              Exporter
+            </Button>
+            <Button
+              onClick={() => fileInputRef.current?.click()}
+              variant="outline"
+              className="gap-2"
+            >
+              <Upload className="h-4 w-4" />
+              Importer
+            </Button>
+          </div>
+        </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          <Card className="bg-white/90 backdrop-blur border-gray-200">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Total</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-gray-700">{users.length}</div>
-            </CardContent>
-          </Card>
-          <Card className="bg-white/90 backdrop-blur border-blue-200 bg-blue-50/50">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-blue-700">Admins</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">
-                {users.filter(u => u.role === 'ADMIN').length}
+        {/* Stats Cards - Compact */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+          <Card className="bg-white/90 backdrop-blur border-blue-200">
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-blue-600 rounded-lg">
+                    <Shield className="h-4 w-4 text-white" />
+                  </div>
+                  <span className="text-sm font-medium text-blue-700">Admins</span>
+                </div>
+                <div className="text-2xl font-bold text-blue-600">
+                  {users.filter(u => u.role === 'ADMIN').length}
+                </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-white/90 backdrop-blur border-purple-200 bg-purple-50/50">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-purple-700">Managers</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-purple-600">
-                {users.filter(u => u.role === 'MANAGER').length}
+          <Card className="bg-white/90 backdrop-blur border-red-20">
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-red-600 rounded-lg">
+                    <Stethoscope className="h-4 w-4 text-white" />
+                  </div>
+                  <span className="text-sm font-medium text-red-700">Docteurs</span>
+                </div>
+                <div className="text-2xl font-bold text-red-600">
+                  {users.filter(u => u.role === 'DOCTOR').length}
+                </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-white/90 backdrop-blur border-red-200 bg-red-50/50">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-red-700">Docteurs</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">
-                {users.filter(u => u.role === 'DOCTOR').length}
+          <Card className="bg-white/90 backdrop-blur border-green-200 ">
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-green-600 rounded-lg">
+                    <Briefcase className="h-4 w-4 text-white" />
+                  </div>
+                  <span className="text-sm font-medium text-green-700">Employés</span>
+                </div>
+                <div className="text-2xl font-bold text-green-600">
+                  {users.filter(u => u.role === 'EMPLOYEE').length}
+                </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-white/90 backdrop-blur border-green-200 bg-green-50/50">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-green-700">Employés</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">
-                {users.filter(u => u.role === 'EMPLOYEE').length}
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-white/90 backdrop-blur border-orange-200">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Inactifs</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-orange-600">
-                {users.filter(u => !u.isActive).length}
+          <Card className="bg-white/90 backdrop-blur border-purple-200 ">
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-purple-600 rounded-lg">
+                    <Lock className="h-4 w-4 text-white" />
+                  </div>
+                  <span className="text-sm font-medium text-purple-700">Managers</span>
+                </div>
+                <div className="text-2xl font-bold text-purple-600">
+                  {users.filter(u => u.role === 'MANAGER').length}
+                </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Import Instructions */}
-        <Alert className="bg-blue-50 border-blue-200">
-          <FileUp className="h-4 w-4 text-blue-600" />
-          <AlertDescription className="text-gray-700">
-            <div className="flex items-center justify-between">
-              <div>
-                <strong>Format d'import Excel:</strong> Colonnes requises - Prénom, Nom, Email, Mot de passe, Rôle (ADMIN/MANAGER/DOCTOR/EMPLOYEE), Téléphone, Adresse, Spécialité, Actif (Oui/Non)
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  // Create template Excel file
-                  const templateData = [
-                    {
-                      'Prénom': 'Jean',
-                      'Nom': 'Dupont',
-                      'Email': 'jean.dupont@example.com',
-                      'Mot de passe': 'MotDePasse123',
-                      'Rôle': 'EMPLOYEE',
-                      'Téléphone': '0123456789',
-                      'Adresse': '123 Rue de la Paix, Paris',
-                      'Spécialité': '',
-                      'Actif': 'Oui'
-                    },
-                    {
-                      'Prénom': 'Marie',
-                      'Nom': 'Martin',
-                      'Email': 'marie.martin@example.com',
-                      'Mot de passe': 'SecurePass456',
-                      'Rôle': 'DOCTOR',
-                      'Téléphone': '0987654321',
-                      'Adresse': '456 Avenue des Champs',
-                      'Spécialité': 'Cardiologie',
-                      'Actif': 'Oui'
-                    }
-                  ];
-                  
-                  const ws = XLSX.utils.json_to_sheet(templateData);
-                  const wb = XLSX.utils.book_new();
-                  XLSX.utils.book_append_sheet(wb, ws, 'Template');
-                  
-                  const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-                  const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-                  
-                  const link = document.createElement('a');
-                  const url = URL.createObjectURL(blob);
-                  link.setAttribute('href', url);
-                  link.setAttribute('download', 'template_utilisateurs_import.xlsx');
-                  link.click();
-                  URL.revokeObjectURL(url);
-                }}
-                className="ml-4"
-              >
-                <FileSpreadsheet className="mr-2 h-4 w-4" />
-                Télécharger le modèle Excel
-              </Button>
-            </div>
-          </AlertDescription>
-        </Alert>
+        {/* Tabs Section */}
+        <Card>
+          <CardContent className="pt-6">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-4 mb-6">
+                <TabsTrigger value="admin" className="flex items-center gap-2">
+                  <Shield className="h-4 w-4" />
+                  Admins
+                </TabsTrigger>
+                <TabsTrigger value="doctor" className="flex items-center gap-2">
+                  <Stethoscope className="h-4 w-4" />
+                  Docteurs
+                </TabsTrigger>
+                <TabsTrigger value="employee" className="flex items-center gap-2">
+                  <Briefcase className="h-4 w-4" />
+                  Employés
+                </TabsTrigger>
+                <TabsTrigger
+                  value="manager"
+                  className="flex items-center gap-2 opacity-50 cursor-not-allowed"
+                  disabled
+                >
+                  <Lock className="h-4 w-4" />
+                  Managers
+                </TabsTrigger>
+              </TabsList>
 
-        {/* Table Section */}
-        <Card className="shadow-lg border-0">
-          <CardContent className="p-6">
-            <UsersTable columns={userColumns} data={users} />
+              <TabsContent value="admin" className="mt-0">
+                <UsersExcelTable key="admin" roleFilter="ADMIN" />
+              </TabsContent>
+
+              <TabsContent value="doctor" className="mt-0">
+                <UsersExcelTable key="doctor" roleFilter="DOCTOR" />
+              </TabsContent>
+
+              <TabsContent value="employee" className="mt-0">
+                <UsersExcelTable key="employee" roleFilter="EMPLOYEE" />
+              </TabsContent>
+
+              <TabsContent value="manager" className="mt-0">
+                <div className="text-center py-12 text-gray-500">
+                  <Lock className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg font-medium">Onglet verrouillé</p>
+                  <p className="text-sm mt-2">La gestion des managers sera disponible prochainement</p>
+                </div>
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
 
@@ -578,57 +370,6 @@ const UsersPage = () => {
           onChange={handleImport}
           className="hidden"
         />
-
-        <Dialog open={isOpen} onOpenChange={(open) => !open && setIsOpen(false)}>
-          <DialogContent onInteractOutside={(e) => e.preventDefault()}>
-            <DialogHeader>
-              <DialogTitle>{isEditMode ? 'Modifier l\'utilisateur' : 'Ajouter un utilisateur'}</DialogTitle>
-            </DialogHeader>
-            <UserForm
-              formData={formData}
-              onChange={handleInputChange}
-              onSubmit={handleSubmit}
-              onCancel={handleCancel}
-              isEditMode={isEditMode}
-            />
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {hasRelations ? 'Action Requise' : 'Confirmation de Suppression'}
-              </DialogTitle>
-              <DialogDescription>
-                {hasRelations ? (
-                  <div className="space-y-4">
-                    <p className="text-red-600 font-semibold">Cet utilisateur est lié à des données importantes et ne peut pas être supprimé directement :</p>
-                    <ul className="list-disc list-inside bg-gray-100 p-3 rounded-md">
-                      {userRelations && Object.entries(userRelations).map(([key, value]) => (
-                        <li key={key}>{`${key}: ${value}`}</li>
-                      ))}
-                    </ul>
-                    <p>La suppression permanente entraînera la perte de ces données. Nous vous recommandons de désactiver l'utilisateur à la place.</p>
-                  </div>
-                ) : (
-                  'Êtes-vous sûr de vouloir supprimer définitivement cet utilisateur ? Cette action est irréversible.'
-                )}
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter className="gap-2 sm:justify-end">
-              <Button variant="outline" onClick={cancelDelete}>Annuler</Button>
-              {hasRelations ? (
-                <>
-                  <Button variant="destructive" onClick={() => confirmAction('hard-delete')}>Supprimer quand même</Button>
-                  <Button onClick={() => confirmAction('soft-delete')}>Désactiver (Recommandé)</Button>
-                </>
-              ) : (
-                <Button variant="destructive" onClick={() => confirmAction('hard-delete')}>Supprimer Définitivement</Button>
-              )}
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
     </div>
   );

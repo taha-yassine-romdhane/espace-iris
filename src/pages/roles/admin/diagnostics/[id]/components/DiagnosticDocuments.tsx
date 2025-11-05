@@ -16,7 +16,6 @@ interface DiagnosticDocumentsProps {
 
 export function DiagnosticDocuments({ documents = [], diagnosticId }: DiagnosticDocumentsProps) {
   // Log documents for debugging
-  console.log('Documents received in component:', documents);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const queryClient = useQueryClient();
@@ -67,7 +66,6 @@ export function DiagnosticDocuments({ documents = [], diagnosticId }: Diagnostic
   const handleUploadComplete = (res: Array<any>) => {
     if (!res || res.length === 0) return;
     
-    console.log('Upload complete response:', res);
     const fileData = res[0];
     
     // Now save the file reference in our database
@@ -161,7 +159,6 @@ export function DiagnosticDocuments({ documents = [], diagnosticId }: Diagnostic
 
   // Handle document deletion
   const handleDelete = (documentId: string) => {
-    console.log('Deleting document with ID:', documentId);
     if (confirm('Êtes-vous sûr de vouloir supprimer ce document?')) {
       deleteDocumentMutation.mutate(documentId);
     }

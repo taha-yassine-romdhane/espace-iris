@@ -53,17 +53,13 @@ import {
   Wrench,
   RotateCcw,
   ClipboardCheck,
-  Plus,
 } from "lucide-react";
 
 interface AppointmentsTableProps {
   onViewDetails?: (id: string) => void;
-  onCreateDiagnostic?: (patientId: string, appointmentId: string, scheduledDate: Date) => void;
-  onCreateSale?: (clientId: string, clientType: 'patient' | 'company', appointmentId: string) => void;
-  onCreateRental?: (clientId: string, clientType: 'patient' | 'company', appointmentId: string) => void;
 }
 
-export function AppointmentsTable({ onViewDetails, onCreateDiagnostic, onCreateSale, onCreateRental }: AppointmentsTableProps) {
+export function AppointmentsTable({ onViewDetails }: AppointmentsTableProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -73,7 +69,6 @@ export function AppointmentsTable({ onViewDetails, onCreateDiagnostic, onCreateS
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dateFilter, setDateFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [employeeFilter, setEmployeeFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
 
@@ -87,29 +82,9 @@ export function AppointmentsTable({ onViewDetails, onCreateDiagnostic, onCreateS
           throw new Error("Failed to fetch appointments");
         }
         const data = await response.json();
-        console.log("Appointments data:", data);
         return data.appointments || [];
       } catch (error) {
         console.error("Error fetching appointments:", error);
-        return [];
-      }
-    },
-  });
-
-  // Fetch employees for filter dropdown
-  const { data: employees } = useQuery({
-    queryKey: ["employees"],
-    queryFn: async () => {
-      try {
-        const response = await fetch("/api/users");
-        if (!response.ok) {
-          throw new Error("Failed to fetch employees");
-        }
-        const data = await response.json();
-        // API returns array directly, not wrapped in { users: [...] }
-        return Array.isArray(data) ? data : [];
-      } catch (error) {
-        console.error("Error fetching employees:", error);
         return [];
       }
     },
@@ -268,7 +243,7 @@ export function AppointmentsTable({ onViewDetails, onCreateDiagnostic, onCreateS
     switch (type) {
       case "DIAGNOSTIC_VISIT":
         return {
-          label: "Diagnostic",
+          label: "Visite Diagnostique",
           badge: "bg-purple-100 text-purple-800 border-purple-200",
           icon: <Home className="h-3 w-3" />
         };
@@ -277,6 +252,12 @@ export function AppointmentsTable({ onViewDetails, onCreateDiagnostic, onCreateS
           label: "Consultation",
           badge: "bg-blue-100 text-blue-800 border-blue-200",
           icon: <Stethoscope className="h-3 w-3" />
+        };
+      case "DIAGNOSTIC":
+        return {
+          label: "Diagnostic",
+          badge: "bg-teal-100 text-teal-800 border-teal-200",
+          icon: <Microscope className="h-3 w-3" />
         };
       case "LOCATION":
         return {
@@ -369,11 +350,6 @@ export function AppointmentsTable({ onViewDetails, onCreateDiagnostic, onCreateS
       filtered = filtered.filter((appointment: any) => appointment.appointmentType === typeFilter);
     }
 
-    // Apply employee filter
-    if (employeeFilter !== "all") {
-      filtered = filtered.filter((appointment: any) => appointment.assignedTo?.id === employeeFilter);
-    }
-
     // Apply date filter
     if (dateFilter !== "all") {
       const today = new Date();
@@ -401,7 +377,7 @@ export function AppointmentsTable({ onViewDetails, onCreateDiagnostic, onCreateS
 
     setFilteredAppointments(filtered);
     setCurrentPage(1);
-  }, [appointments, searchTerm, statusFilter, dateFilter, typeFilter, employeeFilter]);
+  }, [appointments, searchTerm, statusFilter, dateFilter, typeFilter]);
 
   // Pagination
   const totalItems = filteredAppointments.length;
@@ -439,7 +415,7 @@ export function AppointmentsTable({ onViewDetails, onCreateDiagnostic, onCreateS
           </div>
 
           {/* Filters - Optimized for tablets */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             <div className="relative">
               <select
                 value={statusFilter}
@@ -484,32 +460,13 @@ export function AppointmentsTable({ onViewDetails, onCreateDiagnostic, onCreateS
                 className="w-full px-4 py-3 pr-10 bg-white border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-[#1e3a8a] text-sm shadow-sm hover:shadow-md transition-all duration-200 appearance-none cursor-pointer"
               >
                 <option value="all">Tous les types</option>
-                <option value="DIAGNOSTIC_VISIT">Diagnostic</option>
+                <option value="DIAGNOSTIC_VISIT">Visite Diagnostique</option>
                 <option value="CONSULTATION">Consultation</option>
+                <option value="DIAGNOSTIC">Diagnostic</option>
                 <option value="LOCATION">Location</option>
                 <option value="VENTE">Vente</option>
                 <option value="MAINTENANCE">Maintenance</option>
                 <option value="RECUPERATION">Récupération</option>
-              </select>
-              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                <svg className="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-            </div>
-
-            <div className="relative">
-              <select
-                value={employeeFilter}
-                onChange={(e) => setEmployeeFilter(e.target.value)}
-                className="w-full px-4 py-3 pr-10 bg-white border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-[#1e3a8a] text-sm shadow-sm hover:shadow-md transition-all duration-200 appearance-none cursor-pointer"
-              >
-                <option value="all">Tous les employés</option>
-                {employees?.map((employee: any) => (
-                  <option key={employee.id} value={employee.id}>
-                    {employee.firstName} {employee.lastName}
-                  </option>
-                ))}
               </select>
               <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                 <svg className="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -587,14 +544,14 @@ export function AppointmentsTable({ onViewDetails, onCreateDiagnostic, onCreateS
                         </div>
                       </TableCell>
                       
-                      <TableCell className="whitespace-nowrap">
+                      <TableCell>
                         {appointment.appointmentType ? (
                           <div className="space-y-1">
                             <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${
                               getAppointmentTypeDisplay(appointment.appointmentType).badge
                             }`}>
                               {getAppointmentTypeDisplay(appointment.appointmentType).icon}
-                              <span className="hidden sm:inline whitespace-nowrap">
+                              <span className="hidden sm:inline">
                                 {getAppointmentTypeDisplay(appointment.appointmentType).label}
                                 {appointment.appointmentCode && (
                                   <span className="ml-1 font-normal opacity-75">
@@ -604,8 +561,9 @@ export function AppointmentsTable({ onViewDetails, onCreateDiagnostic, onCreateS
                               </span>
                               <span className="sm:hidden">
                                 {/* Abbreviated labels for mobile */}
-                                {appointment.appointmentType === 'DIAGNOSTIC_VISIT' ? 'Diagn.' :
+                                {appointment.appointmentType === 'DIAGNOSTIC_VISIT' ? 'Visite' :
                                  appointment.appointmentType === 'CONSULTATION' ? 'Consult.' :
+                                 appointment.appointmentType === 'DIAGNOSTIC' ? 'Diag.' :
                                  appointment.appointmentType === 'LOCATION' ? 'Loc.' :
                                  appointment.appointmentType === 'VENTE' ? 'Vente' :
                                  appointment.appointmentType === 'MAINTENANCE' ? 'Maint.' :
@@ -613,6 +571,14 @@ export function AppointmentsTable({ onViewDetails, onCreateDiagnostic, onCreateS
                                  'Autre'}
                               </span>
                             </div>
+                            {/* Show Polygraphie as a small indicator only for diagnostic visits */}
+                            {appointment.appointmentType === 'DIAGNOSTIC_VISIT' && (
+                              <div className="text-xs text-purple-600 flex items-center gap-1">
+                                <Stethoscope className="h-3 w-3" />
+                                <span className="hidden md:inline">Polygraphie</span>
+                                <span className="md:hidden">Poly.</span>
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <span className="text-gray-400">-</span>
@@ -678,8 +644,8 @@ export function AppointmentsTable({ onViewDetails, onCreateDiagnostic, onCreateS
                       <TableCell>
                         <div className="flex items-center gap-2">
                           {onViewDetails && (
-                            <Button
-                              variant="outline"
+                            <Button 
+                              variant="outline" 
                               size="sm"
                               onClick={() => onViewDetails(appointment.id)}
                               className="flex items-center gap-1 text-xs min-h-[36px] px-3 touch-manipulation"
@@ -688,65 +654,6 @@ export function AppointmentsTable({ onViewDetails, onCreateDiagnostic, onCreateS
                               <span className="hidden lg:inline">Détails</span>
                             </Button>
                           )}
-                          {/* Diagnostic Button for DIAGNOSTIC_VISIT */}
-                          {onCreateDiagnostic && appointment.appointmentType === 'DIAGNOSTIC_VISIT' && appointment.patient && (
-                            appointment.diagnostic ? (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                disabled
-                                className="flex items-center gap-1 text-xs min-h-[36px] px-3 touch-manipulation border-green-200 text-green-700 bg-green-50"
-                              >
-                                <CheckCircle2 className="h-4 w-4" />
-                                <span className="hidden lg:inline">Diagnostic Créé</span>
-                              </Button>
-                            ) : (
-                              <Button
-                                variant="default"
-                                size="sm"
-                                onClick={() => onCreateDiagnostic(appointment.patient!.id, appointment.id, new Date(appointment.scheduledDate))}
-                                className="flex items-center gap-1 text-xs min-h-[36px] px-3 touch-manipulation bg-green-600 hover:bg-green-700"
-                              >
-                                <Plus className="h-4 w-4" />
-                                <span className="hidden lg:inline">Créer Diagnostic</span>
-                              </Button>
-                            )
-                          )}
-
-                          {/* Sale Button for VENTE */}
-                          {onCreateSale && appointment.appointmentType === 'VENTE' && (appointment.patient || appointment.company) && (
-                            <Button
-                              variant="default"
-                              size="sm"
-                              onClick={() => {
-                                const clientId = appointment.patient?.id || appointment.company?.id || '';
-                                const clientType = appointment.patient ? 'patient' : 'company';
-                                onCreateSale(clientId, clientType as 'patient' | 'company', appointment.id);
-                              }}
-                              className="flex items-center gap-1 text-xs min-h-[36px] px-3 touch-manipulation bg-blue-600 hover:bg-blue-700"
-                            >
-                              <Plus className="h-4 w-4" />
-                              <span className="hidden lg:inline">Créer Vente</span>
-                            </Button>
-                          )}
-
-                          {/* Rental Button for LOCATION */}
-                          {onCreateRental && appointment.appointmentType === 'LOCATION' && (appointment.patient || appointment.company) && (
-                            <Button
-                              variant="default"
-                              size="sm"
-                              onClick={() => {
-                                const clientId = appointment.patient?.id || appointment.company?.id || '';
-                                const clientType = appointment.patient ? 'patient' : 'company';
-                                onCreateRental(clientId, clientType as 'patient' | 'company', appointment.id);
-                              }}
-                              className="flex items-center gap-1 text-xs min-h-[36px] px-3 touch-manipulation bg-orange-600 hover:bg-orange-700"
-                            >
-                              <Plus className="h-4 w-4" />
-                              <span className="hidden lg:inline">Créer Location</span>
-                            </Button>
-                          )}
-
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button 

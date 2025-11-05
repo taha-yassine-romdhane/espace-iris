@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import PatientForm from '@/components/forms/PatientForm';
 import SocieteForm from '@/components/forms/SocieteForm';
-import { RenseignementTable } from './components/RenseignementTable';
+import EmployeeSimpleRenseignementTables from './components/EmployeeSimpleRenseignementTables';
 import { FileViewer } from './components/FileViewer';
 import { BeneficiaryType } from '@prisma/client';
 import { CaisseAffiliation, Renseignement, RenseignementFormData } from '@/types/renseignement';
@@ -421,18 +421,9 @@ export default function RenseignementPage() {
     try {
       const response = await fetch('/api/renseignements');
       const data = await response.json();
-      
-      // Filter renseignements to show only those assigned to the logged-in employee
-      if (session?.user?.name) {
-        const filteredData = data.filter((item: Renseignement) => {
-          // Check if the technician's name matches the logged-in user's name
-          return item.technician?.name === session.user.name;
-        });
-        setRenseignements(filteredData);
-      } else {
-        // If no session, show empty array
-        setRenseignements([]);
-      }
+
+      // API now filters by employee role server-side
+      setRenseignements(data);
     } catch (error) {
       console.error('Error fetching renseignements:', error);
       toast({
@@ -448,11 +439,9 @@ export default function RenseignementPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold">Renseignements</h1>
-          {session?.user?.name && (
-            <p className="text-sm text-gray-600 mt-1">
-              Patients assignés à: <span className="font-semibold text-green-700">{session.user.name}</span>
-            </p>
-          )}
+          <p className="text-sm text-gray-600 mt-1">
+            Patients et sociétés qui vous sont assignés
+          </p>
         </div>
         <div className="space-x-2">
           <Button 
@@ -586,23 +575,27 @@ export default function RenseignementPage() {
         )}
       </div>
 
-      <RenseignementTable
+      <EmployeeSimpleRenseignementTables
         data={filteredRenseignements}
         onEdit={handleEdit}
         onDelete={handleDelete}
-        onViewFiles={(files) => handleViewFiles(files)}
         onViewDetails={(item) => {
-          // For now, just edit the item - can be expanded later for a dedicated view
-          handleEdit(item);
+          // Navigate to details page
+          if (item.type === 'Patient') {
+            window.location.href = `/roles/employee/renseignement/patient/${item.id}`;
+          } else {
+            window.location.href = `/roles/employee/renseignement/societe/${item.id}`;
+          }
         }}
         isLoading={false}
+        initialItemsPerPage={100}
       />
 
       {isOpen && (
         <div className="fixed inset-0 flex items-center justify-center z-50">
           {/* Modal backdrop with blur effect */}
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
-          
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsOpen(false)}></div>
+
           {/* Modal container */}
           <div className="relative bg-white rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col m-4">
             {/* Modal header */}

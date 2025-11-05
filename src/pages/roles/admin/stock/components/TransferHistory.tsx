@@ -129,12 +129,28 @@ export default function TransferHistory() {
   const getStatusBadge = (status: string | null) => {
     if (!status) return null;
     switch (status) {
+      // Medical device statuses
+      case 'ACTIVE':
+        return <Badge className="bg-green-500">Actif</Badge>;
+      case 'MAINTENANCE':
+        return <Badge className="bg-yellow-500">En maintenance</Badge>;
+      case 'RETIRED':
+        return <Badge className="bg-red-500">Retiré</Badge>;
+      case 'RESERVED':
+        return <Badge className="bg-purple-500">Réservé</Badge>;
+      // Stock/Product statuses
       case 'FOR_SALE':
-        return <Badge variant="default">En vente</Badge>;
+        return <Badge className="bg-blue-500">En vente</Badge>;
+      case 'FOR_RENT':
+        return <Badge className="bg-purple-500">Pour location</Badge>;
+      case 'IN_REPAIR':
+        return <Badge className="bg-yellow-500">En réparation</Badge>;
+      case 'OUT_OF_SERVICE':
+        return <Badge className="bg-red-500">Hors service</Badge>;
       case 'RESERVE':
-        return <Badge variant="secondary">Réservé</Badge>;
+        return <Badge className="bg-purple-500">Réservé</Badge>;
       case 'DEFECTUEUX':
-        return <Badge variant="destructive">Défectueux</Badge>;
+        return <Badge className="bg-red-500">Défectueux</Badge>;
       default:
         return <Badge>{status}</Badge>;
     }

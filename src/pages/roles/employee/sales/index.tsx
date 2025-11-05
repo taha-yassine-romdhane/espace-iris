@@ -1,37 +1,19 @@
-import React, { useState } from "react";
+import React from "react";
 import { useRouter } from "next/router";
-import { useSession } from "next-auth/react";
 import Head from "next/head";
-import { 
-  ShoppingCart, 
-  Filter
-} from "lucide-react";
+import { ShoppingCart, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { SalesTable } from "../dashboard/components/tables/SalesTable";
+import { Card, CardContent } from "@/components/ui/card";
+import SalesExcelTable from "../dashboard/components/tables/SalesExcelTable";
 import EmployeeLayout from '../EmployeeLayout';
 
 export default function EmployeeSalesPage() {
   const router = useRouter();
-  const { data: session } = useSession();
-
-
-  // Handle view sale details
-  const handleViewDetails = (saleId: string) => {
-    router.push(`/roles/employee/sales/${saleId}`);
-  };
-
-  // Handle edit sale
-  const handleEditSale = (saleId: string) => {
-    router.push(`/roles/employee/sales/${saleId}/edit`);
-  };
-
-
 
   return (
     <>
       <Head>
-        <title>Mes Ventes - Espace Iris </title>
+        <title>Mes Ventes - Espace Elite</title>
         <meta name="description" content="Gestion de mes ventes" />
       </Head>
 
@@ -49,49 +31,29 @@ export default function EmployeeSalesPage() {
                   Gérez vos ventes et suivez vos performances
                 </p>
               </div>
-              
+              <Button
+                onClick={() => router.push('/roles/employee/sales/create')}
+                className="bg-white text-green-700 hover:bg-green-50 font-semibold shadow-lg flex items-center gap-2"
+              >
+                <Plus className="h-5 w-5" />
+                Nouvelle Vente
+              </Button>
             </div>
           </div>
         </div>
 
         {/* Container for content */}
         <div className="w-full px-4 -mt-6">
-
-          {/* Quick Filters */}
-          <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-            <div className="flex flex-wrap items-center gap-3">
-              <Filter className="h-5 w-5 text-gray-500" />
-              <span className="text-sm font-medium text-gray-700">Filtres rapides:</span>
-              <Button variant="outline" size="sm" className="text-xs">
-                Aujourd'hui
-              </Button>
-              <Button variant="outline" size="sm" className="text-xs">
-                Cette semaine
-              </Button>
-              <Button variant="outline" size="sm" className="text-xs">
-                Ce mois
-              </Button>
-              <Button variant="outline" size="sm" className="text-xs">
-                En attente
-              </Button>
-              <Button variant="outline" size="sm" className="text-xs">
-                Complétées
-              </Button>
-            </div>
-          </div>
-
           {/* Sales Table */}
           <div className="mb-8 w-full">
-            <div className="w-full overflow-hidden">
-              <SalesTable
-                onViewDetails={handleViewDetails}
-                onEdit={handleEditSale}
-              />
-            </div>
+            <Card className="bg-white rounded-xl shadow-sm">
+              <CardContent className="p-6">
+                <SalesExcelTable />
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
-
     </>
   );
 }

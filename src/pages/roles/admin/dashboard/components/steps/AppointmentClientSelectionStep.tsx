@@ -62,14 +62,12 @@ export function AppointmentClientSelectionStep({
   const { data: patients, isLoading: patientsLoading, error: patientsError } = useQuery({
     queryKey: ['patients'],
     queryFn: async () => {
-      console.log('Fetching patients for appointment...');
       const response = await fetch('/api/renseignements/patients');
       if (!response.ok) {
         console.error('Failed to fetch patients:', response.status, response.statusText);
         throw new Error('Failed to fetch patients');
       }
       const data = await response.json();
-      console.log('Patients data:', data);
       return data.patients || [];
     },
   });
@@ -77,15 +75,11 @@ export function AppointmentClientSelectionStep({
   // Format patients for appointment selection
   const formatPatients = (rawPatients: any[]): Client[] => {
     if (!rawPatients) {
-      console.log('No rawPatients data received');
       return [];
     }
     
-    console.log('Raw patients data received:', rawPatients);
-    console.log('First patient structure:', rawPatients[0]);
     
     return rawPatients.map(patient => {
-      console.log('Processing patient:', patient);
       
       // Use the name from API, or fallback to constructing it
       let patientName = patient.name;
@@ -104,7 +98,6 @@ export function AppointmentClientSelectionStep({
         firstName: patient.firstName,
         lastName: patient.lastName,
       };
-      console.log('Formatted patient:', formattedPatient);
       return formattedPatient;
     });
   };
@@ -117,9 +110,6 @@ export function AppointmentClientSelectionStep({
     (client.telephone && client.telephone.includes(searchQuery))
   );
 
-  console.log('Current clients after formatting:', currentClients);
-  console.log('Filtered clients:', filteredClients);
-  console.log('Search query:', searchQuery);
 
   const handleClientSelect = (clientId: string) => {
     const client = currentClients.find(c => c.id === clientId);
@@ -145,7 +135,6 @@ export function AppointmentClientSelectionStep({
 
   const handleCreatePatient = async () => {
     try {
-      console.log('Creating patient with data:', patientFormData);
       
       // Validate required fields
       if (!patientFormData.nomComplet || !patientFormData.telephonePrincipale) {
@@ -177,7 +166,6 @@ export function AppointmentClientSelectionStep({
         }
       });
 
-      console.log('Sending FormData:', Array.from(apiFormData.entries()));
 
       const response = await fetch('/api/renseignements/patients', {
         method: 'POST',
@@ -190,7 +178,6 @@ export function AppointmentClientSelectionStep({
       }
 
       const newPatient = await response.json();
-      console.log('Created patient:', newPatient);
       
       // Format the new patient for selection
       const formattedPatient: Client = {
@@ -316,7 +303,6 @@ export function AppointmentClientSelectionStep({
                 <SelectContent className="max-h-[200px]">
                   {filteredClients.length > 0 ? (
                     filteredClients.map((client) => {
-                      console.log('Rendering client:', client);
                       return (
                         <SelectItem key={client.id} value={client.id}>
                           <div className="flex items-center gap-2">
@@ -366,13 +352,8 @@ export function AppointmentClientSelectionStep({
       </div>
 
       {/* Create Patient Dialog */}
-      <Dialog open={isCreateFormOpen} onOpenChange={(open) => !open && setIsCreateFormOpen(false)} modal>
-        <DialogContent
-          className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
-          onInteractOutside={(e) => e.preventDefault()}
-          onPointerDownOutside={(e) => e.preventDefault()}
-          onEscapeKeyDown={(e) => e.preventDefault()}
-        >
+      <Dialog open={isCreateFormOpen} onOpenChange={setIsCreateFormOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <UserPlus className="h-5 w-5" />

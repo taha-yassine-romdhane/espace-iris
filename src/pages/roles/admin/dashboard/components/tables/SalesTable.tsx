@@ -165,8 +165,6 @@ const SalesTable = React.memo(({ onViewDetails, onEdit }: SalesTableProps) => {
           throw new Error("Failed to fetch sales");
         }
         const data = await response.json();
-        console.log("Sales data:", data);
-        console.log("First sale processedBy:", data.sales?.[0]?.processedBy);
         return data.sales || [];
       } catch (error) {
         console.error("Error fetching sales:", error);

@@ -77,7 +77,6 @@ export default function StockLocations() {
   useEffect(() => {
     if (locations) {
       // Locations now come with pre-calculated counts from the API
-      console.log('Locations with counts from API:', locations);
       setFilteredLocations(locations);
     }
   }, [locations]);

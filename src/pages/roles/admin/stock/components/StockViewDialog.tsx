@@ -66,7 +66,6 @@ export function StockViewDialog({ locationId, locationName, isOpen, onClose }: S
         const inventoryData = await response.json();
         
         // Check the structure of the response
-        console.log('Raw inventory response:', inventoryData);
         
         // Handle the new API response structure (items property)
         const inventoryItems = inventoryData.items || inventoryData;
@@ -127,9 +126,6 @@ export function StockViewDialog({ locationId, locationName, isOpen, onClose }: S
           : [];
         
         // Log data for debugging
-        console.log('Formatted inventory data:', formattedInventoryData);
-        console.log('Medical devices:', medicalDeviceItems);
-        console.log('Diagnostic devices:', diagnosticDeviceItems);
         
         // Create a Set to track unique item IDs
         const uniqueItemIds = new Set();

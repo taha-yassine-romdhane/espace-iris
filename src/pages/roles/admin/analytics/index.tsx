@@ -1,156 +1,41 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Area,
-  AreaChart
-} from 'recharts';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { useSession } from 'next-auth/react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  Users, 
-  DollarSign, 
-  Package, 
-  Activity,
-  RefreshCw
-} from "lucide-react";
+import { RefreshCw, Users, Stethoscope, Package, Download } from "lucide-react";
+import { ExcelTable } from '@/components/analytics/ExcelTable';
 
-interface AnalyticsData {
-  revenue: {
-    total: number;
-    monthly: Array<{ month: string; amount: number; sales: number; rentals: number }>;
-    byPaymentMethod: Array<{ method: string; amount: number; percentage: number }>;
-    growth: number;
+interface DetailedAnalytics {
+  employees: any[];
+  patients: any[];
+  devices: any[];
+  summary: {
+    employees: any;
+    patients: any;
+    devices: any;
   };
-  devices: {
-    totalActive: number;
-    totalSold: number;
-    totalRented: number;
-    mostPopular: Array<{ name: string; count: number; revenue: number }>;
-    utilization: { rented: number; sold: number; available: number };
-  };
-  patients: {
-    total: number;
-    newThisMonth: number;
-    byAffiliation: Array<{ type: string; count: number }>;
-    activeRentals: number;
-  };
-  cnam: {
-    totalBonds: number;
-    approvedBonds: number;
-    approvalRate: number;
-    totalAmount: number;
-    byBondType: Array<{ type: string; count: number; amount: number }>;
-  };
-  recentActivity: Array<{
-    type: string;
-    description: string;
-    amount?: number;
-    date: string;
-  }>;
 }
-
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
 const AnalyticsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
-  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
-  const [timeRange, setTimeRange] = useState('12months');
+  const [analyticsData, setAnalyticsData] = useState<DetailedAnalytics | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('employees');
 
   const fetchAnalyticsData = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
-      const response = await fetch(`/api/analytics?timeRange=${timeRange}`);
+      const response = await fetch('/api/analytics/detailed');
       if (!response.ok) {
         throw new Error('Failed to fetch analytics data');
       }
       const data = await response.json();
       setAnalyticsData(data);
     } catch (error) {
-      console.error('Error fetching analytics:', error);
       setError('Failed to load analytics data');
-      // Enhanced mock data for development
-      console.warn('Using mock data due to API error:', error);
-      setAnalyticsData({
-        revenue: {
-          total: 125000,
-          monthly: [
-            { month: 'Jan', amount: 8500, sales: 12, rentals: 8 },
-            { month: 'Feb', amount: 9200, sales: 15, rentals: 10 },
-            { month: 'Mar', amount: 11800, sales: 18, rentals: 12 },
-            { month: 'Apr', amount: 10500, sales: 16, rentals: 9 },
-            { month: 'May', amount: 12300, sales: 20, rentals: 14 },
-            { month: 'Jun', amount: 13100, sales: 22, rentals: 16 },
-          ],
-          byPaymentMethod: [
-            { method: 'CNAM', amount: 45000, percentage: 36 },
-            { method: 'CASH', amount: 35000, percentage: 28 },
-            { method: 'CHEQUE', amount: 25000, percentage: 20 },
-            { method: 'VIREMENT', amount: 20000, percentage: 16 },
-          ],
-          growth: 15.2
-        },
-        devices: {
-          totalActive: 150,
-          totalSold: 89,
-          totalRented: 45,
-          mostPopular: [
-            { name: 'CPAP ResMed', count: 25, revenue: 35000 },
-            { name: 'Masque Nasal', count: 40, revenue: 8000 },
-            { name: 'Concentrateur O2', count: 18, revenue: 27000 },
-            { name: 'BiPAP', count: 12, revenue: 18000 },
-          ],
-          utilization: { rented: 30, sold: 45, available: 25 }
-        },
-        patients: {
-          total: 234,
-          newThisMonth: 18,
-          byAffiliation: [
-            { type: 'CNSS', count: 145 },
-            { type: 'CNRPS', count: 89 },
-          ],
-          activeRentals: 67
-        },
-        cnam: {
-          totalBonds: 89,
-          approvedBonds: 76,
-          approvalRate: 85.4,
-          totalAmount: 45000,
-          byBondType: [
-            { type: 'CPAP', count: 35, amount: 22000 },
-            { type: 'MASQUE', count: 28, amount: 8000 },
-            { type: 'VNI', count: 15, amount: 10000 },
-            { type: 'CONCENTRATEUR_OXYGENE', count: 11, amount: 5000 },
-          ]
-        },
-        recentActivity: [
-          { type: 'sale', description: 'Vente CPAP - Patient Ahmed Ben Ali', amount: 1500, date: '2025-07-30' },
-          { type: 'rental', description: 'Location Masque - Société MedCare', amount: 250, date: '2025-07-30' },
-          { type: 'cnam', description: 'Approbation Bond CNAM #B2025-001', amount: 800, date: '2025-07-29' },
-          { type: 'payment', description: 'Paiement reçu - Chèque #123456', amount: 2000, date: '2025-07-29' },
-        ]
-      });
     } finally {
       setLoading(false);
     }
@@ -158,19 +43,104 @@ const AnalyticsPage: React.FC = () => {
 
   useEffect(() => {
     fetchAnalyticsData();
-  }, [timeRange]);
+  }, []);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('fr-TN', {
-      style: 'currency',
-      currency: 'TND',
-      minimumFractionDigits: 0,
-    }).format(amount);
+  const formatCurrency = (value: any) => {
+    if (value === 'N/A' || value === null || value === undefined) return 'N/A';
+    return `${Number(value).toLocaleString('fr-TN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TND`;
   };
 
-  const formatPercentage = (value: number) => {
-    return `${value.toFixed(1)}%`;
+  const formatNumber = (value: any) => {
+    if (value === 'N/A' || value === null || value === undefined) return 'N/A';
+    return Number(value).toLocaleString('fr-TN');
   };
+
+  // Employee columns
+  const employeeColumns = [
+    { key: 'fullName', label: 'Nom Complet', width: '200px', align: 'left' as const },
+    { key: 'email', label: 'Email', width: '200px', align: 'left' as const },
+    { key: 'role', label: 'Rôle', width: '100px', align: 'center' as const },
+    { key: 'telephone', label: 'Téléphone', width: '120px', align: 'center' as const },
+    { key: 'totalPatients', label: 'Patients', width: '100px', align: 'right' as const, format: formatNumber },
+    { key: 'totalRentals', label: 'Total Locations', width: '120px', align: 'right' as const, format: formatNumber },
+    { key: 'activeRentals', label: 'Locations Actives', width: '130px', align: 'right' as const, format: formatNumber },
+    { key: 'completedRentals', label: 'Locations Terminées', width: '150px', align: 'right' as const, format: formatNumber },
+    { key: 'totalSales', label: 'Ventes', width: '100px', align: 'right' as const, format: formatNumber },
+    { key: 'rentalRevenue', label: 'Revenu Location', width: '150px', align: 'right' as const, format: formatCurrency },
+    { key: 'salesRevenue', label: 'Revenu Vente', width: '150px', align: 'right' as const, format: formatCurrency },
+    { key: 'totalRevenue', label: 'Revenu Total', width: '150px', align: 'right' as const, format: formatCurrency, className: 'font-bold text-green-700' },
+    { key: 'totalAppointments', label: 'RDV Total', width: '100px', align: 'right' as const, format: formatNumber },
+    { key: 'completedAppointments', label: 'RDV Terminés', width: '120px', align: 'right' as const, format: formatNumber },
+    { key: 'totalDiagnostics', label: 'Diagnostics Total', width: '140px', align: 'right' as const, format: formatNumber },
+    { key: 'completedDiagnostics', label: 'Diagnostics Terminés', width: '160px', align: 'right' as const, format: formatNumber },
+    { key: 'stockLocation', label: 'Emplacement Stock', width: '150px', align: 'left' as const },
+    { key: 'devicesInStock', label: 'Appareils en Stock', width: '150px', align: 'right' as const, format: formatNumber },
+    { key: 'activeDevices', label: 'Appareils Actifs', width: '130px', align: 'right' as const, format: formatNumber },
+    { key: 'performanceScore', label: 'Score Performance', width: '150px', align: 'right' as const, format: (v: number) => v + '%' },
+    { key: 'createdAt', label: 'Date Création', width: '120px', align: 'center' as const }
+  ];
+
+  // Patient columns
+  const patientColumns = [
+    { key: 'fullName', label: 'Nom Complet', width: '200px', align: 'left' as const },
+    { key: 'patientCode', label: 'Code Patient', width: '120px', align: 'center' as const },
+    { key: 'telephone', label: 'Téléphone', width: '120px', align: 'center' as const },
+    { key: 'affiliation', label: 'Affiliation', width: '100px', align: 'center' as const },
+    { key: 'beneficiaryType', label: 'Type Bénéficiaire', width: '150px', align: 'center' as const },
+    { key: 'cnamId', label: 'CNAM ID', width: '120px', align: 'center' as const },
+    { key: 'age', label: 'Âge', width: '80px', align: 'right' as const },
+    { key: 'totalRentals', label: 'Total Locations', width: '120px', align: 'right' as const, format: formatNumber },
+    { key: 'activeRentals', label: 'Locations Actives', width: '130px', align: 'right' as const, format: formatNumber },
+    { key: 'completedRentals', label: 'Locations Terminées', width: '150px', align: 'right' as const, format: formatNumber },
+    { key: 'totalSales', label: 'Achats', width: '100px', align: 'right' as const, format: formatNumber },
+    { key: 'totalPayments', label: 'Total Paiements', width: '130px', align: 'right' as const, format: formatNumber },
+    { key: 'totalPaid', label: 'Total Payé', width: '150px', align: 'right' as const, format: formatCurrency, className: 'font-bold text-green-700' },
+    { key: 'totalPending', label: 'En Attente', width: '150px', align: 'right' as const, format: formatCurrency, className: 'font-bold text-orange-600' },
+    { key: 'salesTotal', label: 'Montant Ventes', width: '150px', align: 'right' as const, format: formatCurrency },
+    { key: 'cnamBons', label: 'Bons CNAM', width: '100px', align: 'right' as const, format: formatNumber },
+    { key: 'cnamTotal', label: 'Montant CNAM', width: '150px', align: 'right' as const, format: formatCurrency },
+    { key: 'totalDiagnostics', label: 'Diagnostics Total', width: '140px', align: 'right' as const, format: formatNumber },
+    { key: 'completedDiagnostics', label: 'Diagnostics Terminés', width: '160px', align: 'right' as const, format: formatNumber },
+    { key: 'pendingDiagnostics', label: 'Diagnostics En Attente', width: '180px', align: 'right' as const, format: formatNumber },
+    { key: 'totalAppointments', label: 'RDV Total', width: '100px', align: 'right' as const, format: formatNumber },
+    { key: 'completedAppointments', label: 'RDV Terminés', width: '120px', align: 'right' as const, format: formatNumber },
+    { key: 'upcomingAppointments', label: 'RDV À Venir', width: '120px', align: 'right' as const, format: formatNumber },
+    { key: 'activityScore', label: 'Score Activité', width: '120px', align: 'right' as const },
+    { key: 'governorate', label: 'Gouvernorat', width: '120px', align: 'left' as const },
+    { key: 'delegation', label: 'Délégation', width: '120px', align: 'left' as const },
+    { key: 'createdAt', label: 'Date Création', width: '120px', align: 'center' as const },
+    { key: 'lastActivity', label: 'Dernière Activité', width: '140px', align: 'center' as const }
+  ];
+
+  // Device columns
+  const deviceColumns = [
+    { key: 'name', label: 'Nom Appareil', width: '200px', align: 'left' as const },
+    { key: 'deviceCode', label: 'Code', width: '120px', align: 'center' as const },
+    { key: 'type', label: 'Type', width: '150px', align: 'left' as const },
+    { key: 'brand', label: 'Marque', width: '120px', align: 'left' as const },
+    { key: 'model', label: 'Modèle', width: '120px', align: 'left' as const },
+    { key: 'serialNumber', label: 'N° Série', width: '150px', align: 'center' as const },
+    { key: 'status', label: 'Statut', width: '100px', align: 'center' as const },
+    { key: 'destination', label: 'Destination', width: '120px', align: 'center' as const },
+    { key: 'stockLocation', label: 'Emplacement', width: '150px', align: 'left' as const },
+    { key: 'purchasePrice', label: 'Prix Achat', width: '120px', align: 'right' as const, format: formatCurrency },
+    { key: 'sellingPrice', label: 'Prix Vente', width: '120px', align: 'right' as const, format: formatCurrency },
+    { key: 'rentalPrice', label: 'Prix Location', width: '130px', align: 'right' as const, format: formatCurrency },
+    { key: 'totalRentals', label: 'Total Locations', width: '120px', align: 'right' as const, format: formatNumber },
+    { key: 'activeRentals', label: 'Locations Actives', width: '130px', align: 'right' as const, format: formatNumber },
+    { key: 'completedRentals', label: 'Locations Terminées', width: '150px', align: 'right' as const, format: formatNumber },
+    { key: 'rentalRevenue', label: 'Revenu Location', width: '150px', align: 'right' as const, format: formatCurrency },
+    { key: 'salesCount', label: 'Ventes', width: '100px', align: 'right' as const, format: formatNumber },
+    { key: 'salesRevenue', label: 'Revenu Vente', width: '150px', align: 'right' as const, format: formatCurrency },
+    { key: 'totalRevenue', label: 'Revenu Total', width: '150px', align: 'right' as const, format: formatCurrency, className: 'font-bold text-green-700' },
+    { key: 'repairCount', label: 'Réparations', width: '100px', align: 'right' as const, format: formatNumber },
+    { key: 'repairCost', label: 'Coût Réparations', width: '150px', align: 'right' as const, format: formatCurrency, className: 'text-red-600' },
+    { key: 'lastRepairDate', label: 'Dernière Réparation', width: '150px', align: 'center' as const },
+    { key: 'utilizationRate', label: 'Taux Utilisation', width: '140px', align: 'right' as const },
+    { key: 'profitability', label: 'Rentabilité', width: '150px', align: 'right' as const, format: formatCurrency, className: 'font-bold text-blue-700' },
+    { key: 'roi', label: 'ROI', width: '100px', align: 'right' as const },
+    { key: 'createdAt', label: 'Date Création', width: '120px', align: 'center' as const }
+  ];
 
   if (loading) {
     return (
@@ -197,269 +167,209 @@ const AnalyticsPage: React.FC = () => {
     );
   }
 
+  const { employees, patients, devices, summary } = analyticsData;
+
   return (
     <div className="space-y-6 p-6">
-      {/* Error/Mock Data Banner */}
-      {error && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <div className="flex items-center">
-            <RefreshCw className="h-5 w-5 text-yellow-600 mr-2" />
-            <div>
-              <p className="text-yellow-800 font-medium">Données de démonstration</p>
-              <p className="text-yellow-700 text-sm">L&apos;API de données analytiques rencontre des difficultés. Affichage des données d&apos;exemple.</p>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Analyses & Rapports</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Analyses & Statistiques Détaillées</h1>
           <p className="text-muted-foreground">
-            Vue d&apos;ensemble des performances de votre entreprise
+            Vue complète des performances avec statistiques calculées
           </p>
         </div>
         <div className="flex items-center space-x-4">
-          <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Période" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="3months">3 derniers mois</SelectItem>
-              <SelectItem value="6months">6 derniers mois</SelectItem>
-              <SelectItem value="12months">12 derniers mois</SelectItem>
-              <SelectItem value="year">Année en cours</SelectItem>
-            </SelectContent>
-          </Select>
           <Button onClick={fetchAnalyticsData} variant="outline" size="sm">
             <RefreshCw className="h-4 w-4 mr-2" />
             Actualiser
           </Button>
+          <Button variant="outline" size="sm">
+            <Download className="h-4 w-4 mr-2" />
+            Exporter Excel
+          </Button>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* Summary Cards */}
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Chiffre d&apos;affaires</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(analyticsData.revenue.total)}</div>
-            <div className="flex items-center text-xs text-muted-foreground">
-              {analyticsData.revenue.growth > 0 ? (
-                <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
-              ) : (
-                <TrendingDown className="h-3 w-3 text-red-500 mr-1" />
-              )}
-              {formatPercentage(Math.abs(analyticsData.revenue.growth))} par rapport au mois dernier
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Patients Actifs</CardTitle>
+            <CardTitle className="text-sm font-medium">Employés</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{analyticsData.patients.total}</div>
-            <p className="text-xs text-muted-foreground">
-              +{analyticsData.patients.newThisMonth} nouveaux ce mois
-            </p>
+            <div className="text-2xl font-bold">{summary.employees.total}</div>
+            <div className="space-y-1 mt-2 text-xs text-muted-foreground">
+              <div className="flex justify-between">
+                <span>Revenu Total:</span>
+                <span className="font-medium text-green-700">{formatCurrency(summary.employees.totalRevenue)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Moy. par Employé:</span>
+                <span className="font-medium">{formatCurrency(summary.employees.avgRevenuePerEmployee)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Total Patients:</span>
+                <span className="font-medium">{formatNumber(summary.employees.totalPatients)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Total Locations:</span>
+                <span className="font-medium">{formatNumber(summary.employees.totalRentals)}</span>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Appareils Actifs</CardTitle>
+            <CardTitle className="text-sm font-medium">Patients</CardTitle>
+            <Stethoscope className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{summary.patients.total}</div>
+            <div className="space-y-1 mt-2 text-xs text-muted-foreground">
+              <div className="flex justify-between">
+                <span>Revenu Total:</span>
+                <span className="font-medium text-green-700">{formatCurrency(summary.patients.totalRevenue)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Moy. par Patient:</span>
+                <span className="font-medium">{formatCurrency(summary.patients.avgRevenuePerPatient)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Locations Actives:</span>
+                <span className="font-medium">{formatNumber(summary.patients.activeRentals)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Montant CNAM:</span>
+                <span className="font-medium">{formatCurrency(summary.patients.totalCnamAmount)}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Appareils</CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{analyticsData.devices.totalActive}</div>
-            <p className="text-xs text-muted-foreground">
-              {analyticsData.devices.totalRented} en location
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Taux d&apos;approbation CNAM</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatPercentage(analyticsData.cnam.approvalRate)}</div>
-            <p className="text-xs text-muted-foreground">
-              {analyticsData.cnam.approvedBonds}/{analyticsData.cnam.totalBonds} bons approuvés
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Charts Row 1 */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Revenue Trend */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Évolution du Chiffre d&apos;Affaires</CardTitle>
-            <CardDescription>Revenus mensuels par type d&apos;activité</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={analyticsData.revenue.monthly}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip 
-                  formatter={(value, name) => [formatCurrency(Number(value)), name]}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="amount" 
-                  stackId="1"
-                  stroke="#8884d8" 
-                  fill="#8884d8" 
-                  name="Montant Total"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* Payment Methods */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Répartition par Mode de Paiement</CardTitle>
-            <CardDescription>Distribution des revenus</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={analyticsData.revenue.byPaymentMethod}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={(props: any) => `${props.method} ${props.percentage.toFixed(1)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="amount"
-                >
-                  {analyticsData.revenue.byPaymentMethod.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Charts Row 2 */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Device Utilization */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Utilisation des Appareils</CardTitle>
-            <CardDescription>Répartition par statut</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={[
-                { status: 'En Location', count: analyticsData.devices.utilization.rented },
-                { status: 'Vendus', count: analyticsData.devices.utilization.sold },
-                { status: 'Disponibles', count: analyticsData.devices.utilization.available },
-              ]}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="status" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="count" fill="#8884d8" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* CNAM Bonds by Type */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Bons CNAM par Type</CardTitle>
-            <CardDescription>Distribution des bons approuvés</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={analyticsData.cnam.byBondType}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="type" />
-                <YAxis />
-                <Tooltip formatter={(value, name) => name === 'amount' ? formatCurrency(Number(value)) : value} />
-                <Bar dataKey="count" fill="#00C49F" name="Nombre" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Bottom Section */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Most Popular Devices */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Appareils les Plus Populaires</CardTitle>
-            <CardDescription>Par nombre de transactions</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {analyticsData.devices.mostPopular.map((device, index) => (
-                <div key={device.name} className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <Badge variant="outline">{index + 1}</Badge>
-                    <div>
-                      <p className="font-medium">{device.name}</p>
-                      <p className="text-sm text-muted-foreground">{device.count} transactions</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-medium">{formatCurrency(device.revenue)}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Recent Activity */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Activité Récente</CardTitle>
-            <CardDescription>Dernières transactions</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {analyticsData.recentActivity.map((activity, index) => (
-                <div key={index} className="flex items-center space-x-3">
-                  <div className="flex h-2 w-2 rounded-full bg-blue-600" />
-                  <div className="flex-1 space-y-1">
-                    <p className="text-sm font-medium">{activity.description}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(activity.date).toLocaleDateString('fr-FR')}
-                    </p>
-                  </div>
-                  {activity.amount && (
-                    <Badge variant="outline">
-                      {formatCurrency(activity.amount)}
-                    </Badge>
-                  )}
-                </div>
-              ))}
+            <div className="text-2xl font-bold">{summary.devices.total}</div>
+            <div className="space-y-1 mt-2 text-xs text-muted-foreground">
+              <div className="flex justify-between">
+                <span>Revenu Total:</span>
+                <span className="font-medium text-green-700">{formatCurrency(summary.devices.totalRevenue)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Moy. par Appareil:</span>
+                <span className="font-medium">{formatCurrency(summary.devices.avgRevenuePerDevice)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Coût Réparations:</span>
+                <span className="font-medium text-red-600">{formatCurrency(summary.devices.totalRepairCost)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Rentabilité:</span>
+                <span className="font-medium text-blue-700">{formatCurrency(summary.devices.totalProfitability)}</span>
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Tabs with Excel Tables */}
+      <Card>
+        <CardContent className="p-6">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="employees" className="flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Employés ({employees.length})
+              </TabsTrigger>
+              <TabsTrigger value="patients" className="flex items-center gap-2">
+                <Stethoscope className="h-4 w-4" />
+                Patients ({patients.length})
+              </TabsTrigger>
+              <TabsTrigger value="devices" className="flex items-center gap-2">
+                <Package className="h-4 w-4" />
+                Appareils ({devices.length})
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="employees" className="mt-6">
+              <ExcelTable
+                title="Statistiques des Employés"
+                columns={employeeColumns}
+                data={employees}
+                summary={{
+                  fullName: 'TOTAL',
+                  totalPatients: summary.employees.totalPatients,
+                  totalRentals: summary.employees.totalRentals,
+                  totalSales: summary.employees.totalSales,
+                  rentalRevenue: employees.reduce((sum, e) => sum + Number(e.rentalRevenue), 0).toFixed(2),
+                  salesRevenue: employees.reduce((sum, e) => sum + Number(e.salesRevenue), 0).toFixed(2),
+                  totalRevenue: summary.employees.totalRevenue,
+                  completedAppointments: employees.reduce((sum, e) => sum + e.completedAppointments, 0),
+                  totalAppointments: employees.reduce((sum, e) => sum + e.totalAppointments, 0),
+                  completedDiagnostics: employees.reduce((sum, e) => sum + e.completedDiagnostics, 0),
+                  totalDiagnostics: employees.reduce((sum, e) => sum + e.totalDiagnostics, 0),
+                  devicesInStock: employees.reduce((sum, e) => sum + e.devicesInStock, 0),
+                  activeDevices: employees.reduce((sum, e) => sum + e.activeDevices, 0)
+                }}
+              />
+            </TabsContent>
+
+            <TabsContent value="patients" className="mt-6">
+              <ExcelTable
+                title="Statistiques des Patients"
+                columns={patientColumns}
+                data={patients}
+                summary={{
+                  fullName: 'TOTAL',
+                  totalRentals: patients.reduce((sum, p) => sum + p.totalRentals, 0),
+                  activeRentals: summary.patients.activeRentals,
+                  completedRentals: patients.reduce((sum, p) => sum + p.completedRentals, 0),
+                  totalSales: patients.reduce((sum, p) => sum + p.totalSales, 0),
+                  totalPayments: patients.reduce((sum, p) => sum + p.totalPayments, 0),
+                  totalPaid: summary.patients.totalRevenue,
+                  totalPending: patients.reduce((sum, p) => sum + Number(p.totalPending), 0).toFixed(2),
+                  salesTotal: patients.reduce((sum, p) => sum + Number(p.salesTotal), 0).toFixed(2),
+                  cnamBons: summary.patients.totalCnamBons,
+                  cnamTotal: summary.patients.totalCnamAmount,
+                  totalDiagnostics: patients.reduce((sum, p) => sum + p.totalDiagnostics, 0),
+                  completedDiagnostics: patients.reduce((sum, p) => sum + p.completedDiagnostics, 0),
+                  pendingDiagnostics: patients.reduce((sum, p) => sum + p.pendingDiagnostics, 0),
+                  totalAppointments: patients.reduce((sum, p) => sum + p.totalAppointments, 0),
+                  completedAppointments: patients.reduce((sum, p) => sum + p.completedAppointments, 0),
+                  upcomingAppointments: patients.reduce((sum, p) => sum + p.upcomingAppointments, 0)
+                }}
+              />
+            </TabsContent>
+
+            <TabsContent value="devices" className="mt-6">
+              <ExcelTable
+                title="Statistiques des Appareils Médicaux"
+                columns={deviceColumns}
+                data={devices}
+                summary={{
+                  name: 'TOTAL',
+                  totalRentals: devices.reduce((sum, d) => sum + d.totalRentals, 0),
+                  activeRentals: summary.devices.activeRentals,
+                  completedRentals: devices.reduce((sum, d) => sum + d.completedRentals, 0),
+                  rentalRevenue: devices.reduce((sum, d) => sum + Number(d.rentalRevenue), 0).toFixed(2),
+                  salesCount: devices.reduce((sum, d) => sum + d.salesCount, 0),
+                  salesRevenue: devices.reduce((sum, d) => sum + Number(d.salesRevenue), 0).toFixed(2),
+                  totalRevenue: summary.devices.totalRevenue,
+                  repairCount: devices.reduce((sum, d) => sum + d.repairCount, 0),
+                  repairCost: summary.devices.totalRepairCost,
+                  profitability: summary.devices.totalProfitability
+                }}
+              />
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
     </div>
   );
 };

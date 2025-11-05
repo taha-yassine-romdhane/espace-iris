@@ -81,8 +81,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     const device = await prisma.medicalDevice.findUnique({
       where: { id },
       include: {
-        Patient: true,
-        Company: true,
         stockLocation: {
           select: {
             name: true,

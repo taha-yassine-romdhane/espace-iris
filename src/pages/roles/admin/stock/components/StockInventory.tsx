@@ -210,9 +210,9 @@ export default function StockInventory() {
           return <Badge variant="default">En vente</Badge>;
         case 'FOR_RENT':
           return <Badge variant="secondary">En location</Badge>;
-        case 'EN_REPARATION':
+        case 'IN_REPAIR':
           return <Badge variant="destructive">En réparation</Badge>;
-        case 'HORS_SERVICE':
+        case 'OUT_OF_SERVICE':
           return <Badge variant="outline">Hors service</Badge>;
         default:
           return <Badge>{status}</Badge>;
@@ -357,175 +357,189 @@ export default function StockInventory() {
         </div>
       </div>
 
-      {/* Inventory table */}
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Produit</TableHead>
-              <TableHead>Marque/Modèle</TableHead>
-              <TableHead>N° Série</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Emplacement</TableHead>
-              <TableHead className="text-center">Quantité</TableHead>
-              <TableHead>Statut</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {inventoryData?.items.map((item) => (
-              <TableRow key={item.id} className="hover:bg-gray-50">
-                <TableCell className="font-medium">
-                  <div className="max-w-xs truncate" title={item.product.name}>
-                    {item.product.name}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="space-y-1">
-                    {item.product.brand && (
-                      <div className="font-medium text-sm">{item.product.brand}</div>
+      {/* Inventory table - Excel style */}
+      <div className="border rounded-lg bg-white shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead className="bg-slate-50 sticky top-0 z-10">
+              <tr className="border-b border-slate-200">
+                <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[200px]">Produit</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[120px]">Marque</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[120px]">Modèle</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[140px]">N° Série</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[150px]">Type</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[150px]">Emplacement</th>
+                <th className="px-3 py-3 text-center text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[100px]">Quantité</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 min-w-[150px]">Statut</th>
+              </tr>
+            </thead>
+            <tbody>
+              {inventoryData?.items.map((item, index) => (
+                <tr
+                  key={item.id}
+                  className={`border-b border-slate-100 hover:bg-blue-50/50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'}`}
+                >
+                  <td className="px-3 py-2.5 text-sm font-medium text-slate-900 border-r border-slate-100">
+                    <div className="max-w-[200px] truncate" title={item.product.name}>
+                      {item.product.name}
+                    </div>
+                  </td>
+                  <td className="px-3 py-2.5 text-xs text-slate-600 border-r border-slate-100">
+                    {item.product.brand || '-'}
+                  </td>
+                  <td className="px-3 py-2.5 text-xs text-slate-600 border-r border-slate-100">
+                    {item.product.model || '-'}
+                  </td>
+                  <td className="px-3 py-2.5 text-xs border-r border-slate-100">
+                    {item.product.serialNumber ? (
+                      <Badge variant="outline" className="font-mono text-xs">
+                        {item.product.serialNumber}
+                      </Badge>
+                    ) : (
+                      <span className="text-slate-400">-</span>
                     )}
-                    {item.product.model && (
-                      <div className="text-xs text-gray-500">{item.product.model}</div>
-                    )}
-                    {!item.product.brand && !item.product.model && (
-                      <span className="text-gray-400">-</span>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  {item.product.serialNumber ? (
-                    <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded">
-                      {item.product.serialNumber}
+                  </td>
+                  <td className="px-3 py-2.5 border-r border-slate-100">
+                    {getTypeBadge(item.product.type)}
+                  </td>
+                  <td className="px-3 py-2.5 text-xs text-slate-600 border-r border-slate-100">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0"></div>
+                      <span>{item.location.name}</span>
+                    </div>
+                  </td>
+                  <td className="px-3 py-2.5 text-center border-r border-slate-100">
+                    <span className="inline-flex items-center justify-center min-w-[32px] h-7 px-2 text-xs font-semibold bg-blue-100 text-blue-800 rounded">
+                      {item.quantity}
                     </span>
-                  ) : (
-                    <span className="text-gray-400">-</span>
-                  )}
-                </TableCell>
-                <TableCell>{getTypeBadge(item.product.type)}</TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-1">
-                    <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                    <span className="text-sm">{item.location.name}</span>
-                  </div>
-                </TableCell>
-                <TableCell className="text-center">
-                  <span className="inline-flex items-center justify-center w-8 h-8 text-sm font-medium bg-blue-100 text-blue-800 rounded-full">
-                    {item.quantity}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    {getStatusBadge(item.status, item.isDevice, item.reservedFor)}
-                    {item.status === 'RESERVED' && item.reservedFor && (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                              <Search className="h-3.5 w-3.5" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent side="bottom" className="w-72 p-4">
-                            <div className="space-y-2">
-                              <h4 className="font-semibold text-sm">Détails de la réservation</h4>
-                              <div className="text-xs space-y-1">
-                                <div className="flex justify-between">
-                                  <span className="font-medium">{item.reservedFor.isCompany ? 'Société:' : 'Patient:'}</span>
-                                  <span>{item.reservedFor.name}</span>
-                                </div>
-                                {item.reservedFor.telephone && (
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <div className="flex items-center gap-2">
+                      {getStatusBadge(item.status, item.isDevice, item.reservedFor)}
+                      {item.status === 'RESERVED' && item.reservedFor && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                                <Search className="h-3.5 w-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom" className="w-72 p-4">
+                              <div className="space-y-2">
+                                <h4 className="font-semibold text-sm">Détails de la réservation</h4>
+                                <div className="text-xs space-y-1">
                                   <div className="flex justify-between">
-                                    <span className="font-medium">Téléphone:</span>
-                                    <span>{item.reservedFor.telephone}</span>
+                                    <span className="font-medium">{item.reservedFor.isCompany ? 'Société:' : 'Patient:'}</span>
+                                    <span>{item.reservedFor.name}</span>
                                   </div>
-                                )}
-                                <div className="flex justify-between">
-                                  <span className="font-medium">Date de diagnostic:</span>
-                                  <span>{new Date(item.reservedFor.diagnosticDate).toLocaleDateString('fr-FR')}</span>
-                                </div>
-                                {item.reservedFor.resultDueDate && (
+                                  {item.reservedFor.telephone && (
+                                    <div className="flex justify-between">
+                                      <span className="font-medium">Téléphone:</span>
+                                      <span>{item.reservedFor.telephone}</span>
+                                    </div>
+                                  )}
                                   <div className="flex justify-between">
-                                    <span className="font-medium">Date de résultat prévue:</span>
-                                    <span>{new Date(item.reservedFor.resultDueDate).toLocaleDateString('fr-FR')}</span>
+                                    <span className="font-medium">Date de diagnostic:</span>
+                                    <span>{new Date(item.reservedFor.diagnosticDate).toLocaleDateString('fr-FR')}</span>
                                   </div>
-                                )}
-                                <div className="mt-2 pt-2 border-t border-gray-100">
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm" 
-                                    className="w-full mt-1 text-xs h-7"
-                                    onClick={() => window.open(`/roles/admin/diagnostics/${item.reservedFor?.diagnosticId}`, '_blank')}
-                                  >
-                                    Voir le diagnostic
-                                  </Button>
+                                  {item.reservedFor.resultDueDate && (
+                                    <div className="flex justify-between">
+                                      <span className="font-medium">Date de résultat prévue:</span>
+                                      <span>{new Date(item.reservedFor.resultDueDate).toLocaleDateString('fr-FR')}</span>
+                                    </div>
+                                  )}
+                                  <div className="mt-2 pt-2 border-t border-gray-100">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="w-full mt-1 text-xs h-7"
+                                      onClick={() => window.open(`/roles/admin/diagnostics/${item.reservedFor?.diagnosticId}`, '_blank')}
+                                    >
+                                      Voir le diagnostic
+                                    </Button>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-            {(!inventoryData?.items || inventoryData.items.length === 0) && (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-8">
-                  Aucun produit trouvé
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {(!inventoryData?.items || inventoryData.items.length === 0) && (
+                <tr>
+                  <td colSpan={8} className="text-center py-12 text-slate-500">
+                    Aucun produit trouvé
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Pagination controls */}
       {inventoryData && inventoryData.pagination.totalPages > 1 && (
-        <div className="flex justify-between items-center">
-          <div className="text-sm text-muted-foreground">
-            Affichage de {(currentPage - 1) * itemsPerPage + 1} à {Math.min(currentPage * itemsPerPage, inventoryData.pagination.total)} sur {inventoryData.pagination.total} produits
+        <div className="flex items-center justify-between px-4 py-3 bg-white border border-slate-200 rounded-lg">
+          <div className="flex items-center space-x-4">
+            <div className="text-sm text-slate-600">
+              <span className="font-semibold text-slate-900">{inventoryData.pagination.total}</span> produits au total
+            </div>
+            <div className="text-xs text-slate-500">
+              Affichage {(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, inventoryData.pagination.total)}
+            </div>
           </div>
+
           <div className="flex items-center space-x-2">
             <Button
               variant="outline"
-              size="icon"
-              onClick={goToFirstPage}
-              disabled={currentPage === 1}
-              className="h-8 w-8 p-0"
-            >
-              <ChevronsLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
+              size="sm"
               onClick={goToPreviousPage}
               disabled={currentPage === 1}
-              className="h-8 w-8 p-0"
+              className="h-9 px-3"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Précédent
             </Button>
-            
-            <span className="text-sm">
-              Page {currentPage} sur {inventoryData.pagination.totalPages}
-            </span>
-            
+
+            <div className="flex items-center space-x-1">
+              {Array.from({ length: Math.min(5, inventoryData.pagination.totalPages) }, (_, i) => {
+                let pageNum;
+                if (inventoryData.pagination.totalPages <= 5) {
+                  pageNum = i + 1;
+                } else if (currentPage <= 3) {
+                  pageNum = i + 1;
+                } else if (currentPage >= inventoryData.pagination.totalPages - 2) {
+                  pageNum = inventoryData.pagination.totalPages - 4 + i;
+                } else {
+                  pageNum = currentPage - 2 + i;
+                }
+
+                return (
+                  <Button
+                    key={pageNum}
+                    variant={currentPage === pageNum ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(pageNum)}
+                    className="h-9 w-9 p-0"
+                  >
+                    {pageNum}
+                  </Button>
+                );
+              })}
+            </div>
+
             <Button
               variant="outline"
-              size="icon"
+              size="sm"
               onClick={goToNextPage}
               disabled={currentPage === inventoryData.pagination.totalPages}
-              className="h-8 w-8 p-0"
+              className="h-9 px-3"
             >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={goToLastPage}
-              disabled={currentPage === inventoryData.pagination.totalPages}
-              className="h-8 w-8 p-0"
-            >
-              <ChevronsRight className="h-4 w-4" />
+              Suivant
+              <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           </div>
         </div>

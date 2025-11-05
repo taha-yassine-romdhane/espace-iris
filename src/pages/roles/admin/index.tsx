@@ -3,20 +3,21 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useEffect } from 'react';
 import AdminLayout from './AdminLayout';
-import { 
-  Users, 
-  Package, 
-  Bell, 
-  ShoppingCart, 
-  Settings, 
-  ClipboardList, 
-  Activity, 
-  Home, 
+import {
+  Users,
+  Package,
+  Bell,
+  ShoppingCart,
+  Settings,
+  ClipboardList,
+  Activity,
+  Home,
   Stethoscope,
   FileText,
   AlertCircle,
   Shield,
-  Clock
+  Clock,
+  ClipboardCheck
 } from 'lucide-react';
 
 export default function AdminDashboard() {
@@ -30,11 +31,6 @@ export default function AdminDashboard() {
     }
   }, [status, router]);
 
-  // Debug session information
-  useEffect(() => {
-    console.log('Admin Dashboard - Auth Status:', status);
-    console.log('Admin Dashboard - Session:', session);
-  }, [status, session]);
 
   // Loading state
   if (status === 'loading') {
@@ -113,15 +109,23 @@ export default function AdminDashboard() {
       path: '/roles/admin/reparateur',
       category: 'Personnel'
     },
-    { 
-      icon: <FileText size={24} />, 
-      title: 'Patients et Entreprises', 
-      description: 'Gestion des comptes patients et entreprises', 
-      bgColor: 'bg-gradient-to-br from-cyan-500 to-cyan-600', 
+    {
+      icon: <FileText size={24} />,
+      title: 'Patients et Entreprises',
+      description: 'Gestion des comptes patients et entreprises',
+      bgColor: 'bg-gradient-to-br from-cyan-500 to-cyan-600',
       path: '/roles/admin/renseignement',
       category: 'Gestion'
     },
- 
+    {
+      icon: <ClipboardCheck size={24} />,
+      title: 'Tâches Manuelles',
+      description: 'Créer et assigner des tâches aux employés',
+      bgColor: 'bg-gradient-to-br from-pink-500 to-pink-600',
+      path: '/roles/admin/manual-tasks',
+      category: 'Gestion des Tâches'
+    },
+
   ];
 
   // Get current time for professional greeting
@@ -132,14 +136,15 @@ export default function AdminDashboard() {
     return 'Bonsoir';
   };
 
-  const getSystemStats = () => {
-    return [
-      { label: 'Patients Actifs', value: '847', trend: '+12', icon: <Users size={16} /> },
-      { label: 'Équipements', value: '234', trend: '+3', icon: <Package size={16} /> },
-      { label: 'Interventions', value: '45', trend: '+8', icon: <Activity size={16} /> },
-      { label: 'Alertes', value: '3', trend: '-2', icon: <AlertCircle size={16} /> },
-    ];
-  };
+  // TODO: Connect to real API for system stats
+  // const getSystemStats = () => {
+  //   return [
+  //     { label: 'Patients Actifs', value: '847', trend: '+12', icon: <Users size={16} /> },
+  //     { label: 'Équipements', value: '234', trend: '+3', icon: <Package size={16} /> },
+  //     { label: 'Interventions', value: '45', trend: '+8', icon: <Activity size={16} /> },
+  //     { label: 'Alertes', value: '3', trend: '-2', icon: <AlertCircle size={16} /> },
+  //   ];
+  // };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-blue-50 to-blue-100">

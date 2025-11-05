@@ -1,6 +1,6 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Calendar, Stethoscope, ShoppingCart, Building2 } from "lucide-react";
+import { Calendar, Stethoscope, ShoppingCart, Building2, ClipboardCheck } from "lucide-react";
 
 interface TabSwitcherProps {
   activeTab: string;
@@ -10,6 +10,21 @@ interface TabSwitcherProps {
 export function TabSwitcher({ activeTab, onTabChange }: TabSwitcherProps) {
   return (
     <div className="flex space-x-2 mb-6 border-b border-gray-200 bg-white rounded-t-xl p-2">
+      <Button
+        variant={activeTab === "manual-tasks" ? "default" : "ghost"}
+        className={`${
+          activeTab === "manual-tasks"
+            ? "bg-blue-100 text-[#1e3a8a] hover:bg-blue-200"
+            : "text-gray-600 hover:text-[#1e3a8a] hover:bg-gray-50"
+        } rounded-lg border-2 ${
+          activeTab === "manual-tasks" ? "border-[#1e3a8a] shadow-sm" : "border-transparent"
+        } px-4 py-2 transition-all duration-200`}
+        onClick={() => onTabChange("manual-tasks")}
+      >
+        <ClipboardCheck className="h-4 w-4 mr-2" />
+        Tâches Manuelles
+      </Button>
+
       <Button
         variant={activeTab === "appointments" ? "default" : "ghost"}
         className={`${
@@ -24,7 +39,7 @@ export function TabSwitcher({ activeTab, onTabChange }: TabSwitcherProps) {
         <Calendar className="h-4 w-4 mr-2" />
         Rendez-vous
       </Button>
-      
+
       <Button
         variant={activeTab === "diagnostics" ? "default" : "ghost"}
         className={`${
@@ -39,7 +54,7 @@ export function TabSwitcher({ activeTab, onTabChange }: TabSwitcherProps) {
         <Stethoscope className="h-4 w-4 mr-2" />
         Diagnostics
       </Button>
-      
+
       <Button
         variant={activeTab === "sales" ? "default" : "ghost"}
         className={`${
@@ -54,7 +69,7 @@ export function TabSwitcher({ activeTab, onTabChange }: TabSwitcherProps) {
         <ShoppingCart className="h-4 w-4 mr-2" />
         Ventes
       </Button>
-      
+
       <Button
         variant={activeTab === "rentals" ? "default" : "ghost"}
         className={`${

@@ -167,7 +167,6 @@ export function FileViewer({ files, isOpen, onClose }: FileViewerProps) {
                         height={500}
                         loading="lazy"
                         onError={(e) => {
-                          console.log(`Failed to load image: ${fileUrl}`);
                           const target = e.target as HTMLImageElement;
                           target.style.display = 'none';
                           

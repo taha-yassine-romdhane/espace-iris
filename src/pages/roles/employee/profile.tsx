@@ -123,7 +123,7 @@ const EmployeeProfilePage = () => {
               <h1 className="text-2xl font-bold">
                 {profile.firstName} {profile.lastName}
               </h1>
-              <p className="text-blue-100">Employé - Espace Iris </p>
+              <p className="text-blue-100">Employé - Espace Elite</p>
             </div>
           </div>
         </div>

@@ -1,11 +1,9 @@
 import { Button } from "@/components/ui/button";
-import {
-  Plus,
-  ChevronRight,
+import { 
+  Plus, 
+  ChevronRight, 
   ChevronLeft,
-  Stethoscope,
-  Calendar,
-  Loader2
+  Stethoscope
 } from "lucide-react";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -18,7 +16,7 @@ import { ParameterConfigurationDialog } from "./ParameterConfigurationDialog";
 import { ProductCard } from "../ProductCard";
 
 interface DiagnosticProductStepProps {
-  onBack?: () => void;
+  onBack: () => void;
   onNext: () => void;
   selectedProducts?: any[];
   onRemoveProduct: (index: number) => void;
@@ -27,9 +25,6 @@ interface DiagnosticProductStepProps {
   patientId?: string;
   resultDueDate?: Date;
   onResultDueDateChange?: (date: Date | undefined) => void;
-  notes?: string;
-  onNotesChange?: (notes: string) => void;
-  isLoading?: boolean;
 }
 
 export function NewDiagnosticProductStep({
@@ -39,10 +34,7 @@ export function NewDiagnosticProductStep({
   onRemoveProduct,
   onSelectProduct,
   resultDueDate,
-  onResultDueDateChange = () => {},
-  notes = "",
-  onNotesChange = () => {},
-  isLoading: submitting
+  onResultDueDateChange = () => {}
 }: DiagnosticProductStepProps) {
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
@@ -132,30 +124,17 @@ export function NewDiagnosticProductStep({
       </div>
 
       <div className="flex justify-between">
-        {onBack ? (
-          <Button variant="outline" onClick={onBack}>
-            <ChevronLeft className="h-4 w-4 mr-2" />
-            Retour
-          </Button>
-        ) : (
-          <div></div>
-        )}
-        <Button
+        <Button variant="outline" onClick={onBack}>
+          <ChevronLeft className="h-4 w-4 mr-2" />
+          Retour
+        </Button>
+        <Button 
           onClick={onNext}
-          disabled={selectedProducts.length === 0 || submitting}
-          className="bg-green-600 hover:bg-green-700 text-white"
+          disabled={selectedProducts.length === 0}
+          className="bg-[#1e3a8a] hover:bg-[#1e3a8a]/90 text-white"
         >
-          {submitting ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Création en cours...
-            </>
-          ) : (
-            <>
-              Créer le Diagnostic
-              <ChevronRight className="h-4 w-4 ml-2" />
-            </>
-          )}
+          Suivant
+          <ChevronRight className="h-4 w-4 ml-2" />
         </Button>
       </div>
 
@@ -184,38 +163,17 @@ export function NewDiagnosticProductStep({
         ) : (
           <div className="space-y-3">
             {selectedProducts.map((product, index) => (
-              <ProductCard
+              <ProductCard 
                 key={`${product.id}-${index}`}
                 product={product}
                 index={index}
                 onRemove={onRemoveProduct}
                 onConfigure={(idx) => handleOpenParameterDialog(idx)}
-                showConfigureButton={false}
-                resultDueDate={resultDueDate}
               />
             ))}
           </div>
         )}
       </div>
-
-      {/* Notes Section */}
-      {selectedProducts.length > 0 && (
-        <div className="space-y-2 mt-6">
-          <label className="block text-sm font-medium text-gray-700">
-            Notes (optionnel)
-          </label>
-          <textarea
-            value={notes}
-            onChange={(e) => onNotesChange(e.target.value)}
-            placeholder="Ajoutez des notes sur ce diagnostic..."
-            className="w-full min-h-[100px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-          <div className="flex items-center gap-1 text-xs text-gray-500">
-            <Calendar className="h-3 w-3" />
-            <span>Résultats disponibles demain ({resultDueDate?.toLocaleDateString('fr-FR')})</span>
-          </div>
-        </div>
-      )}
 
       {/* Product Selection Dialog */}
       <DiagnosticProductDialog

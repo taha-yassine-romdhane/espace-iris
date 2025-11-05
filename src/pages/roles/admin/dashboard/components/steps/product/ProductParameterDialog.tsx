@@ -49,7 +49,6 @@ export default function ProductParameterDialog({
     if (!product) return null;
 
     // For debugging
-    console.log('Product in parameter dialog:', product);
     
     // Extract device type from various possible properties
     // Check all possible locations where the device type might be stored
@@ -59,7 +58,6 @@ export default function ProductParameterDialog({
                       product.type || 
                       '';
     
-    console.log('Detected device type:', deviceType);
     
     // Normalize the device type for matching
     const normalizedType = deviceType.toUpperCase();

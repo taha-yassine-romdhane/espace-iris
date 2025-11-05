@@ -65,7 +65,7 @@ interface ComprehensiveTask {
     rentalId?: string;
     appointmentId?: string;
     paymentId?: string;
-    bondNumber?: string;
+    bonNumber?: string;
   };
   
   actionUrl?: string;
@@ -933,12 +933,12 @@ export default function EmployeeModernTasksPage() {
                         </div>
                       </div>
                     )}
-                    {selectedTask.relatedData.bondNumber && (
+                    {selectedTask.relatedData.bonNumber && (
                       <div className="flex items-center gap-2">
                         <Hash className="h-4 w-4 text-gray-400" />
                         <div>
                           <p className="text-xs text-gray-500">N° Bon</p>
-                          <p className="text-sm font-medium">{selectedTask.relatedData.bondNumber}</p>
+                          <p className="text-sm font-medium">{selectedTask.relatedData.bonNumber}</p>
                         </div>
                       </div>
                     )}
@@ -1113,46 +1113,19 @@ export default function EmployeeModernTasksPage() {
       {/* Current Date Info */}
       <div className="mb-6">
         <div className="bg-white p-4 rounded-lg border border-green-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-green-800 capitalize">
-                {viewMode === 'month' && format(selectedDate, 'MMMM yyyy', { locale: fr })}
-                {viewMode === 'week' && `Semaine du ${format(startOfWeek(selectedDate, { weekStartsOn: 1 }), 'dd MMMM yyyy', { locale: fr })}`}
-                {viewMode === 'day' && format(selectedDate, 'EEEE dd MMMM yyyy', { locale: fr })}
-                {viewMode === 'list' && 'Vue d\'ensemble des tâches'}
-              </h2>
-              <p className="text-sm text-gray-600 mt-1">
-                {tasks.length} tâche{tasks.length !== 1 ? 's' : ''}
-                {filter !== 'all' && ` • Type: ${filter}`}
-                {' • '}
-                {stats.byStatus?.OVERDUE || 0} en retard •
-                {stats.byStatus?.IN_PROGRESS || 0} en cours
-              </p>
-            </div>
-            {/* Quick month navigation for month view */}
-            {viewMode === 'month' && (
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectedDate(subMonths(selectedDate, 1))}
-                  className="text-green-600 border-green-300 hover:bg-green-50"
-                >
-                  <ChevronLeft className="h-4 w-4 mr-1" />
-                  Mois précédent
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectedDate(addMonths(selectedDate, 1))}
-                  className="text-green-600 border-green-300 hover:bg-green-50"
-                >
-                  Mois suivant
-                  <ChevronRight className="h-4 w-4 ml-1" />
-                </Button>
-              </div>
-            )}
-          </div>
+          <h2 className="text-lg font-semibold text-green-800">
+            {viewMode === 'month' && format(selectedDate, 'MMMM yyyy', { locale: fr })}
+            {viewMode === 'week' && `Semaine du ${format(startOfWeek(selectedDate, { weekStartsOn: 1 }), 'dd MMMM yyyy', { locale: fr })}`}
+            {viewMode === 'day' && format(selectedDate, 'EEEE dd MMMM yyyy', { locale: fr })}
+            {viewMode === 'list' && 'Vue d\'ensemble des tâches'}
+          </h2>
+          <p className="text-sm text-gray-600 mt-1">
+            {tasks.length} tâche{tasks.length !== 1 ? 's' : ''} 
+            {filter !== 'all' && ` • Type: ${filter}`}
+            {' • '}
+            {stats.byStatus?.OVERDUE || 0} en retard • 
+            {stats.byStatus?.IN_PROGRESS || 0} en cours
+          </p>
         </div>
       </div>
 

@@ -1,482 +1,897 @@
-import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import Head from 'next/head';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Calendar,
-  Clock,
-  MapPin,
-  User,
-  Phone,
-  Plus,
-  Search,
-  Filter,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  MoreVertical,
-  Edit,
-  Trash2,
-  CalendarDays
-} from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { useSession } from 'next-auth/react';
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Check, X, Edit2, Plus, Trash2, Search, ChevronLeft, ChevronRight, Calendar as CalendarIcon, User, MapPin, Clock, AlertCircle } from "lucide-react";
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import EmployeeLayout from '../EmployeeLayout';
-import { EmployeeRdvStepperDialog } from '../dashboard/components/EmployeeRdvStepperDialog';
 
-const AppointmentsPage = () => {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-  const { toast } = useToast();
-  const [appointments, setAppointments] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
-  const [selectedDate, setSelectedDate] = useState('');
-  const [isRdvDialogOpen, setIsRdvDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [appointmentToDelete, setAppointmentToDelete] = useState<string | null>(null);
+interface Patient {
+  id: string;
+  firstName: string;
+  lastName: string;
+  name: string;
+  telephone?: string;
+}
 
-  useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/auth/signin');
-    }
-  }, [status, router]);
+interface Employee {
+  id: string;
+  firstName: string;
+  lastName: string;
+}
 
-  useEffect(() => {
-    if (session?.user?.id) {
-      fetchAppointments();
-    }
-  }, [session, searchTerm, filterStatus, selectedDate]);
-
-  const fetchAppointments = async () => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams();
-
-      // Filter to show only appointments assigned to current employee
-      params.append('assignedToMe', 'true');
-
-      if (searchTerm) params.append('search', searchTerm);
-      if (filterStatus) params.append('status', filterStatus);
-      if (selectedDate) params.append('date', selectedDate);
-
-      const response = await fetch(`/api/appointments?${params}`);
-      if (response.ok) {
-        const data = await response.json();
-        setAppointments(data.appointments || []);
-      }
-    } catch (error) {
-      console.error('Error fetching appointments:', error);
-    } finally {
-      setLoading(false);
-    }
+interface Appointment {
+  id?: string;
+  appointmentCode?: string;
+  patientId: string;
+  patient?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    telephone?: string;
   };
+  appointmentType: string;
+  scheduledDate: Date | string;
+  location: string;
+  notes?: string;
+  priority: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
+  status: 'SCHEDULED' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
+  assignedToId?: string;
+  assignedTo?: Employee;
+}
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      'SCHEDULED': { 
-        color: 'bg-blue-100 text-blue-800', 
-        icon: <Clock className="h-3 w-3" />,
-        label: 'Programmé'
-      },
-      'COMPLETED': { 
-        color: 'bg-green-100 text-green-800', 
-        icon: <CheckCircle className="h-3 w-3" />,
-        label: 'Terminé'
-      },
-      'CANCELLED': { 
-        color: 'bg-red-100 text-red-800', 
-        icon: <XCircle className="h-3 w-3" />,
-        label: 'Annulé'
-      },
-      'IN_PROGRESS': { 
-        color: 'bg-yellow-100 text-yellow-800', 
-        icon: <AlertCircle className="h-3 w-3" />,
-        label: 'En cours'
-      }
-    };
-    
-    const config = statusConfig[status as keyof typeof statusConfig] || { 
-      color: 'bg-gray-100 text-gray-800', 
-      icon: null, 
-      label: status 
-    };
-    
-    return (
-      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${config.color}`}>
-        {config.icon}
-        {config.label}
-      </span>
-    );
+const APPOINTMENT_TYPES = [
+  { value: 'POLYGRAPHIE', label: 'Polygraphie' },
+  { value: 'CONSULTATION', label: 'Consultation' },
+  { value: 'LOCATION', label: 'Location' },
+  { value: 'VENTE', label: 'Vente' },
+  { value: 'MAINTENANCE', label: 'Maintenance' },
+  { value: 'RECUPERATION', label: 'Récupération' }
+];
+
+const STATUSES = ['SCHEDULED', 'CONFIRMED', 'CANCELLED', 'COMPLETED'];
+const PRIORITIES = ['LOW', 'NORMAL', 'HIGH', 'URGENT'];
+
+const getStatusLabel = (status: string): string => {
+  const labels: Record<string, string> = {
+    SCHEDULED: 'Planifié',
+    CONFIRMED: 'Confirmé',
+    CANCELLED: 'Annulé',
+    COMPLETED: 'Terminé'
   };
+  return labels[status] || status;
+};
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'HIGH':
-        return 'border-l-red-500';
-      case 'NORMAL':
-        return 'border-l-blue-500';
-      case 'LOW':
-        return 'border-l-gray-500';
-      default:
-        return 'border-l-gray-300';
-    }
+const getPriorityLabel = (priority: string): string => {
+  const labels: Record<string, string> = {
+    LOW: 'Faible',
+    NORMAL: 'Normal',
+    HIGH: 'Élevée',
+    URGENT: 'Urgent'
   };
+  return labels[priority] || priority;
+};
 
-  const handleStatusUpdate = async (appointmentId: string, newStatus: string) => {
-    try {
-      const response = await fetch(`/api/appointments/${appointmentId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      if (response.ok) {
-        toast({
-          title: "Statut mis à jour",
-          description: "Le statut du rendez-vous a été mis à jour avec succès.",
-        });
-        fetchAppointments();
-      } else {
-        throw new Error('Failed to update status');
-      }
-    } catch (error) {
-      console.error('Error updating appointment status:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de mettre à jour le statut. Veuillez réessayer.",
-        variant: "destructive",
-      });
-    }
+const getStatusColor = (status: string): string => {
+  const colors: Record<string, string> = {
+    SCHEDULED: 'bg-blue-100 text-blue-800',
+    CONFIRMED: 'bg-green-100 text-green-800',
+    CANCELLED: 'bg-red-100 text-red-800',
+    COMPLETED: 'bg-gray-100 text-gray-800'
   };
+  return colors[status] || 'bg-gray-100 text-gray-800';
+};
 
-  const handleDeleteClick = (appointmentId: string) => {
-    setAppointmentToDelete(appointmentId);
-    setIsDeleteDialogOpen(true);
+const getPriorityColor = (priority: string): string => {
+  const colors: Record<string, string> = {
+    LOW: 'bg-green-100 text-green-800',
+    NORMAL: 'bg-blue-100 text-blue-800',
+    HIGH: 'bg-orange-100 text-orange-800',
+    URGENT: 'bg-red-100 text-red-800'
   };
+  return colors[priority] || 'bg-gray-100 text-gray-800';
+};
 
-  const handleConfirmDelete = async () => {
-    if (!appointmentToDelete) return;
-
-    try {
-      const response = await fetch(`/api/appointments/${appointmentToDelete}`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        toast({
-          title: "Rendez-vous supprimé",
-          description: "Le rendez-vous a été supprimé avec succès.",
-        });
-        fetchAppointments();
-      } else {
-        throw new Error('Failed to delete appointment');
-      }
-    } catch (error) {
-      console.error('Error deleting appointment:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de supprimer le rendez-vous. Veuillez réessayer.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDeleteDialogOpen(false);
-      setAppointmentToDelete(null);
-    }
+const getAppointmentTypeColor = (type: string): string => {
+  const colors: Record<string, string> = {
+    POLYGRAPHIE: 'bg-purple-100 text-purple-800 border-purple-200',
+    CONSULTATION: 'bg-blue-100 text-blue-800 border-blue-200',
+    LOCATION: 'bg-green-100 text-green-800 border-green-200',
+    VENTE: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    MAINTENANCE: 'bg-orange-100 text-orange-800 border-orange-200',
+    RECUPERATION: 'bg-teal-100 text-teal-800 border-teal-200'
   };
+  return colors[type] || 'bg-gray-100 text-gray-800 border-gray-200';
+};
 
-  const handleCancelDelete = () => {
-    setAppointmentToDelete(null);
-    setIsDeleteDialogOpen(false);
+// Patient Selection Dialog Component
+interface PatientSelectionDialogProps {
+  patients: Patient[];
+  selectedPatientId: string | undefined;
+  onSelect: (patientId: string) => void;
+  trigger?: React.ReactNode;
+}
+
+function PatientSelectionDialog({ patients, selectedPatientId, onSelect, trigger }: PatientSelectionDialogProps) {
+  const [open, setOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const selectedPatient = patients.find(p => p.id === selectedPatientId);
+
+  const filteredPatients = patients.filter(patient => {
+    const searchLower = searchQuery.toLowerCase();
+    const fullName = `${patient.firstName || ''} ${patient.lastName || ''}`.toLowerCase();
+    const telephone = patient.telephone?.toLowerCase() || '';
+    return fullName.includes(searchLower) || telephone.includes(searchLower);
+  });
+
+  const handleSelect = (patientId: string) => {
+    onSelect(patientId);
+    setOpen(false);
+    setSearchQuery('');
   };
-
-  if (status === 'loading') {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
-      </div>
-    );
-  }
 
   return (
-    <>
-      <Head>
-        <title>Rendez-vous - Espace Iris </title>
-        <meta name="description" content="Gestion des rendez-vous employé" />
-      </Head>
-      
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-        {/* Header Section */}
-        <div className="bg-gradient-to-r from-green-600 to-green-700 text-white px-6 py-8">
-          <div className="max-w-7xl mx-auto">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <div>
-                <h1 className="text-3xl font-bold flex items-center gap-3">
-                  <Calendar className="h-8 w-8" />
-                  Mes Rendez-vous
-                </h1>
-                <p className="text-green-100 mt-2">
-                  Gérez vos rendez-vous et planifications
-                </p>
-              </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setIsRdvDialogOpen(true)}
-                  className="bg-white text-green-700 hover:bg-green-50 font-semibold shadow-lg flex items-center gap-2 px-6 py-3 rounded-lg transition-colors"
-                >
-                  <Plus className="h-5 w-5" />
-                  Nouveau RDV
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="w-full px-4 -mt-6 space-y-6">
-
-      {/* Filters and Search */}
-      <Card className="bg-white rounded-xl shadow-sm">
-        <CardContent className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Rechercher..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </div>
-
-            {/* Status Filter */}
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-            >
-              <option value="">Tous les statuts</option>
-              <option value="SCHEDULED">Programmé</option>
-              <option value="IN_PROGRESS">En cours</option>
-              <option value="COMPLETED">Terminé</option>
-              <option value="CANCELLED">Annulé</option>
-            </select>
-
-            {/* Date Filter */}
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        {trigger || (
+          <Button variant="outline" className="h-8 text-xs justify-start w-full">
+            <User className="h-3 w-3 mr-2" />
+            {selectedPatient ? selectedPatient.name : "Sélectionner un patient"}
+          </Button>
+        )}
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Sélectionner un patient</DialogTitle>
+          <DialogDescription>
+            Recherchez et sélectionnez un patient pour le rendez-vous
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="relative">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Rechercher par nom ou téléphone..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8"
             />
-
-            {/* Clear Filters */}
-            <button
-              onClick={() => {
-                setSearchTerm('');
-                setFilterStatus('');
-                setSelectedDate('');
-              }}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-            >
-              Effacer
-            </button>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Appointments List */}
-      <Card className="bg-white rounded-xl shadow-sm">
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="flex justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
-            </div>
-          ) : appointments.length > 0 ? (
-            <div className="divide-y divide-gray-100">
-              {appointments.map((appointment: any, index) => (
-                <div 
-                  key={index} 
-                  className={`p-6 hover:bg-gray-50 transition-colors border-l-4 ${getPriorityColor(appointment.priority)}`}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="p-2 bg-green-100 rounded-lg">
-                          <Calendar className="h-5 w-5 text-green-600" />
-                        </div>
-                        <div>
-                          <h3 className="text-lg font-semibold text-gray-900">
-                            {appointment.appointmentType}
-                          </h3>
-                          <p className="text-sm text-gray-500">
-                            {appointment.patient 
-                              ? `${appointment.patient.firstName} ${appointment.patient.lastName}`
-                              : appointment.company?.name || 'Client non spécifié'
-                            }
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <CalendarDays className="h-4 w-4" />
-                          {new Date(appointment.scheduledDate).toLocaleDateString('fr-FR')}
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <Clock className="h-4 w-4" />
-                          {new Date(appointment.scheduledDate).toLocaleTimeString('fr-FR', {
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <MapPin className="h-4 w-4" />
-                          {appointment.location}
-                        </div>
-                      </div>
-
-                      {appointment.notes && (
-                        <p className="text-sm text-gray-600 mb-3">
-                          {appointment.notes}
-                        </p>
-                      )}
-
-                      <div className="flex items-center gap-3">
-                        {getStatusBadge(appointment.status)}
-                        {appointment.priority === 'HIGH' && (
-                          <span className="px-2 py-1 bg-red-100 text-red-800 text-xs font-medium rounded-full">
-                            Urgent
-                          </span>
+          <ScrollArea className="h-[400px] rounded-md border">
+            <div className="p-2 space-y-1">
+              {filteredPatients.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground text-sm">
+                  Aucun patient trouvé
+                </div>
+              ) : (
+                filteredPatients.map((patient) => (
+                  <Button
+                    key={patient.id}
+                    variant="ghost"
+                    className={`w-full justify-start h-auto py-3 px-3 ${
+                      patient.id === selectedPatientId
+                        ? "bg-green-100 text-green-900 hover:bg-green-200 border-2 border-green-300"
+                        : "hover:bg-gray-100"
+                    }`}
+                    onClick={() => handleSelect(patient.id)}
+                  >
+                    <div className="flex flex-col items-start w-full">
+                      <div className="flex items-center gap-2 w-full">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">{patient.name}</span>
+                        {patient.id === selectedPatientId && (
+                          <Check className="h-4 w-4 ml-auto text-green-600" />
                         )}
                       </div>
+                      {patient.telephone && (
+                        <span className="text-xs text-muted-foreground ml-6">
+                          {patient.telephone}
+                        </span>
+                      )}
                     </div>
-
-                    <div className="ml-4">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                            <MoreVertical className="h-5 w-5 text-gray-400" />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => handleStatusUpdate(appointment.id, 'SCHEDULED')}
-                            disabled={appointment.status === 'SCHEDULED'}
-                          >
-                            <Clock className="h-4 w-4 mr-2" />
-                            Marquer comme planifié
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleStatusUpdate(appointment.id, 'CONFIRMED')}
-                            disabled={appointment.status === 'CONFIRMED'}
-                          >
-                            <CheckCircle className="h-4 w-4 mr-2" />
-                            Marquer comme confirmé
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleStatusUpdate(appointment.id, 'COMPLETED')}
-                            disabled={appointment.status === 'COMPLETED'}
-                          >
-                            <CheckCircle className="h-4 w-4 mr-2" />
-                            Marquer comme terminé
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleStatusUpdate(appointment.id, 'CANCELLED')}
-                            disabled={appointment.status === 'CANCELLED'}
-                          >
-                            <XCircle className="h-4 w-4 mr-2" />
-                            Marquer comme annulé
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => handleDeleteClick(appointment.id)}
-                            className="text-red-600"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Supprimer
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                  </Button>
+                ))
+              )}
             </div>
-          ) : (
-            <div className="text-center py-12">
-              <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500">Aucun rendez-vous trouvé</p>
-              <p className="text-sm text-gray-400 mt-2">
-                Créez votre premier rendez-vous ou modifiez vos filtres
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          </ScrollArea>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
+function AppointmentsPage() {
+  const router = useRouter();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { data: session } = useSession();
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editedAppointment, setEditedAppointment] = useState<Appointment | null>(null);
+  const [isAddingNew, setIsAddingNew] = useState(false);
+  const [newAppointment, setNewAppointment] = useState<Partial<Appointment>>({
+    appointmentType: 'CONSULTATION',
+    priority: 'NORMAL',
+    status: 'SCHEDULED',
+    location: ''
+  });
+
+  // Pagination & Filters
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(50);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [typeFilter, setTypeFilter] = useState<string>('ALL');
+  const [priorityFilter, setPriorityFilter] = useState<string>('ALL');
+
+  // Fetch appointments
+  const { data: appointments = [], isLoading } = useQuery({
+    queryKey: ["appointments"],
+    queryFn: async () => {
+      const response = await fetch("/api/appointments");
+      if (!response.ok) throw new Error("Failed to fetch appointments");
+      const data = await response.json();
+      return Array.isArray(data) ? data : (data.appointments || []);
+    },
+  });
+
+  // Fetch patients (only assigned to this employee)
+  const { data: patients = [] } = useQuery({
+    queryKey: ["patients", "assignedToMe"],
+    queryFn: async () => {
+      const response = await fetch("/api/renseignements/patients?assignedToMe=true");
+      if (!response.ok) throw new Error("Failed to fetch patients");
+      const data = await response.json();
+      return data.patients || [];
+    },
+    enabled: !!session, // Only fetch when session is available
+  });
+
+  // Fetch employees
+  const { data: employees = [] } = useQuery({
+    queryKey: ["employees"],
+    queryFn: async () => {
+      const response = await fetch("/api/users/employees-stats");
+      if (!response.ok) throw new Error("Failed to fetch employees");
+      return response.json();
+    },
+  });
+
+  // Apply filters
+  const filteredAppointments = appointments.filter((apt: Appointment) => {
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase();
+      const patientName = apt.patient ? `${apt.patient.firstName || ''} ${apt.patient.lastName || ''}`.toLowerCase() : '';
+      const location = apt.location?.toLowerCase() || '';
+      const type = apt.appointmentType?.toLowerCase() || '';
+
+      if (!patientName.includes(search) && !location.includes(search) && !type.includes(search)) {
+        return false;
+      }
+    }
+
+    if (statusFilter !== 'ALL' && apt.status !== statusFilter) return false;
+    if (typeFilter !== 'ALL' && apt.appointmentType !== typeFilter) return false;
+    if (priorityFilter !== 'ALL' && apt.priority !== priorityFilter) return false;
+
+    return true;
+  });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredAppointments.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedAppointments = filteredAppointments.slice(startIndex, endIndex);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, typeFilter, priorityFilter]);
+
+  // Create mutation
+  const createMutation = useMutation({
+    mutationFn: async (data: Partial<Appointment>) => {
+      const response = await fetch("/api/appointments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error("Failed to create appointment");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      toast({ title: "Succès", description: "Rendez-vous créé avec succès" });
+      handleCancelNew();
+    },
+    onError: () => {
+      toast({ title: "Erreur", description: "Erreur lors de la création", variant: "destructive" });
+    },
+  });
+
+  // Update mutation
+  const updateMutation = useMutation({
+    mutationFn: async (data: Appointment) => {
+      const response = await fetch(`/api/appointments/${data.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error("Failed to update appointment");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      toast({ title: "Succès", description: "Rendez-vous mis à jour avec succès" });
+      setEditingId(null);
+      setEditedAppointment(null);
+    },
+    onError: () => {
+      toast({ title: "Erreur", description: "Erreur lors de la mise à jour", variant: "destructive" });
+    },
+  });
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/appointments/${id}`, { method: "DELETE" });
+      if (!response.ok) throw new Error("Failed to delete appointment");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      toast({ title: "Succès", description: "Rendez-vous supprimé avec succès" });
+    },
+    onError: () => {
+      toast({ title: "Erreur", description: "Erreur lors de la suppression", variant: "destructive" });
+    },
+  });
+
+  const handleEdit = (appointment: Appointment) => {
+    setEditingId(appointment.id || null);
+    setEditedAppointment({ ...appointment });
+  };
+
+  const handleCancel = () => {
+    setEditingId(null);
+    setEditedAppointment(null);
+  };
+
+  const handleSave = async () => {
+    if (!editedAppointment || !editedAppointment.id) return;
+
+    if (!editedAppointment.patientId || !editedAppointment.scheduledDate || !editedAppointment.location) {
+      toast({ title: "Erreur", description: "Patient, date et lieu sont requis", variant: "destructive" });
+      return;
+    }
+
+    await updateMutation.mutateAsync(editedAppointment);
+  };
+
+  const handleDelete = async (appointment: Appointment) => {
+    if (!appointment.id) return;
+    if (confirm("Êtes-vous sûr de vouloir supprimer ce rendez-vous ?")) {
+      await deleteMutation.mutateAsync(appointment.id);
+    }
+  };
+
+  const handleAddNew = () => setIsAddingNew(true);
+
+  const handleCancelNew = () => {
+    setIsAddingNew(false);
+    setNewAppointment({
+      appointmentType: 'CONSULTATION',
+      priority: 'NORMAL',
+      status: 'SCHEDULED',
+      location: ''
+    });
+  };
+
+  const handleSaveNew = async () => {
+    if (!newAppointment.patientId || !newAppointment.scheduledDate || !newAppointment.location) {
+      toast({ title: "Erreur", description: "Patient, date et lieu sont requis", variant: "destructive" });
+      return;
+    }
+
+    // Automatically assign to the logged-in employee
+    const appointmentData = {
+      ...newAppointment,
+      assignedToId: session?.user?.id
+    };
+
+    await createMutation.mutateAsync(appointmentData);
+  };
+
+  const updateEditedField = (field: keyof Appointment, value: any) => {
+    if (editedAppointment) {
+      setEditedAppointment({ ...editedAppointment, [field]: value });
+    }
+  };
+
+  const updateNewField = (field: keyof Appointment, value: any) => {
+    setNewAppointment(prev => ({ ...prev, [field]: value }));
+  };
+
+  const renderCell = (appointment: Appointment, field: keyof Appointment, isEditing: boolean) => {
+    const value = isEditing && editedAppointment ? editedAppointment[field] : appointment[field];
+
+    if (isEditing && editedAppointment) {
+      switch (field) {
+        case 'appointmentCode':
+          // AppointmentCode is not editable, just display it
+          return (
+            <Badge variant="outline" className="text-xs font-mono bg-green-50 text-green-700 border-green-200">
+              {appointment.appointmentCode || 'N/A'}
+            </Badge>
+          );
+
+        case 'patientId':
+          return (
+            <PatientSelectionDialog
+              patients={patients}
+              selectedPatientId={editedAppointment.patientId}
+              onSelect={(val) => updateEditedField('patientId', val)}
+            />
+          );
+
+        case 'appointmentType':
+          return (
+            <Select
+              value={editedAppointment.appointmentType}
+              onValueChange={(val) => updateEditedField('appointmentType', val)}
+            >
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {APPOINTMENT_TYPES.map(type => (
+                  <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          );
+
+        case 'scheduledDate':
+          const editScheduledDateValue = editedAppointment.scheduledDate
+            ? new Date(editedAppointment.scheduledDate).toISOString().slice(0, 16)
+            : '';
+          return (
+            <Input
+              type="datetime-local"
+              value={editScheduledDateValue}
+              onChange={(e) => updateEditedField('scheduledDate', e.target.value ? new Date(e.target.value) : null)}
+              className="h-8 text-xs"
+            />
+          );
+
+        case 'location':
+        case 'notes':
+          return (
+            <Input
+              value={(editedAppointment[field] as string) || ''}
+              onChange={(e) => updateEditedField(field, e.target.value)}
+              className="h-8 text-xs"
+            />
+          );
+
+        case 'priority':
+          return (
+            <Select
+              value={editedAppointment.priority}
+              onValueChange={(val) => updateEditedField('priority', val)}
+            >
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PRIORITIES.map(priority => (
+                  <SelectItem key={priority} value={priority}>{getPriorityLabel(priority)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          );
+
+        case 'status':
+          return (
+            <Select
+              value={editedAppointment.status}
+              onValueChange={(val) => updateEditedField('status', val)}
+            >
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {STATUSES.map(status => (
+                  <SelectItem key={status} value={status}>{getStatusLabel(status)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          );
+
+        case 'assignedToId':
+          // Employee cannot change assigned technician - show current user
+          return (
+            <span className="text-xs text-green-700 font-medium">
+              {session?.user?.name || 'Moi'}
+            </span>
+          );
+
+        default:
+          return <span className="text-xs">{String(value || '-')}</span>;
+      }
+    }
+
+    // Display mode
+    switch (field) {
+      case 'appointmentCode':
+        return (
+          <Badge variant="outline" className="text-xs font-mono bg-green-50 text-green-700 border-green-200">
+            {appointment.appointmentCode || 'N/A'}
+          </Badge>
+        );
+
+      case 'patientId':
+        const patientFullName = appointment.patient
+          ? `${appointment.patient.firstName || ''} ${appointment.patient.lastName || ''}`.trim()
+          : '-';
+        return <span className="text-xs">{patientFullName || '-'}</span>;
+
+      case 'appointmentType':
+        const typeLabel = APPOINTMENT_TYPES.find(t => t.value === appointment.appointmentType)?.label || appointment.appointmentType;
+        return (
+          <Badge variant="outline" className={`text-xs ${getAppointmentTypeColor(appointment.appointmentType)}`}>
+            {typeLabel}
+          </Badge>
+        );
+
+      case 'scheduledDate':
+        if (!appointment.scheduledDate) return <span className="text-xs">-</span>;
+        const date = new Date(appointment.scheduledDate);
+        return (
+          <div className="text-xs">
+            <div>{format(date, 'dd/MM/yyyy', { locale: fr })}</div>
+            <div className="text-gray-500">{format(date, 'HH:mm', { locale: fr })}</div>
+          </div>
+        );
+
+      case 'priority':
+        return (
+          <Badge className={`text-xs ${getPriorityColor(appointment.priority)}`}>
+            {getPriorityLabel(appointment.priority)}
+          </Badge>
+        );
+
+      case 'status':
+        return (
+          <Badge className={`text-xs ${getStatusColor(appointment.status)}`}>
+            {getStatusLabel(appointment.status)}
+          </Badge>
+        );
+
+      case 'assignedToId':
+        return (
+          <span className="text-xs">
+            {appointment.assignedTo ? `${appointment.assignedTo.firstName} ${appointment.assignedTo.lastName}` : '-'}
+          </span>
+        );
+
+      default:
+        return <span className="text-xs">{String(value || '-')}</span>;
+    }
+  };
+
+  const renderNewRow = () => (
+    <tr className="bg-green-50 border-b">
+      <td className="px-2 py-2">
+        <span className="text-xs text-gray-500 italic">Auto-généré</span>
+      </td>
+      <td className="px-2 py-2">
+        <PatientSelectionDialog
+          patients={patients}
+          selectedPatientId={newAppointment.patientId}
+          onSelect={(val) => updateNewField('patientId', val)}
+        />
+      </td>
+      <td className="px-2 py-2">
+        <Select
+          value={newAppointment.appointmentType || 'CONSULTATION'}
+          onValueChange={(val) => updateNewField('appointmentType', val)}
+        >
+          <SelectTrigger className="h-8 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {APPOINTMENT_TYPES.map(type => (
+              <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </td>
+      <td className="px-2 py-2">
+        <Input
+          type="datetime-local"
+          value={newAppointment.scheduledDate ? new Date(newAppointment.scheduledDate).toISOString().slice(0, 16) : ''}
+          onChange={(e) => updateNewField('scheduledDate', e.target.value ? new Date(e.target.value) : null)}
+          className="h-8 text-xs"
+        />
+      </td>
+      <td className="px-2 py-2">
+        <Input
+          value={newAppointment.location || ''}
+          onChange={(e) => updateNewField('location', e.target.value)}
+          placeholder="Lieu"
+          className="h-8 text-xs"
+        />
+      </td>
+      <td className="px-2 py-2">
+        <Select
+          value={newAppointment.priority || 'NORMAL'}
+          onValueChange={(val) => updateNewField('priority', val as any)}
+        >
+          <SelectTrigger className="h-8 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {PRIORITIES.map(priority => (
+              <SelectItem key={priority} value={priority}>{getPriorityLabel(priority)}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </td>
+      <td className="px-2 py-2">
+        <Select
+          value={newAppointment.status || 'SCHEDULED'}
+          onValueChange={(val) => updateNewField('status', val as any)}
+        >
+          <SelectTrigger className="h-8 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUSES.map(status => (
+              <SelectItem key={status} value={status}>{getStatusLabel(status)}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </td>
+      <td className="px-2 py-2">
+        <span className="text-xs text-green-700 font-medium">
+          {session?.user?.name || 'Moi'}
+        </span>
+      </td>
+      <td className="px-2 py-2">
+        <Input
+          value={newAppointment.notes || ''}
+          onChange={(e) => updateNewField('notes', e.target.value)}
+          placeholder="Notes"
+          className="h-8 text-xs"
+        />
+      </td>
+      <td className="px-2 py-2 sticky right-0 bg-green-50">
+        <div className="flex gap-1 justify-center">
+          <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleSaveNew}>
+            <Check className="h-4 w-4 text-green-600" />
+          </Button>
+          <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleCancelNew}>
+            <X className="h-4 w-4 text-red-600" />
+          </Button>
+        </div>
+      </td>
+    </tr>
+  );
+
+  return (
+    <div className="container mx-auto py-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold flex items-center gap-2 text-green-900">
+            <CalendarIcon className="h-8 w-8" />
+            Mes Rendez-vous
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">
+            {filteredAppointments.length} rendez-vous trouvé{filteredAppointments.length > 1 ? 's' : ''}
+          </p>
         </div>
       </div>
-      
-      {/* RDV Stepper Dialog */}
-      <EmployeeRdvStepperDialog
-        isOpen={isRdvDialogOpen}
-        onClose={() => {
-          setIsRdvDialogOpen(false);
-          fetchAppointments(); // Refresh appointments list after creating new one
-        }}
-      />
 
-      {/* Delete confirmation dialog */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-red-600" />
-              Êtes-vous sûr de vouloir supprimer ce rendez-vous?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              Cette action est irréversible. Le rendez-vous sera définitivement supprimé.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleCancelDelete}>Annuler</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmDelete}
-              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+      {/* Filters */}
+      <div className="space-y-3 bg-green-50 p-4 rounded-lg border border-green-200">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex-1 min-w-[200px]">
+            <div className="relative">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Rechercher par patient, lieu, type..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-8"
+              />
+            </div>
+          </div>
+          <Button onClick={handleAddNew} disabled={isAddingNew} className="bg-green-700 hover:bg-green-600">
+            <Plus className="h-4 w-4 mr-2" />
+            Ajouter
+          </Button>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-xs font-medium text-muted-foreground">Filtres:</span>
+
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[160px] h-9">
+              <SelectValue placeholder="Statut" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">Tous les statuts</SelectItem>
+              {STATUSES.map(status => (
+                <SelectItem key={status} value={status}>{getStatusLabel(status)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="w-[180px] h-9">
+              <SelectValue placeholder="Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">Tous les types</SelectItem>
+              {APPOINTMENT_TYPES.map(type => (
+                <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+            <SelectTrigger className="w-[160px] h-9">
+              <SelectValue placeholder="Priorité" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">Toutes priorités</SelectItem>
+              {PRIORITIES.map(priority => (
+                <SelectItem key={priority} value={priority}>{getPriorityLabel(priority)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {(statusFilter !== 'ALL' || typeFilter !== 'ALL' || priorityFilter !== 'ALL' || searchTerm) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setStatusFilter('ALL');
+                setTypeFilter('ALL');
+                setPriorityFilter('ALL');
+                setSearchTerm('');
+              }}
+              className="h-9"
             >
-              Supprimer
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+              <X className="h-4 w-4 mr-1" />
+              Réinitialiser
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="border rounded-lg overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-green-100 border-b sticky top-0">
+              <tr>
+                <th className="px-2 py-3 text-left font-medium text-xs">Code</th>
+                <th className="px-2 py-3 text-left font-medium text-xs">Patient</th>
+                <th className="px-2 py-3 text-left font-medium text-xs">Type</th>
+                <th className="px-2 py-3 text-left font-medium text-xs">Date/Heure</th>
+                <th className="px-2 py-3 text-left font-medium text-xs">Lieu</th>
+                <th className="px-2 py-3 text-left font-medium text-xs">Priorité</th>
+                <th className="px-2 py-3 text-left font-medium text-xs">Statut</th>
+                <th className="px-2 py-3 text-left font-medium text-xs">Technicien</th>
+                <th className="px-2 py-3 text-left font-medium text-xs">Notes</th>
+                <th className="px-2 py-3 text-center font-medium text-xs sticky right-0 bg-green-100">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {isAddingNew && renderNewRow()}
+
+              {paginatedAppointments.map((appointment: Appointment) => {
+                const isEditing = editingId === appointment.id;
+                return (
+                  <tr key={appointment.id} className={`border-b ${isEditing ? 'bg-yellow-50' : 'hover:bg-gray-50'}`}>
+                    <td className="px-2 py-2">{renderCell(appointment, 'appointmentCode', isEditing)}</td>
+                    <td className="px-2 py-2">{renderCell(appointment, 'patientId', isEditing)}</td>
+                    <td className="px-2 py-2">{renderCell(appointment, 'appointmentType', isEditing)}</td>
+                    <td className="px-2 py-2">{renderCell(appointment, 'scheduledDate', isEditing)}</td>
+                    <td className="px-2 py-2">{renderCell(appointment, 'location', isEditing)}</td>
+                    <td className="px-2 py-2">{renderCell(appointment, 'priority', isEditing)}</td>
+                    <td className="px-2 py-2">{renderCell(appointment, 'status', isEditing)}</td>
+                    <td className="px-2 py-2">{renderCell(appointment, 'assignedToId', isEditing)}</td>
+                    <td className="px-2 py-2">{renderCell(appointment, 'notes', isEditing)}</td>
+                    <td className="px-2 py-2 sticky right-0 bg-white">
+                      {isEditing ? (
+                        <div className="flex gap-1 justify-center">
+                          <Button onClick={handleSave} size="icon" variant="ghost" className="h-7 w-7 text-green-600 hover:bg-green-50">
+                            <Check className="h-4 w-4" />
+                          </Button>
+                          <Button onClick={handleCancel} size="icon" variant="ghost" className="h-7 w-7 text-red-600 hover:bg-red-50">
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex gap-1 justify-center">
+                          <Button onClick={() => handleEdit(appointment)} size="icon" variant="ghost" className="h-7 w-7">
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button onClick={() => handleDelete(appointment)} size="icon" variant="ghost" className="h-7 w-7 text-red-600 hover:bg-red-50">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Pagination */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Afficher</span>
+          <Select value={itemsPerPage.toString()} onValueChange={(val) => setItemsPerPage(Number(val))}>
+            <SelectTrigger className="w-[100px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="25">25</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+              <SelectItem value="100">100</SelectItem>
+            </SelectContent>
+          </Select>
+          <span className="text-sm text-muted-foreground">
+            {startIndex + 1}-{Math.min(endIndex, filteredAppointments.length)} sur {filteredAppointments.length}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            size="sm"
+            variant="outline"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="text-sm">
+            Page {currentPage} sur {totalPages || 1}
+          </span>
+          <Button
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            size="sm"
+            variant="outline"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    </div>
   );
-};
+}
 
 AppointmentsPage.getLayout = (page: React.ReactNode) => (
   <EmployeeLayout>{page}</EmployeeLayout>
