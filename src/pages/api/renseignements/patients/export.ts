@@ -34,6 +34,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Transform the data for Excel export
     const excelData = patients.map(patient => ({
+      'Code Patient': patient.patientCode || '',
       'Nom Complet': `${patient.firstName || ''} ${patient.lastName || ''}`.trim(),
       'Téléphone Principal': patient.telephone || '',
       'Téléphone Secondaire': patient.telephoneTwo || '',
@@ -65,6 +66,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     // Set column widths
     const columnWidths = [
+      { wch: 12 }, // Code Patient
       { wch: 25 }, // Nom Complet
       { wch: 15 }, // Téléphone Principal
       { wch: 15 }, // Téléphone Secondaire

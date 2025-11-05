@@ -228,33 +228,16 @@ export default async function handler(
           endDate: { gte: start, lte: end },
           status: 'ACTIVE',
           ...(currentUserId && {
-            OR: [
-              { 
-                patient: {
-                  OR: [
-                    { technicianId: currentUserId }, // Patient assigned to user as technician
-                    { userId: currentUserId }        // Patient assigned to user
-                  ]
-                }
-              },
-              { 
-                Company: {
-                  OR: [
-                    { technicianId: currentUserId }, // Company assigned to user as technician
-                    { userId: currentUserId }        // Company assigned to user
-                  ]
-                }
-              }
-            ]
+            patient: {
+              OR: [
+                { technicianId: currentUserId }, // Patient assigned to user as technician
+                { userId: currentUserId }        // Patient assigned to user
+              ]
+            }
           })
         },
         include: {
           patient: {
-            include: {
-              technician: true
-            }
-          },
-          Company: {
             include: {
               technician: true
             }
@@ -266,8 +249,8 @@ export default async function handler(
       expiringRentals.forEach(rental => {
         const daysUntil = Math.ceil((rental.endDate!.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
         
-        // Determine responsible user (technician assigned to patient/company)
-        const responsibleUser = rental.patient?.technician || rental.Company?.technician;
+        // Determine responsible user (technician assigned to patient)
+        const responsibleUser = rental.patient?.technician;
         
         tasks.push({
           id: `rental-${rental.id}`,
@@ -291,11 +274,6 @@ export default async function handler(
             name: `${rental.patient.firstName} ${rental.patient.lastName}`,
             type: 'patient',
             telephone: rental.patient.telephone
-          } : rental.Company ? {
-            id: rental.Company.id,
-            name: rental.Company.companyName,
-            type: 'company',
-            telephone: rental.Company.telephone
           } : undefined,
           relatedData: {
             deviceName: rental.medicalDevice.name,

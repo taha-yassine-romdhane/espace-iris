@@ -23,7 +23,6 @@ export default async function handler(
         const medicalDeviceQuery: any = {
           include: {
             stockLocation: true,
-            Patient: true,
           },
         };
 
@@ -127,11 +126,13 @@ export default async function handler(
             sellingPrice: device.sellingPrice,
             technicalSpecs: device.technicalSpecs,
             destination: device.destination,
-            requiresMaintenance: device.requiresMaintenance,
             stockLocation: (device as any).stockLocation,
             stockLocationId: device.stockLocationId,
             stockQuantity: device.stockQuantity || 1, // Default to 1 if not specified
             status: device.status,
+            warranty: device.warranty,
+            description: device.description,
+            maintenanceInterval: device.maintenanceInterval,
             configuration: device.configuration,
             installationDate: device.installationDate,
             patientId: device.patientId,
@@ -157,6 +158,7 @@ export default async function handler(
 
           return {
             id: product.id,
+            productCode: product.productCode,
             name: product.name,
             type: product.type,
             brand: product.brand,
@@ -186,9 +188,59 @@ export default async function handler(
 
           // Handle medical devices
           if (type === 'MEDICAL_DEVICE' || type === 'DIAGNOSTIC_DEVICE') {
+            // Generate device code if not provided
+            let deviceCode = data.deviceCode;
+
+            if (!deviceCode) {
+              if (type === 'DIAGNOSTIC_DEVICE') {
+                // Generate APP-DIAG-01, APP-DIAG-02, etc. for diagnostic devices
+                const lastDiagDevice = await prisma.medicalDevice.findFirst({
+                  where: {
+                    deviceCode: {
+                      startsWith: 'APP-DIAG-'
+                    }
+                  },
+                  orderBy: {
+                    deviceCode: 'desc'
+                  }
+                });
+
+                deviceCode = 'APP-DIAG-01';
+                if (lastDiagDevice && lastDiagDevice.deviceCode) {
+                  const lastNumber = parseInt(lastDiagDevice.deviceCode.replace('APP-DIAG-', ''));
+                  if (!isNaN(lastNumber)) {
+                    deviceCode = `APP-DIAG-${String(lastNumber + 1).padStart(2, '0')}`;
+                  }
+                }
+              } else {
+                // Generate APP0001, APP0002, etc. for regular medical devices
+                const lastDevice = await prisma.medicalDevice.findFirst({
+                  where: {
+                    deviceCode: {
+                      startsWith: 'APP',
+                      not: {
+                        startsWith: 'APP-DIAG-'
+                      }
+                    }
+                  },
+                  orderBy: {
+                    deviceCode: 'desc'
+                  }
+                });
+
+                deviceCode = 'APP0001';
+                if (lastDevice && lastDevice.deviceCode) {
+                  const lastNumber = parseInt(lastDevice.deviceCode.replace('APP', ''));
+                  if (!isNaN(lastNumber)) {
+                    deviceCode = `APP${String(lastNumber + 1).padStart(4, '0')}`;
+                  }
+                }
+              }
+            }
+
             const newMedicalDevice = await prisma.medicalDevice.create({
               data: {
-                deviceCode: data.deviceCode,
+                deviceCode: deviceCode,
                 name: data.name,
                 type: type,
                 brand: data.brand,
@@ -198,12 +250,15 @@ export default async function handler(
                 purchasePrice: data.purchasePrice ? parseFloat(data.purchasePrice) : null,
                 sellingPrice: data.sellingPrice ? parseFloat(data.sellingPrice) : null,
                 technicalSpecs: data.technicalSpecs,
+                description: data.description,
                 destination: data.destination || 'FOR_SALE',
-                requiresMaintenance: data.requiresMaintenance || false,
                 configuration: data.configuration,
                 status: 'ACTIVE',
                 stockLocationId: data.stockLocationId,
                 stockQuantity: data.stockQuantity ? parseInt(data.stockQuantity) : 1,
+                // Optional fields
+                warranty: data.warranty || null,
+                maintenanceInterval: data.maintenanceInterval || null,
               },
               include: {
                 stockLocation: true
@@ -253,21 +308,51 @@ export default async function handler(
               technicalSpecs: newMedicalDevice.technicalSpecs,
               destination: newMedicalDevice.destination,
               rentalPrice: newMedicalDevice.rentalPrice,
-              requiresMaintenance: newMedicalDevice.requiresMaintenance,
               stockLocation: newMedicalDevice.stockLocation,
               stockLocationId: newMedicalDevice.stockLocationId,
               stockQuantity: newMedicalDevice.stockQuantity,
               status: newMedicalDevice.status,
+              warranty: newMedicalDevice.warranty,
+              description: newMedicalDevice.description,
+              maintenanceInterval: newMedicalDevice.maintenanceInterval,
               configuration: newMedicalDevice.configuration
             });
           }
           // Handle accessories and spare parts
           else {
+            // Generate productCode if not provided
+            let productCode = data.productCode;
+
+            if (!productCode) {
+              const prefix = type === 'ACCESSORY' ? 'ACC-' : type === 'SPARE_PART' ? 'PIEC-' : 'PRD-';
+
+              const lastProduct = await prisma.product.findFirst({
+                where: {
+                  type: type,
+                  productCode: {
+                    startsWith: prefix
+                  }
+                },
+                orderBy: {
+                  productCode: 'desc'
+                }
+              });
+
+              productCode = `${prefix}001`;
+              if (lastProduct && lastProduct.productCode) {
+                const lastNumber = parseInt(lastProduct.productCode.replace(prefix, ''));
+                if (!isNaN(lastNumber)) {
+                  productCode = `${prefix}${String(lastNumber + 1).padStart(3, '0')}`;
+                }
+              }
+            }
+
             // First, create the product
             const newProduct = await prisma.product.create({
               data: {
                 name: data.name,
                 type: type,
+                productCode: productCode,
                 brand: data.brand || null,
                 model: data.model || null,
                 serialNumber: data.serialNumber || null,
@@ -302,6 +387,7 @@ export default async function handler(
 
               return res.status(201).json({
                 id: newProduct.id,
+                productCode: newProduct.productCode,
                 name: newProduct.name,
                 type: newProduct.type,
                 brand: newProduct.brand,
@@ -349,6 +435,7 @@ export default async function handler(
 
               return res.status(201).json({
                 id: newProduct.id,
+                productCode: newProduct.productCode,
                 name: newProduct.name,
                 type: newProduct.type,
                 brand: newProduct.brand,
@@ -392,8 +479,10 @@ export default async function handler(
               sellingPrice: updateData.sellingPrice ? parseFloat(updateData.sellingPrice.toString()) : null,
               technicalSpecs: updateData.technicalSpecs,
               destination: updateData.destination || 'FOR_SALE',
-              requiresMaintenance: updateData.requiresMaintenance,
               configuration: updateData.configuration || updateData.specifications,
+              warranty: updateData.warranty || null,
+              description: updateData.description || null,
+              maintenanceInterval: updateData.maintenanceInterval || null,
               status: updateData.status || 'ACTIVE',
               stockLocationId: updateData.stockLocationId || updateData.stockLocation,
               stockQuantity: updateData.stockQuantity ? parseInt(updateData.stockQuantity.toString()) : 1,
@@ -445,7 +534,10 @@ export default async function handler(
             sellingPrice: updatedMedicalDevice.sellingPrice,
             technicalSpecs: updatedMedicalDevice.technicalSpecs,
             destination: updatedMedicalDevice.destination,
-            requiresMaintenance: updatedMedicalDevice.requiresMaintenance,
+            configuration: updatedMedicalDevice.configuration,
+            warranty: updatedMedicalDevice.warranty,
+            description: updatedMedicalDevice.description,
+            maintenanceInterval: updatedMedicalDevice.maintenanceInterval,
             stockLocation: updatedMedicalDevice.stockLocation,
             stockLocationId: updatedMedicalDevice.stockLocationId,
             stockQuantity: updatedMedicalDevice.stockQuantity,
@@ -455,9 +547,63 @@ export default async function handler(
         
         // Handle regular product update (accessories/spare parts)
         else {
+          // Check if product needs code generation or pattern correction
+          const existingProduct = await prisma.product.findUnique({
+            where: { id }
+          });
+
+          if (!existingProduct) {
+            return res.status(404).json({ error: 'Product not found' });
+          }
+
+          let productCode = existingProduct.productCode;
+          const type = updateData.type || existingProduct.type;
+
+          // Check if product needs code generation or pattern correction
+          const needsCodeGeneration = !productCode;
+          let needsPatternCorrection = false;
+
+          if (productCode && type) {
+            const expectedPrefix = type === 'ACCESSORY' ? 'ACC-' : type === 'SPARE_PART' ? 'PIEC-' : 'PRD-';
+            needsPatternCorrection = !productCode.startsWith(expectedPrefix);
+          }
+
+          if (needsCodeGeneration || needsPatternCorrection) {
+            if (needsCodeGeneration) {
+              console.log('Product has no code, generating new code...');
+            } else {
+              console.log('Product has incorrect pattern, correcting code from:', productCode);
+            }
+
+            const prefix = type === 'ACCESSORY' ? 'ACC-' : type === 'SPARE_PART' ? 'PIEC-' : 'PRD-';
+
+            const lastProduct = await prisma.product.findFirst({
+              where: {
+                type: type,
+                productCode: {
+                  startsWith: prefix
+                }
+              },
+              orderBy: {
+                productCode: 'desc'
+              }
+            });
+
+            productCode = `${prefix}001`;
+            if (lastProduct && lastProduct.productCode) {
+              const lastNumber = parseInt(lastProduct.productCode.replace(prefix, ''));
+              if (!isNaN(lastNumber)) {
+                productCode = `${prefix}${String(lastNumber + 1).padStart(3, '0')}`;
+              }
+            }
+
+            console.log('Generated/Corrected product code:', productCode);
+          }
+
           const updatedProduct = await prisma.product.update({
             where: { id },
             data: {
+              productCode: productCode,
               name: updateData.name,
               brand: updateData.brand,
               model: updateData.model,
@@ -487,6 +633,7 @@ export default async function handler(
 
           return res.status(200).json({
             id: updatedProduct.id,
+            productCode: updatedProduct.productCode,
             name: updatedProduct.name,
             type: updatedProduct.type,
             brand: updatedProduct.brand,

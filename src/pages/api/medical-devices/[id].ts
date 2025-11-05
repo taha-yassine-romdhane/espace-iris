@@ -37,14 +37,17 @@ export default async function handler(
             purchasePrice: device.purchasePrice,
             sellingPrice: device.sellingPrice,
             rentalPrice: device.rentalPrice,
-            technicalSpecs: device.technicalSpecs,
-            requiresMaintenance: device.requiresMaintenance,
             stockLocation: device.stockLocation?.name || 'Non assigné',
             stockLocationId: device.stockLocationId,
             stockQuantity: device.stockQuantity,
             status: device.status,
+            technicalSpecs: device.technicalSpecs,
             configuration: device.configuration,
-            installationDate: device.installationDate
+            warranty: device.warranty,
+            description: device.description,
+            maintenanceInterval: device.maintenanceInterval,
+            installationDate: device.installationDate,
+            deviceCode: device.deviceCode
           });
         }
 
@@ -138,6 +141,86 @@ export default async function handler(
               delete data.parameters;
             }
 
+            // Check if device exists and has no code - generate one
+            const existingDevice = await prisma.medicalDevice.findUnique({
+              where: { id: id as string }
+            });
+
+            if (!existingDevice) {
+              return res.status(404).json({ error: 'Device not found' });
+            }
+
+            let deviceCode = existingDevice.deviceCode;
+
+            // Check if device needs code generation or pattern correction
+            const needsCodeGeneration = !deviceCode;
+            const isDiagnosticDevice = existingDevice.type === 'DIAGNOSTIC_DEVICE' || type === 'DIAGNOSTIC_DEVICE';
+
+            // Check if pattern is incorrect
+            let needsPatternCorrection = false;
+            if (deviceCode && isDiagnosticDevice) {
+              // Diagnostic device should have APP-DIAG-XX pattern, not APPXXXX or other patterns
+              needsPatternCorrection = !deviceCode.match(/^APP-DIAG-\d{2}$/);
+            } else if (deviceCode && !isDiagnosticDevice) {
+              // Regular device should have APPXXXX pattern, not APP-DIAG-XX
+              needsPatternCorrection = deviceCode.startsWith('APP-DIAG-');
+            }
+
+            if (needsCodeGeneration || needsPatternCorrection) {
+              if (needsCodeGeneration) {
+                console.log('Device has no code, generating new code...');
+              } else {
+                console.log('Device has incorrect pattern, correcting code from:', deviceCode);
+              }
+
+              if (isDiagnosticDevice) {
+                // Generate APP-DIAG-01, APP-DIAG-02, etc. for diagnostic devices
+                const lastDiagDevice = await prisma.medicalDevice.findFirst({
+                  where: {
+                    deviceCode: {
+                      startsWith: 'APP-DIAG-'
+                    }
+                  },
+                  orderBy: {
+                    deviceCode: 'desc'
+                  }
+                });
+
+                deviceCode = 'APP-DIAG-01';
+                if (lastDiagDevice && lastDiagDevice.deviceCode) {
+                  const lastNumber = parseInt(lastDiagDevice.deviceCode.replace('APP-DIAG-', ''));
+                  if (!isNaN(lastNumber)) {
+                    deviceCode = `APP-DIAG-${String(lastNumber + 1).padStart(2, '0')}`;
+                  }
+                }
+              } else {
+                // Generate APP0001, APP0002, etc. for regular medical devices
+                const lastDevice = await prisma.medicalDevice.findFirst({
+                  where: {
+                    deviceCode: {
+                      startsWith: 'APP',
+                      not: {
+                        startsWith: 'APP-DIAG-'
+                      }
+                    }
+                  },
+                  orderBy: {
+                    deviceCode: 'desc'
+                  }
+                });
+
+                deviceCode = 'APP0001';
+                if (lastDevice && lastDevice.deviceCode) {
+                  const lastNumber = parseInt(lastDevice.deviceCode.replace('APP', ''));
+                  if (!isNaN(lastNumber)) {
+                    deviceCode = `APP${String(lastNumber + 1).padStart(4, '0')}`;
+                  }
+                }
+              }
+
+              console.log('Generated/Corrected device code:', deviceCode);
+            }
+
             console.log('About to update device with ID:', id);
             console.log('Update data:', {
               name: data.name,
@@ -152,6 +235,7 @@ export default async function handler(
               const updatedDevice = await prisma.medicalDevice.update({
                 where: { id: id as string },
                 data: {
+                  deviceCode: deviceCode, // Set the generated or existing code
                   name: data.name,
                   brand: data.brand,
                   model: data.model,
@@ -159,11 +243,13 @@ export default async function handler(
                   purchasePrice: data.purchasePrice ? parseFloat(data.purchasePrice) : null,
                   sellingPrice: data.sellingPrice ? parseFloat(data.sellingPrice) : null,
                   rentalPrice: data.rentalPrice ? parseFloat(data.rentalPrice) : null,
-                  technicalSpecs: data.technicalSpecs,
-                  warranty: data.warranty,
-                  requiresMaintenance: data.requiresMaintenance || false,
-                  configuration: data.configuration,
                   status: data.status || 'ACTIVE',
+                  // Optional fields from schema
+                  technicalSpecs: data.technicalSpecs || null,
+                  configuration: data.configuration || null,
+                  warranty: data.warranty || null,
+                  description: data.description || null,
+                  maintenanceInterval: data.maintenanceInterval || null,
                   // Handle patient assignment and reservation
                   ...(data.patientId ? {
                     patientId: data.patientId,
@@ -202,13 +288,17 @@ export default async function handler(
                 serialNumber: updatedDevice.serialNumber,
                 purchasePrice: updatedDevice.purchasePrice,
                 sellingPrice: updatedDevice.sellingPrice,
-                technicalSpecs: updatedDevice.technicalSpecs,
-                requiresMaintenance: updatedDevice.requiresMaintenance,
+                rentalPrice: updatedDevice.rentalPrice,
                 stockLocation: updatedDevice.stockLocation?.name || 'Non assigné',
                 stockLocationId: updatedDevice.stockLocationId,
                 stockQuantity: updatedDevice.stockQuantity,
                 status: updatedDevice.status,
-                configuration: updatedDevice.configuration
+                technicalSpecs: updatedDevice.technicalSpecs,
+                configuration: updatedDevice.configuration,
+                warranty: updatedDevice.warranty,
+                description: updatedDevice.description,
+                maintenanceInterval: updatedDevice.maintenanceInterval,
+                deviceCode: updatedDevice.deviceCode
               });
             } catch (updateError) {
               console.error('Error updating device:', updateError);

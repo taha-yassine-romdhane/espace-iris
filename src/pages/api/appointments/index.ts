@@ -87,12 +87,6 @@ async function handleGetAppointments(req: NextApiRequest, res: NextApiResponse) 
             lastName: true,
           },
         },
-        diagnostic: {
-          select: {
-            id: true,
-            diagnosticCode: true,
-          },
-        },
       },
       orderBy: {
         scheduledDate: 'asc',

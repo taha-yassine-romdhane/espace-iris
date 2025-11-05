@@ -23,7 +23,6 @@ interface MedicalDevice {
   technicalSpecs?: string;
   warranty?: string;
   maintenanceInterval?: string;
-  configuration?: string;
   status: string;
   destination: string;
   location?: string;

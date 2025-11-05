@@ -39,8 +39,7 @@ export default async function handler(
               doctor: true,
             }
           },
-          Company: true,
-          payment: {
+          payments: {
             include: {
               paymentDetails: true,
             },
@@ -65,8 +64,8 @@ export default async function handler(
               startDate: 'asc'
             }
           },
-          // Include CNAM bonds
-          cnamBonds: {
+          // Include CNAM bons
+          cnamBons: {
             orderBy: {
               createdAt: 'desc'
             }
@@ -74,8 +73,8 @@ export default async function handler(
           // Include rental periods
           rentalPeriods: {
             include: {
-              payment: true,
-              cnamBond: true,
+              payments: true,
+              cnamBon: true,
             },
             orderBy: {
               startDate: 'asc'
