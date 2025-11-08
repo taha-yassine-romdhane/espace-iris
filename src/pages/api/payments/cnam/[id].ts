@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import prisma from '@/lib/db';
+import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/pages/api/auth/[...nextauth]';
+import { authOptions } from '../../auth/[...nextauth]';
 import { PaymentMethod, PaymentStatus } from '@prisma/client';
 
 // Define types based on the Prisma schema
@@ -96,7 +96,7 @@ async function getPayment(paymentId: string, res: NextApiResponse) {
       if (detail.metadata && typeof detail.metadata === 'object') {
         // Safe type casting for metadata
         const meta = detail.metadata as Record<string, any>;
-        return meta.bondType !== undefined || meta.isCNAM === true || meta.type === 'cnam';
+        return meta.bonType !== undefined || meta.isCNAM === true || meta.type === 'cnam';
       }
       
       return false;
@@ -109,7 +109,7 @@ async function getPayment(paymentId: string, res: NextApiResponse) {
       try {
         const notesData = JSON.parse(payment.notes);
         if (notesData.payments && Array.isArray(notesData.payments)) {
-          if (notesData.payments.some((p: any) => p.type === 'cnam' || p.cnamBondType)) {
+          if (notesData.payments.some((p: any) => p.type === 'cnam' || p.cnamBonType)) {
             isCNAMPayment = true;
           }
         }
@@ -167,7 +167,7 @@ async function updatePayment(
       // Check metadata if it exists
       if (detail.metadata && typeof detail.metadata === 'object') {
         const meta = detail.metadata as Record<string, any>;
-        return meta.isCNAM === true || meta.type === 'cnam' || meta.bondType;
+        return meta.isCNAM === true || meta.type === 'cnam' || meta.bonType;
       }
       
       return false;
@@ -182,7 +182,7 @@ async function updatePayment(
         legacyNotesData = JSON.parse(existingPayment.notes);
         if (legacyNotesData.payments && Array.isArray(legacyNotesData.payments)) {
           legacyCnamPayment = legacyNotesData.payments.find((p: any) => 
-            p.type === 'cnam' || p.cnamBondType
+            p.type === 'cnam' || p.cnamBonType
           );
         }
       } catch (error) {
@@ -236,7 +236,7 @@ async function updatePayment(
     else if (legacyNotesData && legacyCnamPayment) {
       // Update the CNAM payment in the legacy data
       const paymentIndex = legacyNotesData.payments.findIndex((p: any) => 
-        p.type === 'cnam' || p.cnamBondType
+        p.type === 'cnam' || p.cnamBonType
       );
       
       if (paymentIndex !== -1) {
@@ -320,7 +320,7 @@ async function updatePayment(
             const notesData = JSON.parse(sale.payment.notes);
             if (notesData.payments && Array.isArray(notesData.payments)) {
               hasPendingCNAMPayments = notesData.payments.some((p: any) => 
-                (p.type === 'cnam' || p.cnamBondType) && 
+                (p.type === 'cnam' || p.cnamBonType) && 
                 (p.isPending === true || p.etatDossier === 'en_attente')
               );
             }
