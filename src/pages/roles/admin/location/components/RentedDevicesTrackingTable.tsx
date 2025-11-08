@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -7,6 +8,14 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   Package,
   Search,
@@ -75,11 +84,15 @@ const DEVICE_TYPE_LABELS: Record<string, string> = {
 export default function RentedDevicesTrackingTable() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { data: session } = useSession();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [locationFilter, setLocationFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(20);
+  const [recuperateDialogOpen, setRecuperateDialogOpen] = useState(false);
+  const [selectedRental, setSelectedRental] = useState<RentedDevice | null>(null);
+  const [selectedStockLocationId, setSelectedStockLocationId] = useState<string>('');
 
   // Fetch rentals with device and patient info
   const { data: rentals = [], isLoading } = useQuery<RentedDevice[]>({
@@ -87,6 +100,16 @@ export default function RentedDevicesTrackingTable() {
     queryFn: async () => {
       const response = await fetch('/api/rentals/comprehensive');
       if (!response.ok) throw new Error('Failed to fetch rentals');
+      return response.json();
+    },
+  });
+
+  // Fetch all stock locations for admin dialog
+  const { data: allStockLocations = [] } = useQuery({
+    queryKey: ['stock-locations'],
+    queryFn: async () => {
+      const response = await fetch('/api/stock-locations');
+      if (!response.ok) throw new Error('Failed to fetch stock locations');
       return response.json();
     },
   });
@@ -149,10 +172,19 @@ export default function RentedDevicesTrackingTable() {
     setCurrentPage(1);
   }, [searchTerm, statusFilter, locationFilter]);
 
-  // Mutation to mark rental as completed (device recuperated)
+  // Mutation to mark rental as completed and update device location
   const recuperateMutation = useMutation({
-    mutationFn: async (rentalId: string) => {
-      const response = await fetch(`/api/rentals/comprehensive/${rentalId}`, {
+    mutationFn: async ({
+      rentalId,
+      deviceId,
+      stockLocationId
+    }: {
+      rentalId: string;
+      deviceId: string;
+      stockLocationId: string;
+    }) => {
+      // Update rental status and endDate
+      const rentalResponse = await fetch(`/api/rentals/comprehensive/${rentalId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -161,29 +193,86 @@ export default function RentedDevicesTrackingTable() {
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to mark device as recuperated');
-      return response.json();
+      if (!rentalResponse.ok) throw new Error('Failed to update rental');
+
+      // Update device stock location and status
+      const deviceResponse = await fetch(`/api/medical-devices/${deviceId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          stockLocationId: stockLocationId,
+          status: 'ACTIVE',
+        }),
+      });
+
+      if (!deviceResponse.ok) throw new Error('Failed to update device');
+
+      return {
+        rental: await rentalResponse.json(),
+        device: await deviceResponse.json()
+      };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['rented-devices-tracking'] });
+      queryClient.invalidateQueries({ queryKey: ['medical-devices'] });
+      setRecuperateDialogOpen(false);
+      setSelectedRental(null);
+      setSelectedStockLocationId('');
       toast({
         title: 'Succès',
-        description: 'Appareil récupéré avec succès',
+        description: 'Appareil récupéré et retourné au stock avec succès',
       });
     },
-    onError: () => {
+    onError: (error) => {
       toast({
         variant: 'destructive',
         title: 'Erreur',
-        description: 'Impossible de récupérer l\'appareil',
+        description: error instanceof Error ? error.message : 'Impossible de récupérer l\'appareil',
       });
     },
   });
 
-  const handleRecuperate = (rentalId: string) => {
-    if (confirm('Confirmer la récupération de cet appareil ?')) {
-      recuperateMutation.mutate(rentalId);
+  const handleRecuperate = (rental: RentedDevice) => {
+    const userRole = session?.user?.role;
+    const userStockLocationId = (session?.user as any)?.stockLocation?.id;
+
+    if (userRole === 'ADMIN') {
+      // Show dialog for admin to select stock location
+      setSelectedRental(rental);
+      setRecuperateDialogOpen(true);
+    } else if (userRole === 'EMPLOYEE' && userStockLocationId) {
+      // Auto-recuperate to employee's stock location
+      if (confirm('Confirmer la récupération de cet appareil vers votre emplacement de stock ?')) {
+        recuperateMutation.mutate({
+          rentalId: rental.id,
+          deviceId: rental.medicalDevice.id,
+          stockLocationId: userStockLocationId,
+        });
+      }
+    } else {
+      toast({
+        variant: 'destructive',
+        title: 'Erreur',
+        description: 'Impossible de déterminer l\'emplacement de stock',
+      });
     }
+  };
+
+  const confirmRecuperate = () => {
+    if (!selectedRental || !selectedStockLocationId) {
+      toast({
+        variant: 'destructive',
+        title: 'Erreur',
+        description: 'Veuillez sélectionner un emplacement de stock',
+      });
+      return;
+    }
+
+    recuperateMutation.mutate({
+      rentalId: selectedRental.id,
+      deviceId: selectedRental.medicalDevice.id,
+      stockLocationId: selectedStockLocationId,
+    });
   };
 
   const getStatusBadge = (status: string) => {
@@ -531,7 +620,7 @@ export default function RentedDevicesTrackingTable() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleRecuperate(rental.id)}
+                            onClick={() => handleRecuperate(rental)}
                             disabled={recuperateMutation.isPending}
                             className="h-8 text-xs"
                           >
@@ -554,6 +643,82 @@ export default function RentedDevicesTrackingTable() {
           </Table>
         </div>
       </CardContent>
+
+      {/* Admin Stock Location Selection Dialog */}
+      <Dialog open={recuperateDialogOpen} onOpenChange={setRecuperateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Récupération d'appareil</DialogTitle>
+            <DialogDescription>
+              Sélectionnez l'emplacement de stock où l'appareil sera retourné.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedRental && (
+            <div className="space-y-4 py-4">
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-2">
+                <div className="text-sm">
+                  <span className="font-medium text-slate-700">Patient:</span>{' '}
+                  <span className="text-slate-900">
+                    {selectedRental.patient.firstName} {selectedRental.patient.lastName}
+                  </span>
+                </div>
+                <div className="text-sm">
+                  <span className="font-medium text-slate-700">Appareil:</span>{' '}
+                  <span className="text-slate-900">{selectedRental.medicalDevice.name}</span>
+                </div>
+                <div className="text-sm">
+                  <span className="font-medium text-slate-700">N° Série:</span>{' '}
+                  <span className="text-slate-900 font-mono">
+                    {selectedRental.medicalDevice.serialNumber || 'N/A'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700">
+                  Emplacement de stock
+                </label>
+                <Select
+                  value={selectedStockLocationId}
+                  onValueChange={setSelectedStockLocationId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner un emplacement" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allStockLocations.map((location: any) => (
+                      <SelectItem key={location.id} value={location.id}>
+                        {location.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setRecuperateDialogOpen(false);
+                setSelectedRental(null);
+                setSelectedStockLocationId('');
+              }}
+            >
+              Annuler
+            </Button>
+            <Button
+              onClick={confirmRecuperate}
+              disabled={!selectedStockLocationId || recuperateMutation.isPending}
+            >
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Confirmer la récupération
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

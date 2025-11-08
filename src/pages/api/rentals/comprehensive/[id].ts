@@ -96,8 +96,8 @@ export default async function handler(
       return res.status(200).json(rental);
     }
 
-    // PUT - Update rental
-    if (req.method === 'PUT') {
+    // PUT/PATCH - Update rental
+    if (req.method === 'PUT' || req.method === 'PATCH') {
       const {
         patientId,
         medicalDeviceId,
@@ -107,6 +107,10 @@ export default async function handler(
         configuration,
         createdById,
         assignedToId,
+        alertDate,
+        titrationReminderDate,
+        appointmentDate,
+        notes,
       } = req.body;
 
       // Check if rental exists
@@ -127,6 +131,10 @@ export default async function handler(
         ...(endDate !== undefined && { endDate: endDate ? new Date(endDate) : null }),
         ...(status && { status }),
         ...(createdById && { createdBy: { connect: { id: createdById } } }),
+        ...(alertDate !== undefined && { alertDate: alertDate ? new Date(alertDate) : null }),
+        ...(titrationReminderDate !== undefined && { titrationReminderDate: titrationReminderDate ? new Date(titrationReminderDate) : null }),
+        ...(appointmentDate !== undefined && { appointmentDate: appointmentDate ? new Date(appointmentDate) : null }),
+        ...(notes !== undefined && { notes }),
       };
 
       // Handle assignedTo (can be null or undefined to remove assignment)
