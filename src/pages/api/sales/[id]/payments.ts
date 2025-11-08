@@ -160,9 +160,10 @@ async function handleUpdatePayments(req: NextApiRequest, res: NextApiResponse, s
             amount: totalPaymentAmount,
             method: mapPaymentMethod(primaryPayment?.type || 'cash'),
             status: totalPaymentAmount >= Number(sale.finalAmount) ? PaymentStatus.PAID : PaymentStatus.PARTIAL,
+            source: 'SALE', // IMPORTANT: Ensure source is set as SALE
             chequeNumber: primaryPayment?.type === 'cheque' ? primaryPayment.chequeNumber || null : null,
             bankName: primaryPayment?.type === 'cheque' ? primaryPayment.bank || null : null,
-            referenceNumber: ['virement', 'mandat', 'traite'].includes(primaryPayment?.type) ? 
+            referenceNumber: ['virement', 'mandat', 'traite'].includes(primaryPayment?.type) ?
               (primaryPayment.reference || primaryPayment.mandatNumber || primaryPayment.traiteNumber || null) : null,
             cnamCardNumber: primaryPayment?.type === 'cnam' ? primaryPayment.dossierNumber || null : null,
             notes: primaryPayment?.notes || null,
@@ -177,9 +178,11 @@ async function handleUpdatePayments(req: NextApiRequest, res: NextApiResponse, s
             amount: totalPaymentAmount,
             method: mapPaymentMethod(primaryPayment?.type || 'cash'),
             status: totalPaymentAmount >= Number(sale.finalAmount) ? PaymentStatus.PAID : PaymentStatus.PARTIAL,
+            source: 'SALE', // IMPORTANT: Set source as SALE for filtering
+            saleId: saleId, // IMPORTANT: Link payment to sale
             chequeNumber: primaryPayment?.type === 'cheque' ? primaryPayment.chequeNumber || null : null,
             bankName: primaryPayment?.type === 'cheque' ? primaryPayment.bank || null : null,
-            referenceNumber: ['virement', 'mandat', 'traite'].includes(primaryPayment?.type) ? 
+            referenceNumber: ['virement', 'mandat', 'traite'].includes(primaryPayment?.type) ?
               (primaryPayment.reference || primaryPayment.mandatNumber || primaryPayment.traiteNumber || null) : null,
             cnamCardNumber: primaryPayment?.type === 'cnam' ? primaryPayment.dossierNumber || null : null,
             notes: primaryPayment?.notes || null,

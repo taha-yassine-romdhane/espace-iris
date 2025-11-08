@@ -344,7 +344,7 @@ export default async function handler(
       }
 
       const saleData = req.body;
-      
+
       // Validate required fields
       if (!saleData) {
         return res.status(400).json({ error: 'No sale data provided' });
@@ -355,39 +355,29 @@ export default async function handler(
         saleData.processedById = session.user.id;  
       }
       
-      // Validate client information
-      if (!saleData.patientId && !saleData.companyId) {
-        return res.status(400).json({ error: 'Either patientId or companyId must be provided' });
-      }
-      
-      // Validate items
-      if (!saleData.items || !Array.isArray(saleData.items) || saleData.items.length === 0) {
-        return res.status(400).json({ error: 'At least one item must be provided' });
-      }
-      
-      // Validate required financial fields
-      if (!saleData.totalAmount || isNaN(parseFloat(saleData.totalAmount))) {
-        return res.status(400).json({ error: 'Valid totalAmount is required' });
-      }
-      
-      if (!saleData.finalAmount || isNaN(parseFloat(saleData.finalAmount))) {
-        return res.status(400).json({ error: 'Valid finalAmount is required' });
-      }
-      
-      // Validate each item has required fields
-      for (let i = 0; i < saleData.items.length; i++) {
-        const item = saleData.items[i];
-        if (!item.quantity || isNaN(parseInt(item.quantity))) {
-          return res.status(400).json({ error: `Item ${i + 1}: Valid quantity is required` });
-        }
-        if (!item.unitPrice || isNaN(parseFloat(item.unitPrice))) {
-          return res.status(400).json({ error: `Item ${i + 1}: Valid unitPrice is required` });
-        }
-        if (!item.itemTotal || isNaN(parseFloat(item.itemTotal))) {
-          return res.status(400).json({ error: `Item ${i + 1}: Valid itemTotal is required` });
-        }
-        if (!item.productId && !item.medicalDeviceId) {
-          return res.status(400).json({ error: `Item ${i + 1}: Either productId or medicalDeviceId is required` });
+      // Client information is now OPTIONAL - can be added later
+      // This allows creating draft sales and assigning clients later
+
+      // Items are now OPTIONAL - allow creating sales without items
+      // Items can be added later through the Articles tab
+      const hasItems = saleData.items && Array.isArray(saleData.items) && saleData.items.length > 0;
+
+      if (hasItems) {
+        // Validate each item has required fields only if items are provided
+        for (let i = 0; i < saleData.items.length; i++) {
+          const item = saleData.items[i];
+          if (!item.quantity || isNaN(parseInt(item.quantity))) {
+            return res.status(400).json({ error: `Item ${i + 1}: Valid quantity is required` });
+          }
+          if (!item.unitPrice || isNaN(parseFloat(item.unitPrice))) {
+            return res.status(400).json({ error: `Item ${i + 1}: Valid unitPrice is required` });
+          }
+          if (!item.itemTotal || isNaN(parseFloat(item.itemTotal))) {
+            return res.status(400).json({ error: `Item ${i + 1}: Valid itemTotal is required` });
+          }
+          if (!item.productId && !item.medicalDeviceId) {
+            return res.status(400).json({ error: `Item ${i + 1}: Either productId or medicalDeviceId is required` });
+          }
         }
       }
       
@@ -440,6 +430,7 @@ export default async function handler(
                   amount: totalPaymentAmount,
                   method: mapPaymentMethod(primaryPayment.type || 'cash'),
                   status: totalPaymentAmount >= Number(saleData.finalAmount) ? PaymentStatus.PAID : PaymentStatus.PARTIAL,
+                  source: 'SALE', // IMPORTANT: Set source as SALE for filtering
                   // Store primary payment details in main fields
                   chequeNumber: primaryPayment.type === 'cheque' ? primaryPayment.chequeNumber || null : null,
                   bankName: primaryPayment.type === 'cheque' ? primaryPayment.bank || null : null,
@@ -578,22 +569,31 @@ export default async function handler(
               saleCode: saleCode,
               invoiceNumber: newInvoiceNumber,
               saleDate: new Date(saleData.saleDate || new Date()),
-              totalAmount: parseFloat(saleData.totalAmount),
+              totalAmount: saleData.totalAmount !== undefined ? parseFloat(saleData.totalAmount) : 0,
               discount: saleData.discount ? parseFloat(saleData.discount) : 0,
-              finalAmount: parseFloat(saleData.finalAmount),
+              finalAmount: saleData.finalAmount !== undefined ? parseFloat(saleData.finalAmount) : 0,
               status: saleData.status || 'PENDING',
               notes: saleData.notes,
               processedById: saleData.processedById, // Use the user ID from the session
               patientId: saleData.patientId || null,
               companyId: saleData.companyId || null,
               paymentId: paymentId,
-              // Items will be created in the next step
+              // Items will be created in the next step (if provided)
             }
           });
-          
-          // 3. Create the sale items
+
+          // 2.5. Update the payment with the saleId now that sale is created
+          if (paymentId) {
+            await tx.payment.update({
+              where: { id: paymentId },
+              data: { saleId: sale.id }
+            });
+          }
+
+          // 3. Create the sale items (only if items are provided)
           const saleItems = [];
-          for (const item of saleData.items) {
+          if (hasItems) {
+            for (const item of saleData.items) {
             // Check if item has parameters (device configuration)
             const hasParameters = item.parameters && Object.keys(item.parameters).length > 0;
             
@@ -709,7 +709,8 @@ export default async function handler(
               });
             }
           }
-          
+          } // End of if (hasItems)
+
           // 4.5. Create CNAM dossiers now that sale is created
           const cnamDossierIds: string[] = [];
           if (cnamPaymentsData.length > 0 && saleData.patientId) {
@@ -767,7 +768,7 @@ export default async function handler(
                   saleId: sale.id,
                   finalAmount: sale.finalAmount,
                   notes: sale.notes,
-                  itemCount: saleData.items.length,
+                  itemCount: hasItems ? saleData.items.length : 0,
                   responsibleDoctorId: patient?.doctorId,
                 },
               },
