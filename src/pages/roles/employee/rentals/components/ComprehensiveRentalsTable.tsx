@@ -37,6 +37,8 @@ import {
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { PatientSelectorDialog, PatientDisplay } from "@/components/forms/components/PatientSelectorDialog";
+import { MedicalDeviceSelectorDialog, DeviceDisplay } from "@/components/forms/components/MedicalDeviceSelectorDialog";
 
 interface Rental {
   id?: string;
@@ -89,11 +91,11 @@ export default function ComprehensiveRentalsTable() {
     },
   });
 
-  // Fetch patients
+  // Fetch patients - only assigned to current employee
   const { data: patientsData } = useQuery({
-    queryKey: ['patients-for-rentals'],
+    queryKey: ['patients-for-rentals-employee'],
     queryFn: async () => {
-      const response = await fetch('/api/renseignements/patients');
+      const response = await fetch('/api/renseignements/patients?assignedToMe=true');
       const data = await response.json();
       return data.patients || [];
     },
@@ -579,45 +581,50 @@ function ViewRowComponent({ rental, onEdit, onDelete, getStatusBadge }: any) {
 // Due to length, I'll create them as separate components
 
 function NewRowComponent({ data, onChange, onSave, onCancel, patients, devices, users }: any) {
+  const [patientDialogOpen, setPatientDialogOpen] = useState(false);
+  const [deviceDialogOpen, setDeviceDialogOpen] = useState(false);
+
+  const selectedPatient = patients.find((p: any) => p.id === data.patientId);
+  const selectedDevice = devices.find((d: any) => d.id === data.medicalDeviceId);
+
   return (
-    <tr className="bg-green-50 border-b-2 border-green-200">
-      <td className="px-4 py-3">
-        <span className="text-xs text-slate-500">Auto</span>
-      </td>
-      <td className="px-4 py-3">
-        <Select
-          value={data.patientId}
-          onValueChange={(value) => onChange({ ...data, patientId: value })}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Sélectionner patient" />
-          </SelectTrigger>
-          <SelectContent>
-            {patients.map((p: any) => (
-              <SelectItem key={p.id} value={p.id}>
-                {p.firstName} {p.lastName}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </td>
-      <td className="px-4 py-3">
-        <Select
-          value={data.medicalDeviceId}
-          onValueChange={(value) => onChange({ ...data, medicalDeviceId: value })}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Sélectionner appareil" />
-          </SelectTrigger>
-          <SelectContent>
-            {devices.map((d: any) => (
-              <SelectItem key={d.id} value={d.id}>
-                {d.name} - {d.deviceCode}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </td>
+    <>
+      <PatientSelectorDialog
+        open={patientDialogOpen}
+        onOpenChange={setPatientDialogOpen}
+        patients={patients}
+        selectedPatientId={data.patientId}
+        onSelectPatient={(patientId) => onChange({ ...data, patientId })}
+        title="Sélectionner un patient"
+      />
+
+      <MedicalDeviceSelectorDialog
+        open={deviceDialogOpen}
+        onOpenChange={setDeviceDialogOpen}
+        devices={devices}
+        selectedDeviceId={data.medicalDeviceId}
+        onSelectDevice={(deviceId) => onChange({ ...data, medicalDeviceId: deviceId })}
+        title="Sélectionner un appareil"
+      />
+
+      <tr className="bg-green-50 border-b-2 border-green-200">
+        <td className="px-4 py-3">
+          <span className="text-xs text-slate-500">Auto</span>
+        </td>
+        <td className="px-4 py-3">
+          <PatientDisplay
+            patient={selectedPatient}
+            onClick={() => setPatientDialogOpen(true)}
+            placeholder="Sélectionner patient"
+          />
+        </td>
+        <td className="px-4 py-3">
+          <DeviceDisplay
+            device={selectedDevice}
+            onClick={() => setDeviceDialogOpen(true)}
+            placeholder="Sélectionner appareil"
+          />
+        </td>
       <td className="px-4 py-3">
         <div className="space-y-1">
           <Input
@@ -740,48 +747,56 @@ function NewRowComponent({ data, onChange, onSave, onCancel, patients, devices, 
         </div>
       </td>
     </tr>
+    </>
   );
 }
 
 function EditRowComponent({ data, onChange, onSave, onCancel, patients, devices, users }: any) {
+  const [patientDialogOpen, setPatientDialogOpen] = useState(false);
+  const [deviceDialogOpen, setDeviceDialogOpen] = useState(false);
+
+  const selectedPatient = patients.find((p: any) => p.id === data.patientId);
+  const selectedDevice = devices.find((d: any) => d.id === data.medicalDeviceId);
+
   return (
-    <tr className="bg-blue-50 border-b-2 border-blue-200">
+    <>
+      <PatientSelectorDialog
+        open={patientDialogOpen}
+        onOpenChange={setPatientDialogOpen}
+        patients={patients}
+        selectedPatientId={data.patientId}
+        onSelectPatient={(patientId) => onChange({ ...data, patientId })}
+        title="Sélectionner un patient"
+      />
+
+      <MedicalDeviceSelectorDialog
+        open={deviceDialogOpen}
+        onOpenChange={setDeviceDialogOpen}
+        devices={devices}
+        selectedDeviceId={data.medicalDeviceId}
+        onSelectDevice={(deviceId) => onChange({ ...data, medicalDeviceId: deviceId })}
+        title="Sélectionner un appareil"
+      />
+
+      <tr className="bg-blue-50 border-b-2 border-blue-200">
       <td className="px-4 py-3">
-        <span className="text-xs text-slate-500">{data.rentalCode || 'N/A'}</span>
+        <Badge variant="outline" className="text-xs font-mono bg-indigo-50 text-indigo-700 border-indigo-200">
+          {data.rentalCode || 'N/A'}
+        </Badge>
       </td>
       <td className="px-4 py-3">
-        <Select
-          value={data.patientId}
-          onValueChange={(value) => onChange({ ...data, patientId: value })}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Sélectionner patient" />
-          </SelectTrigger>
-          <SelectContent>
-            {patients.map((p: any) => (
-              <SelectItem key={p.id} value={p.id}>
-                {p.firstName} {p.lastName}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <PatientDisplay
+          patient={selectedPatient}
+          onClick={() => setPatientDialogOpen(true)}
+          placeholder="Sélectionner patient"
+        />
       </td>
       <td className="px-4 py-3">
-        <Select
-          value={data.medicalDeviceId}
-          onValueChange={(value) => onChange({ ...data, medicalDeviceId: value })}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Sélectionner appareil" />
-          </SelectTrigger>
-          <SelectContent>
-            {devices.map((d: any) => (
-              <SelectItem key={d.id} value={d.id}>
-                {d.name} - {d.deviceCode}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <DeviceDisplay
+          device={selectedDevice}
+          onClick={() => setDeviceDialogOpen(true)}
+          placeholder="Sélectionner appareil"
+        />
       </td>
       <td className="px-4 py-3">
         <div className="space-y-1">
@@ -905,5 +920,6 @@ function EditRowComponent({ data, onChange, onSave, onCancel, patients, devices,
         </div>
       </td>
     </tr>
+    </>
   );
 }
