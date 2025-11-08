@@ -10,7 +10,8 @@
       "Bash(yarn build)",
       "mcp__postgres__execute_sql",
       "Bash(grep:*)",
-      "Bash(yarn db:seed)"
+      "Bash(yarn db:seed)",
+      "Bash(nul)"
     ],
     "deny": []
   }

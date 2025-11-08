@@ -74,7 +74,7 @@ export function DiagnosticDevicesExcelTable({
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(50);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
 
   // Filter state
   const [searchTerm, setSearchTerm] = useState('');
@@ -583,81 +583,9 @@ export function DiagnosticDevicesExcelTable({
         </div>
       </div>
 
-      {/* Excel-like Table */}
-      <div className="border rounded-lg overflow-x-auto">
-        <table className="w-full border-collapse text-sm">
-          <thead className="bg-gray-100 sticky top-0 z-20">
-            <tr className="border-b">
-              <th className="px-2 py-3 text-left text-xs font-semibold min-w-[100px]">Code</th>
-              <th className="px-2 py-3 text-left text-xs font-semibold min-w-[160px]">Nom</th>
-              <th className="px-2 py-3 text-left text-xs font-semibold min-w-[140px]">Marque</th>
-              <th className="px-2 py-3 text-left text-xs font-semibold min-w-[140px]">Modèle</th>
-              <th className="px-2 py-3 text-left text-xs font-semibold min-w-[160px]">N° Série</th>
-              <th className="px-2 py-3 text-left text-xs font-semibold min-w-[200px]">Description</th>
-              <th className="px-2 py-3 text-left text-xs font-semibold min-w-[160px]">Emplacement</th>
-              <th className="px-2 py-3 text-left text-xs font-semibold min-w-[120px]">Prix Achat</th>
-              <th className="px-2 py-3 text-left text-xs font-semibold min-w-[120px]">Prix Vente</th>
-              <th className="px-2 py-3 text-left text-xs font-semibold min-w-[130px]">Statut</th>
-              <th className="px-2 py-3 text-left text-xs font-semibold min-w-[120px]">Destination</th>
-              <th className="px-2 py-3 text-left text-xs font-semibold min-w-[120px]">Garantie</th>
-              <th className="px-2 py-3 text-left text-xs font-semibold min-w-[140px]">Maintenance</th>
-              <th className="px-3 py-3 text-right text-xs font-semibold sticky right-0 bg-gray-100/95 backdrop-blur-sm z-30 min-w-[120px]">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {/* New device row */}
-            {renderNewDeviceRow()}
-
-            {/* Existing devices */}
-            {paginatedDevices.map((device) => {
-              const isEditing = editingId === device.id;
-
-              return (
-                <tr key={device.id} className={`border-b hover:bg-gray-50 ${isEditing ? 'bg-yellow-50' : ''}`}>
-                  <td className="px-2 py-2">{renderCell(device, 'deviceCode', isEditing)}</td>
-                  <td className="px-2 py-2">{renderCell(device, 'name', isEditing)}</td>
-                  <td className="px-2 py-2">{renderCell(device, 'brand', isEditing)}</td>
-                  <td className="px-2 py-2">{renderCell(device, 'model', isEditing)}</td>
-                  <td className="px-2 py-2">{renderCell(device, 'serialNumber', isEditing)}</td>
-                  <td className="px-2 py-2">{renderCell(device, 'description', isEditing)}</td>
-                  <td className="px-2 py-2">{renderCell(device, 'stockLocationId', isEditing)}</td>
-                  <td className="px-2 py-2">{renderCell(device, 'purchasePrice', isEditing)}</td>
-                  <td className="px-2 py-2">{renderCell(device, 'sellingPrice', isEditing)}</td>
-                  <td className="px-2 py-2">{renderCell(device, 'status', isEditing)}</td>
-                  <td className="px-2 py-2">{renderCell(device, 'destination', isEditing)}</td>
-                  <td className="px-2 py-2">{renderCell(device, 'warranty', isEditing)}</td>
-                  <td className="px-2 py-2">{renderCell(device, 'maintenanceInterval', isEditing)}</td>
-                  <td className={`px-3 py-2 sticky right-0 z-10 ${isEditing ? 'bg-yellow-50/80' : 'bg-white/80'} backdrop-blur-sm`}>
-                    {isEditing ? (
-                      <div className="flex gap-1 justify-end">
-                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleSave}>
-                          <Check className="h-4 w-4 text-green-600" />
-                        </Button>
-                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleCancel}>
-                          <X className="h-4 w-4 text-red-600" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="flex gap-1 justify-end">
-                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => handleEdit(device)}>
-                          <Edit2 className="h-4 w-4 text-blue-600" />
-                        </Button>
-                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => handleDelete(device.id!)}>
-                          <Trash2 className="h-4 w-4 text-red-600" />
-                        </Button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Pagination Controls */}
+      {/* Pagination Controls - Top */}
       {filteredDevices.length > 0 && (
-        <div className="flex items-center justify-between border-t pt-4">
+        <div className="flex items-center justify-between bg-white border rounded-lg p-4">
           <div className="flex items-center gap-4">
             <p className="text-sm text-gray-600">
               Affichage de {startIndex + 1} à {Math.min(endIndex, filteredDevices.length)} sur {filteredDevices.length} appareils
@@ -673,6 +601,7 @@ export function DiagnosticDevicesExcelTable({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="20">20 par page</SelectItem>
                 <SelectItem value="25">25 par page</SelectItem>
                 <SelectItem value="50">50 par page</SelectItem>
                 <SelectItem value="100">100 par page</SelectItem>
@@ -749,6 +678,78 @@ export function DiagnosticDevicesExcelTable({
           </div>
         </div>
       )}
+
+      {/* Excel-like Table */}
+      <div className="border rounded-lg overflow-x-auto">
+        <table className="w-full border-collapse text-sm">
+          <thead className="bg-gray-100 sticky top-0 z-20">
+            <tr className="border-b">
+              <th className="px-2 py-3 text-left text-xs font-semibold min-w-[100px]">Code</th>
+              <th className="px-2 py-3 text-left text-xs font-semibold min-w-[160px]">Nom</th>
+              <th className="px-2 py-3 text-left text-xs font-semibold min-w-[140px]">Marque</th>
+              <th className="px-2 py-3 text-left text-xs font-semibold min-w-[140px]">Modèle</th>
+              <th className="px-2 py-3 text-left text-xs font-semibold min-w-[160px]">N° Série</th>
+              <th className="px-2 py-3 text-left text-xs font-semibold min-w-[200px]">Description</th>
+              <th className="px-2 py-3 text-left text-xs font-semibold min-w-[160px]">Emplacement</th>
+              <th className="px-2 py-3 text-left text-xs font-semibold min-w-[120px]">Prix Achat</th>
+              <th className="px-2 py-3 text-left text-xs font-semibold min-w-[120px]">Prix Vente</th>
+              <th className="px-2 py-3 text-left text-xs font-semibold min-w-[130px]">Statut</th>
+              <th className="px-2 py-3 text-left text-xs font-semibold min-w-[120px]">Destination</th>
+              <th className="px-2 py-3 text-left text-xs font-semibold min-w-[120px]">Garantie</th>
+              <th className="px-2 py-3 text-left text-xs font-semibold min-w-[140px]">Maintenance</th>
+              <th className="px-3 py-3 text-right text-xs font-semibold sticky right-0 bg-gray-100/95 backdrop-blur-sm z-30 min-w-[120px]">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {/* New device row */}
+            {renderNewDeviceRow()}
+
+            {/* Existing devices */}
+            {paginatedDevices.map((device) => {
+              const isEditing = editingId === device.id;
+
+              return (
+                <tr key={device.id} className={`border-b hover:bg-gray-50 ${isEditing ? 'bg-yellow-50' : ''}`}>
+                  <td className="px-2 py-2">{renderCell(device, 'deviceCode', isEditing)}</td>
+                  <td className="px-2 py-2">{renderCell(device, 'name', isEditing)}</td>
+                  <td className="px-2 py-2">{renderCell(device, 'brand', isEditing)}</td>
+                  <td className="px-2 py-2">{renderCell(device, 'model', isEditing)}</td>
+                  <td className="px-2 py-2">{renderCell(device, 'serialNumber', isEditing)}</td>
+                  <td className="px-2 py-2">{renderCell(device, 'description', isEditing)}</td>
+                  <td className="px-2 py-2">{renderCell(device, 'stockLocationId', isEditing)}</td>
+                  <td className="px-2 py-2">{renderCell(device, 'purchasePrice', isEditing)}</td>
+                  <td className="px-2 py-2">{renderCell(device, 'sellingPrice', isEditing)}</td>
+                  <td className="px-2 py-2">{renderCell(device, 'status', isEditing)}</td>
+                  <td className="px-2 py-2">{renderCell(device, 'destination', isEditing)}</td>
+                  <td className="px-2 py-2">{renderCell(device, 'warranty', isEditing)}</td>
+                  <td className="px-2 py-2">{renderCell(device, 'maintenanceInterval', isEditing)}</td>
+                  <td className={`px-3 py-2 sticky right-0 z-10 ${isEditing ? 'bg-yellow-50/80' : 'bg-white/80'} backdrop-blur-sm`}>
+                    {isEditing ? (
+                      <div className="flex gap-1 justify-end">
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleSave}>
+                          <Check className="h-4 w-4 text-green-600" />
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleCancel}>
+                          <X className="h-4 w-4 text-red-600" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-1 justify-end">
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => handleEdit(device)}>
+                          <Edit2 className="h-4 w-4 text-blue-600" />
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => handleDelete(device.id!)}>
+                          <Trash2 className="h-4 w-4 text-red-600" />
+                        </Button>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
 
       {devices.length === 0 && !isAddingNew && (
         <div className="text-center py-8 text-gray-500">
