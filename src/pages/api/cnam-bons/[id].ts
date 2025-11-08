@@ -94,6 +94,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         bonType,
         notes,
         category,
+        currentStep,
+        cnamMonthlyRate,
+        deviceMonthlyRate,
+        coveredMonths,
+        bonAmount,
+        devicePrice,
+        complementAmount,
       } = req.body;
 
       const updateData: any = {};
@@ -107,6 +114,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (bonType !== undefined) updateData.bonType = bonType;
       if (notes !== undefined) updateData.notes = notes;
       if (category !== undefined) updateData.category = category;
+      if (currentStep !== undefined) updateData.currentStep = parseInt(currentStep);
+      if (cnamMonthlyRate !== undefined) updateData.cnamMonthlyRate = parseFloat(cnamMonthlyRate);
+      if (deviceMonthlyRate !== undefined) updateData.deviceMonthlyRate = parseFloat(deviceMonthlyRate);
+      if (coveredMonths !== undefined) updateData.coveredMonths = parseInt(coveredMonths);
+      if (bonAmount !== undefined) updateData.bonAmount = parseFloat(bonAmount);
+      if (devicePrice !== undefined) updateData.devicePrice = parseFloat(devicePrice);
+      if (complementAmount !== undefined) updateData.complementAmount = parseFloat(complementAmount);
 
       const updatedBon = await prisma.cNAMBonRental.update({
         where: { id },

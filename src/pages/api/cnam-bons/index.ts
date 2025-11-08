@@ -116,6 +116,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         saleId,
         patientId,
         category,
+        currentStep,
       } = req.body;
 
       // Validate required fields
@@ -148,6 +149,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           devicePrice,
           complementAmount,
           renewalReminderDays: renewalReminderDays || 30,
+          currentStep: currentStep !== undefined ? parseInt(currentStep) : 1,
           notes,
           patient: {
             connect: { id: patientId },
