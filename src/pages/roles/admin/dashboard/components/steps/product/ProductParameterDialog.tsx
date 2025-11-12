@@ -29,10 +29,14 @@ export default function ProductParameterDialog({
 
   useEffect(() => {
     // Update parameters when product changes or initialParameters are provided
+    console.log('[ProductParameterDialog] Updating parameters:', { initialParameters, productParameters: product?.parameters });
     if (initialParameters) {
       setParameters(initialParameters);
     } else if (product?.parameters) {
       setParameters(product.parameters);
+    } else if (product?.configuration) {
+      // If configuration object is passed (from database)
+      setParameters(product.configuration);
     } else {
       setParameters({});
     }

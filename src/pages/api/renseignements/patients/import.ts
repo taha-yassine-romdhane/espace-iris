@@ -74,34 +74,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Convert to JSON
     const data = XLSX.utils.sheet_to_json(worksheet);
     
-    // Helper function to generate next patient code
-    async function generateNextPatientCode(): Promise<string> {
-      const lastPatient = await prisma.patient.findFirst({
-        where: {
-          patientCode: {
-            startsWith: 'PAT-'
-          }
-        },
-        orderBy: {
-          patientCode: 'desc'
-        }
-      });
-
-      if (lastPatient && lastPatient.patientCode) {
-        const lastNumber = parseInt(lastPatient.patientCode.split('-')[1]);
-        return `PAT-${String(lastNumber + 1).padStart(4, '0')}`;
-      }
-
-      return 'PAT-0001';
-    }
-
     // Process the data
     const results = {
       success: 0,
       failed: 0,
-      updated: 0,
-      errors: [] as string[],
-      warnings: [] as string[]
+      errors: [] as string[]
     };
 
     // Create a cache for doctors and technicians
@@ -195,66 +172,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const telephone = row['Téléphone Principal'] ? normalizeTunisianPhone(row['Téléphone Principal'].toString()) : null;
         const telephoneTwo = row['Téléphone Secondaire'] ? normalizeTunisianPhone(row['Téléphone Secondaire'].toString()) : null;
 
-        // Get or generate patient code
-        let patientCode = row['Code Patient'] ? row['Code Patient'].toString().trim() : '';
-
-        // Check if patient exists by code
-        let existingPatientByCode = null;
+        // Check if patient code is provided and if it already exists
+        const patientCode = row['Code Patient'] ? String(row['Code Patient']).trim() : null;
         if (patientCode) {
-          existingPatientByCode = await prisma.patient.findUnique({
+          const existingPatientByCode = await prisma.patient.findUnique({
             where: { patientCode }
           });
-        }
 
-        // Check for duplicate patients with different code (by phone or CIN)
-        const cin = row['CIN'] ? row['CIN'].toString().trim() : null;
-        let duplicatePatient = null;
-
-        if (telephone || cin) {
-          duplicatePatient = await prisma.patient.findFirst({
-            where: {
-              OR: [
-                telephone ? { telephone } : {},
-                cin ? { cin } : {}
-              ].filter(obj => Object.keys(obj).length > 0)
-            }
-          });
-
-          // If duplicate found
-          if (duplicatePatient) {
-            // If existing patient has no code and we have a code, update the existing patient
-            if (!duplicatePatient.patientCode && patientCode) {
-              existingPatientByCode = duplicatePatient;
-              // Continue to update logic below
-            }
-            // If existing patient has no code and we don't have a code, generate one and update
-            else if (!duplicatePatient.patientCode && !patientCode) {
-              patientCode = await generateNextPatientCode();
-              existingPatientByCode = duplicatePatient;
-              // Continue to update logic below
-            }
-            // If existing patient has a code but it's different from what we provided
-            else if (duplicatePatient.patientCode && patientCode && duplicatePatient.patientCode !== patientCode) {
-              results.failed++;
-              results.errors.push(`Ligne ${i + 2}: DOUBLON DÉTECTÉ - Patient existe avec un code différent (${duplicatePatient.patientCode}). Téléphone ou CIN déjà utilisé par: ${duplicatePatient.firstName} ${duplicatePatient.lastName}`);
-              continue;
-            }
-            // If existing patient has a code and we don't provide one
-            else if (duplicatePatient.patientCode && !patientCode) {
-              results.failed++;
-              results.errors.push(`Ligne ${i + 2}: Patient existe déjà (Code: ${duplicatePatient.patientCode}, Nom: ${duplicatePatient.firstName} ${duplicatePatient.lastName}). Veuillez utiliser le code existant pour mettre à jour.`);
-              continue;
-            }
+          if (existingPatientByCode) {
+            results.failed++;
+            results.errors.push(`Ligne ${i + 2}: Un patient avec ce code existe déjà (${patientCode})`);
+            continue;
           }
         }
 
-        // Generate patient code if not provided
-        if (!patientCode) {
-          patientCode = await generateNextPatientCode();
+        // Check if patient already exists by phone number
+        if (telephone) {
+          const existingPatient = await prisma.patient.findFirst({
+            where: { telephone }
+          });
+
+          if (existingPatient) {
+            results.failed++;
+            results.errors.push(`Ligne ${i + 2}: Un patient avec ce numéro de téléphone existe déjà (${fullName})`);
+            continue;
+          }
         }
 
-        // Prepare patient data (common fields)
-        const patientDataFields = {
+        // Create patient data
+        const patientData: Prisma.PatientCreateInput = {
+          patientCode: row['Code Patient'] || null,
           firstName,
           lastName,
           telephone: telephone || '',
@@ -262,7 +209,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           governorate: row['Gouvernorat'] || null,
           delegation: row['Délégation'] || null,
           detailedAddress: row['Adresse Détaillée'] || null,
-          cin: cin || null,
+          cin: row['CIN'] || null,
           dateOfBirth: parseDate(row['Date de Naissance']),
           cnamId: row['CNAM ID'] || null,
           beneficiaryType: row['Type Bénéficiaire'] || null,
@@ -271,35 +218,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           weight: row['Poids (kg)'] ? parseFloat(row['Poids (kg)']) : null,
           medicalHistory: row['Antécédents'] || null,
           generalNote: row['Note Générale'] || null,
-          doctorId: doctorId || null,
-          technicianId: technicianId || null,
-          userId: session.user.id
+          doctor: doctorId ? { connect: { id: doctorId } } : undefined,
+          technician: technicianId ? { connect: { id: technicianId } } : undefined,
+          assignedTo: { connect: { id: session.user.id } }
         };
 
-        // If patient exists by code, UPDATE it
-        if (existingPatientByCode) {
-          await prisma.patient.update({
-            where: { id: existingPatientByCode.id },
-            data: {
-              ...patientDataFields,
-              patientCode // Update the patient code too
-            }
-          });
-          results.updated++;
-          results.warnings.push(`Ligne ${i + 2}: Patient mis à jour (Code: ${patientCode}, Nom: ${fullName})`);
-        } else {
-          // Create new patient
-          const patientData: Prisma.PatientCreateInput = {
-            patientCode,
-            ...patientDataFields,
-            doctor: doctorId ? { connect: { id: doctorId } } : undefined,
-            technician: technicianId ? { connect: { id: technicianId } } : undefined,
-            assignedTo: { connect: { id: session.user.id } }
-          };
-
-          await prisma.patient.create({ data: patientData });
-          results.success++;
-        }
+        // Create the patient
+        await prisma.patient.create({ data: patientData });
+        results.success++;
         
       } catch (error) {
         results.failed++;
@@ -313,7 +239,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await fs.unlink(file.filepath);
 
     res.status(200).json({
-      message: `Import terminé: ${results.success} patients créés, ${results.updated} mis à jour, ${results.failed} échecs`,
+      message: `Import terminé: ${results.success} patients importés, ${results.failed} échecs`,
       results
     });
     

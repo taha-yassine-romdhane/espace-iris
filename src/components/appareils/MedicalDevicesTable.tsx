@@ -52,7 +52,6 @@ export const MedicalDevicesTable: React.FC<MedicalDevicesTableProps> = ({
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [brandFilter, setBrandFilter] = useState<string>('');
   const [locationFilter, setLocationFilter] = useState<string>('');
-  const [reservedFilter, setReservedFilter] = useState<string>(''); // 'all', 'reserved', 'not_reserved'
   
   // Get unique values for filter dropdowns
   const uniqueStatuses = useMemo(() => {
@@ -105,17 +104,10 @@ export const MedicalDevicesTable: React.FC<MedicalDevicesTableProps> = ({
       filtered = filtered.filter(item => item.stockLocation?.name === locationFilter);
     }
 
-    // Apply reserved filter
-    if (reservedFilter === 'reserved') {
-      filtered = filtered.filter(item => item.reservedUntil && new Date(item.reservedUntil) > new Date());
-    } else if (reservedFilter === 'not_reserved') {
-      filtered = filtered.filter(item => !item.reservedUntil || new Date(item.reservedUntil) <= new Date());
-    }
-
     setFilteredDevices(filtered);
     // Reset to first page when filters change
     setCurrentPage(1);
-  }, [searchQuery, allMedicalDevices, statusFilter, brandFilter, locationFilter, reservedFilter]);
+  }, [searchQuery, allMedicalDevices, statusFilter, brandFilter, locationFilter]);
   
   // Update paginated data when filtered data changes or pagination settings change
   useEffect(() => {
@@ -147,15 +139,13 @@ export const MedicalDevicesTable: React.FC<MedicalDevicesTableProps> = ({
     setStatusFilter('all');
     setBrandFilter('all');
     setLocationFilter('all');
-    setReservedFilter('all');
   };
 
   // Check if any filters are active
-  const hasActiveFilters = searchQuery || 
-    (statusFilter && statusFilter !== 'all') || 
-    (brandFilter && brandFilter !== 'all') || 
-    (locationFilter && locationFilter !== 'all') || 
-    (reservedFilter && reservedFilter !== 'all');
+  const hasActiveFilters = searchQuery ||
+    (statusFilter && statusFilter !== 'all') ||
+    (brandFilter && brandFilter !== 'all') ||
+    (locationFilter && locationFilter !== 'all');
   
   // Pagination navigation functions
   const goToFirstPage = () => setCurrentPage(1);
@@ -235,8 +225,7 @@ export const MedicalDevicesTable: React.FC<MedicalDevicesTableProps> = ({
                   searchQuery,
                   statusFilter && statusFilter !== 'all' ? statusFilter : null,
                   brandFilter && brandFilter !== 'all' ? brandFilter : null,
-                  locationFilter && locationFilter !== 'all' ? locationFilter : null,
-                  reservedFilter && reservedFilter !== 'all' ? reservedFilter : null
+                  locationFilter && locationFilter !== 'all' ? locationFilter : null
                 ].filter(Boolean).length}
               </span>
             )}
@@ -252,7 +241,7 @@ export const MedicalDevicesTable: React.FC<MedicalDevicesTableProps> = ({
         {/* Filter controls */}
         {showFilters && (
           <div className="border rounded-lg p-4 bg-gray-50 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {/* Status filter */}
               <div>
                 <Label className="text-sm font-medium mb-2 block">Statut</Label>
@@ -306,21 +295,6 @@ export const MedicalDevicesTable: React.FC<MedicalDevicesTableProps> = ({
                   </SelectContent>
                 </Select>
               </div>
-
-              {/* Reserved filter */}
-              <div>
-                <Label className="text-sm font-medium mb-2 block">Réservation</Label>
-                <Select value={reservedFilter} onValueChange={setReservedFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Tous" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tous</SelectItem>
-                    <SelectItem value="reserved">Réservés</SelectItem>
-                    <SelectItem value="not_reserved">Non réservés</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
           </div>
         )}
@@ -334,10 +308,9 @@ export const MedicalDevicesTable: React.FC<MedicalDevicesTableProps> = ({
               <TableHead>Nom</TableHead>
               <TableHead>Marque/Modèle</TableHead>
               <TableHead>Num Serie</TableHead>
+              <TableHead>Description</TableHead>
               <TableHead>Emplacement</TableHead>
-              <TableHead>Statut</TableHead>
-              <TableHead>Destination</TableHead>
-              <TableHead>Réservé jusqu'à</TableHead>
+              <TableHead>Statut / Destination</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -357,19 +330,21 @@ export const MedicalDevicesTable: React.FC<MedicalDevicesTableProps> = ({
                 </div>
               </TableCell>
               <TableCell>{device.serialNumber}</TableCell>
+              <TableCell>
+                <div className="text-sm text-gray-600 max-w-xs truncate" title={(device as any).description || ''}>
+                  {(device as any).description || '-'}
+                </div>
+              </TableCell>
               <TableCell>{getLocationName(device)}</TableCell>
               <TableCell>
-                <Badge variant={getStatusBadgeVariant(device.status)}>
-                  {device.status}
-                </Badge>
-              </TableCell>
-              <TableCell>
-                <Badge variant={(device as any).destination === 'FOR_RENT' ? 'secondary' : 'default'}>
-                  {(device as any).destination === 'FOR_RENT' ? 'Location' : 'Vente'}
-                </Badge>
-              </TableCell>
-              <TableCell className="text-sm">
-                {device.reservedUntil ? formatDate(device.reservedUntil) : 'Non réservé'}
+                <div className="flex flex-col gap-1">
+                  <Badge variant={getStatusBadgeVariant(device.status)}>
+                    {device.status}
+                  </Badge>
+                  <Badge variant={(device as any).destination === 'FOR_RENT' ? 'secondary' : 'default'}>
+                    {(device as any).destination === 'FOR_RENT' ? 'Location' : 'Vente'}
+                  </Badge>
+                </div>
               </TableCell>
               <TableCell className="py-1">
                 <div className="flex items-center justify-end gap-2">

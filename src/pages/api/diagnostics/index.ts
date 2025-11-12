@@ -50,26 +50,14 @@ export default async function handler(
 
   try {
     if (req.method === 'GET') {
-      // Get query parameters for filtering
-      const { assignedToMe } = req.query;
-
-      // Build where clause for filtering
+      // Role-based filtering
       const whereClause: any = {};
 
-      // Filter diagnostics for employees - show only diagnostics assigned to them
-      if (assignedToMe === 'true' && session?.user?.id) {
-        // Check if user is assigned as technician to the patient OR performed the diagnostic
-        whereClause.OR = [
-          {
-            patient: {
-              technicianId: session.user.id
-            }
-          },
-          {
-            performedById: session.user.id
-          }
-        ];
+      // If user is EMPLOYEE, only show diagnostics performed by them
+      if (session.user.role === 'EMPLOYEE') {
+        whereClause.performedById = session.user.id;
       }
+      // ADMIN and DOCTOR can see all diagnostics (no filter)
 
       const diagnostics = await prisma.diagnostic.findMany({
         where: whereClause,
@@ -93,7 +81,6 @@ export default async function handler(
               governorate: true,
               delegation: true,
               detailedAddress: true,
-              technicianId: true,
               technician: {
                 select: {
                   id: true,
@@ -230,8 +217,11 @@ export default async function handler(
           followUpRequired: diagnostic.followUpRequired,
           notes: diagnostic.notes,
           performedBy,
+          performedById: diagnostic.performedById, // Include the ID for editing
+          patientId: diagnostic.patientId, // Include patient ID for editing
+          medicalDeviceId: diagnostic.medicalDeviceId, // Include device ID for editing
           result: diagnostic.result,
-          status: diagnostic.result?.status || 'PENDING',
+          status: diagnostic.status, // Use the actual diagnostic status (PENDING, COMPLETED, CANCELLED)
           patient: diagnostic.patient,
           medicalDevice: diagnostic.medicalDevice,
           // Add business outcome data
@@ -269,13 +259,7 @@ export default async function handler(
         notes = data.notes || '';
         totalPrice = data.totalPrice || 0;
         uploadedFileUrls = data.fileUrls || [];
-
-        // NEW FIELDS from updated workflow
-        const diagnosticType = data.diagnosticType || 'IN_CLINIC';
-        const appointmentId = data.appointmentId || null;
-        const reservationDate = data.reservationDate ? new Date(data.reservationDate) : new Date();
-        const resultDueDate = data.resultDueDate ? new Date(data.resultDueDate) : null;
-
+        
         // Validate required fields
         if (!clientId) {
           return res.status(400).json({ error: 'Patient ID is required' });
@@ -302,8 +286,8 @@ export default async function handler(
         }
         
         // Prepare diagnostic data
-        const diagnosticData: any = {
-          medicalDevice: {
+        const diagnosticData = {
+          medicalDevice: { 
             connect: { id: medicalDeviceId }
           },
           diagnosticDate: new Date(),
@@ -311,20 +295,8 @@ export default async function handler(
           followUpDate: followUpDate,
           followUpRequired: followUpDate ? true : false,
           performedBy: { connect: { id: userId } },
-          patient: { connect: { id: clientId } },
-          // NEW FIELDS
-          diagnosticType: diagnosticType,
-          reservationDate: reservationDate,
-          resultDueDate: resultDueDate,
-          fileUrls: uploadedFileUrls
+          patient: { connect: { id: clientId } }
         };
-
-        // Add appointment relation if appointmentId is provided
-        if (appointmentId) {
-          diagnosticData.appointment = {
-            connect: { id: appointmentId }
-          };
-        }
         
         // Generate diagnostic code
         const diagnosticCode = await generateDiagnosticCode(prisma);
@@ -460,15 +432,34 @@ export default async function handler(
 
     if (req.method === 'PUT') {
       try {
-        const { id, ...data } = req.body;
+        const { id, result, ...data } = req.body;
 
+        // Update diagnostic
         const diagnostic = await prisma.diagnostic.update({
           where: { id },
           data: {
             ...data,
-            diagnosticDate: new Date(data.diagnosticDate),
+            diagnosticDate: data.diagnosticDate ? new Date(data.diagnosticDate) : undefined,
+            followUpDate: data.followUpDate ? new Date(data.followUpDate) : undefined,
           }
         });
+
+        // Update or create diagnostic result if provided
+        if (result) {
+          await prisma.diagnosticResult.upsert({
+            where: { diagnosticId: id },
+            update: {
+              iah: result.iah !== null && result.iah !== undefined ? result.iah : null,
+              idValue: result.idValue !== null && result.idValue !== undefined ? result.idValue : null,
+            },
+            create: {
+              diagnosticId: id,
+              iah: result.iah !== null && result.iah !== undefined ? result.iah : null,
+              idValue: result.idValue !== null && result.idValue !== undefined ? result.idValue : null,
+              status: 'PENDING',
+            }
+          });
+        }
 
         return res.status(200).json(diagnostic);
       } catch (error) {
@@ -511,13 +502,12 @@ export default async function handler(
             });
           }
           
-          // 3. Reset the device status to ACTIVE and clear the reservedUntil date
+          // 3. Reset the device status to ACTIVE
           if (diagnostic.medicalDeviceId) {
             await tx.medicalDevice.update({
               where: { id: diagnostic.medicalDeviceId },
-              data: { 
-                status: 'ACTIVE',
-                reservedUntil: null // Clear the reservation date
+              data: {
+                status: 'ACTIVE'
               }
             });
           }

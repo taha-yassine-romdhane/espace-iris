@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSession } from 'next-auth/react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -39,8 +41,9 @@ import {
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { PatientSelectorDialog, PatientDisplay } from "@/components/forms/components/PatientSelectorDialog";
-import { MedicalDeviceSelectorDialog, DeviceDisplay } from "@/components/forms/components/MedicalDeviceSelectorDialog";
+import { PatientSelectorDialog } from "@/components/dialogs/PatientSelectorDialog";
+import { MedicalDeviceSelectorDialog } from "@/components/dialogs/MedicalDeviceSelectorDialog";
+import { EmployeeSelectorDialog } from "@/components/dialogs/EmployeeSelectorDialog";
 
 interface Rental {
   id?: string;
@@ -52,7 +55,7 @@ interface Rental {
   status: string;
   createdById?: string;
   assignedToId?: string;
-  patient?: { id: string; firstName: string; lastName: string; cnamId?: string; telephone?: string };
+  patient?: { id: string; firstName: string; lastName: string; patientCode?: string; cnamId?: string; telephone?: string };
   medicalDevice?: { id: string; name: string; deviceCode: string; rentalPrice: number };
   createdBy?: { id: string; firstName: string; lastName: string };
   assignedTo?: { id: string; firstName: string; lastName: string };
@@ -69,6 +72,7 @@ interface Rental {
 export default function ComprehensiveRentalsTable() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { data: session } = useSession();
 
   // State
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -175,8 +179,10 @@ export default function ComprehensiveRentalsTable() {
           : '';
         const deviceName = rental.medicalDevice?.name?.toLowerCase() || '';
         const rentalCode = rental.rentalCode?.toLowerCase() || '';
+        const deviceCode = rental.medicalDevice?.deviceCode || ''; // Case-sensitive
+        const patientCode = rental.patient?.patientCode || ''; // Case-sensitive
 
-        if (!patientName.includes(search) && !deviceName.includes(search) && !rentalCode.includes(search)) {
+        if (!patientName.includes(search) && !deviceName.includes(search) && !rentalCode.includes(search) && !deviceCode.includes(searchTerm) && !patientCode.includes(searchTerm)) {
           return false;
         }
       }
@@ -795,6 +801,7 @@ export default function ComprehensiveRentalsTable() {
 
 // View Row Component
 function ViewRowComponent({ rental, onEdit, onDelete, getStatusBadge }: any) {
+  const router = useRouter();
   const patientName = rental.patient
     ? `${rental.patient.firstName} ${rental.patient.lastName}`
     : 'N/A';
@@ -810,7 +817,20 @@ function ViewRowComponent({ rental, onEdit, onDelete, getStatusBadge }: any) {
         <div className="flex items-center gap-2">
           <User className="h-4 w-4 text-slate-400" />
           <div>
-            <div className="text-sm font-medium text-slate-900">{patientName}</div>
+            <div
+              className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer transition-colors"
+              onClick={() => router.push(`/roles/admin/renseignement/patient/${rental.patient.id}`)}
+            >
+              {patientName}
+            </div>
+            {rental.patient?.patientCode && (
+              <div
+                className="text-xs text-slate-500 font-mono cursor-pointer hover:text-blue-600 transition-colors"
+                onClick={() => router.push(`/roles/admin/renseignement/patient/${rental.patient.id}`)}
+              >
+                {rental.patient.patientCode}
+              </div>
+            )}
             {rental.patient?.cnamId && (
               <Badge variant="outline" className="text-xs mt-1">
                 <Shield className="h-3 w-3 mr-1" />
@@ -821,14 +841,26 @@ function ViewRowComponent({ rental, onEdit, onDelete, getStatusBadge }: any) {
         </div>
       </td>
       <td className="px-4 py-3">
-        <div className="text-sm font-medium text-slate-900">{rental.medicalDevice?.name || 'N/A'}</div>
-        <div className="text-xs text-slate-500">{rental.medicalDevice?.deviceCode || ''}</div>
+        <div
+          className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer transition-colors"
+          onClick={() => router.push(`/roles/admin/appareils/medical-device/${rental.medicalDevice?.id}`)}
+        >
+          {rental.medicalDevice?.name || 'N/A'}
+        </div>
+        <div
+          className="text-xs text-slate-500 font-mono cursor-pointer hover:text-blue-600 transition-colors"
+          onClick={() => router.push(`/roles/admin/appareils/medical-device/${rental.medicalDevice?.id}`)}
+        >
+          {rental.medicalDevice?.deviceCode || ''}
+        </div>
       </td>
       <td className="px-4 py-3">
         <div className="text-xs text-slate-700">
           <div>Début: {format(new Date(rental.startDate), 'dd/MM/yyyy', { locale: fr })}</div>
           <div className="text-slate-500">
-            Fin: {rental.endDate ? format(new Date(rental.endDate), 'dd/MM/yyyy', { locale: fr }) : 'Ouvert'}
+            Fin: {rental.endDate ? (
+              new Date(rental.endDate).getFullYear() >= 2099 ? 'Ouvert' : format(new Date(rental.endDate), 'dd/MM/yyyy', { locale: fr })
+            ) : 'Ouvert'}
           </div>
         </div>
       </td>
@@ -885,50 +917,59 @@ function ViewRowComponent({ rental, onEdit, onDelete, getStatusBadge }: any) {
 // Due to length, I'll create them as separate components
 
 function NewRowComponent({ data, onChange, onSave, onCancel, patients, devices, users }: any) {
-  const [patientDialogOpen, setPatientDialogOpen] = useState(false);
-  const [deviceDialogOpen, setDeviceDialogOpen] = useState(false);
+  const { data: session } = useSession();
 
-  const selectedPatient = patients.find((p: any) => p.id === data.patientId);
-  const selectedDevice = devices.find((d: any) => d.id === data.medicalDeviceId);
+  const [selectedPatientName, setSelectedPatientName] = useState<string>(
+    data.patientId
+      ? patients.find((p: any) => p.id === data.patientId)
+        ? `${patients.find((p: any) => p.id === data.patientId).firstName} ${patients.find((p: any) => p.id === data.patientId).lastName}`
+        : ''
+      : ''
+  );
+
+  const [selectedDeviceName, setSelectedDeviceName] = useState<string>(
+    data.medicalDeviceId
+      ? devices.find((d: any) => d.id === data.medicalDeviceId)?.name || ''
+      : ''
+  );
+
+  const [selectedAssignedToName, setSelectedAssignedToName] = useState<string>(
+    data.assignedToId
+      ? users.find((u: any) => u.id === data.assignedToId)
+        ? `${users.find((u: any) => u.id === data.assignedToId).firstName} ${users.find((u: any) => u.id === data.assignedToId).lastName}`
+        : ''
+      : ''
+  );
+
+  // Get current user name from session
+  const currentUserName = session?.user?.name || 'Utilisateur actuel';
 
   return (
-    <>
-      <PatientSelectorDialog
-        open={patientDialogOpen}
-        onOpenChange={setPatientDialogOpen}
-        patients={patients}
-        selectedPatientId={data.patientId}
-        onSelectPatient={(patientId) => onChange({ ...data, patientId })}
-        title="Sélectionner un patient"
-      />
-
-      <MedicalDeviceSelectorDialog
-        open={deviceDialogOpen}
-        onOpenChange={setDeviceDialogOpen}
-        devices={devices}
-        selectedDeviceId={data.medicalDeviceId}
-        onSelectDevice={(deviceId) => onChange({ ...data, medicalDeviceId: deviceId })}
-        title="Sélectionner un appareil"
-      />
-
-      <tr className="bg-green-50 border-b-2 border-green-200">
-        <td className="px-4 py-3">
-          <span className="text-xs text-slate-500">Auto</span>
-        </td>
-        <td className="px-4 py-3">
-          <PatientDisplay
-            patient={selectedPatient}
-            onClick={() => setPatientDialogOpen(true)}
-            placeholder="Sélectionner patient"
-          />
-        </td>
-        <td className="px-4 py-3">
-          <DeviceDisplay
-            device={selectedDevice}
-            onClick={() => setDeviceDialogOpen(true)}
-            placeholder="Sélectionner appareil"
-          />
-        </td>
+    <tr className="bg-green-50 border-b-2 border-green-200">
+      <td className="px-4 py-3">
+        <span className="text-xs text-slate-500">Auto</span>
+      </td>
+      <td className="px-4 py-3">
+        <PatientSelectorDialog
+          onSelect={(type, id, name) => {
+            onChange({ ...data, patientId: id });
+            setSelectedPatientName(name);
+          }}
+          selectedId={data.patientId}
+          selectedName={selectedPatientName}
+        />
+      </td>
+      <td className="px-4 py-3">
+        <MedicalDeviceSelectorDialog
+          onSelect={(id, name) => {
+            onChange({ ...data, medicalDeviceId: id });
+            setSelectedDeviceName(name);
+          }}
+          selectedId={data.medicalDeviceId}
+          selectedName={selectedDeviceName}
+          excludeRented={true}
+        />
+      </td>
       <td className="px-4 py-3">
         <div className="space-y-1">
           <Input
@@ -1006,39 +1047,21 @@ function NewRowComponent({ data, onChange, onSave, onCancel, patients, devices, 
         </label>
       </td>
       <td className="px-4 py-3">
-        <Select
-          value={data.createdById || ''}
-          onValueChange={(value) => onChange({ ...data, createdById: value || undefined })}
-        >
-          <SelectTrigger className="text-xs">
-            <SelectValue placeholder="Créé par (auto)" />
-          </SelectTrigger>
-          <SelectContent>
-            {users.map((u: any) => (
-              <SelectItem key={u.id} value={u.id}>
-                {u.firstName} {u.lastName}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="text-xs text-slate-600 bg-slate-50 px-3 py-2 rounded border border-slate-200">
+          {currentUserName}
+        </div>
       </td>
       <td className="px-4 py-3">
-        <Select
-          value={data.assignedToId || 'none'}
-          onValueChange={(value) => onChange({ ...data, assignedToId: value === 'none' ? undefined : value })}
-        >
-          <SelectTrigger className="text-xs">
-            <SelectValue placeholder="Non assigné" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">Non assigné</SelectItem>
-            {users.map((u: any) => (
-              <SelectItem key={u.id} value={u.id}>
-                {u.firstName} {u.lastName}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <EmployeeSelectorDialog
+          onSelect={(id, name) => {
+            onChange({ ...data, assignedToId: id || undefined });
+            setSelectedAssignedToName(name);
+          }}
+          selectedId={data.assignedToId}
+          selectedName={selectedAssignedToName}
+          placeholder="Non assigné"
+          allowNone={true}
+        />
       </td>
       <td className="px-4 py-3 text-right">
         <div className="flex justify-end gap-2">
@@ -1051,57 +1074,67 @@ function NewRowComponent({ data, onChange, onSave, onCancel, patients, devices, 
         </div>
       </td>
     </tr>
-    </>
   );
 }
 
 function EditRowComponent({ data, onChange, onSave, onCancel, patients, devices, users }: any) {
-  const [patientDialogOpen, setPatientDialogOpen] = useState(false);
-  const [deviceDialogOpen, setDeviceDialogOpen] = useState(false);
+  const [selectedPatientName, setSelectedPatientName] = useState<string>(
+    data.patientId
+      ? patients.find((p: any) => p.id === data.patientId)
+        ? `${patients.find((p: any) => p.id === data.patientId).firstName} ${patients.find((p: any) => p.id === data.patientId).lastName}`
+        : ''
+      : ''
+  );
 
-  const selectedPatient = patients.find((p: any) => p.id === data.patientId);
-  const selectedDevice = devices.find((d: any) => d.id === data.medicalDeviceId);
+  const [selectedDeviceName, setSelectedDeviceName] = useState<string>(
+    data.medicalDeviceId
+      ? devices.find((d: any) => d.id === data.medicalDeviceId)?.name || ''
+      : ''
+  );
+
+  const [selectedAssignedToName, setSelectedAssignedToName] = useState<string>(
+    data.assignedToId
+      ? users.find((u: any) => u.id === data.assignedToId)
+        ? `${users.find((u: any) => u.id === data.assignedToId).firstName} ${users.find((u: any) => u.id === data.assignedToId).lastName}`
+        : ''
+      : ''
+  );
+
+  // Get the creator name from the data (already set when rental was created)
+  const createdByName = data.createdBy
+    ? `${data.createdBy.firstName} ${data.createdBy.lastName}`
+    : users.find((u: any) => u.id === data.createdById)
+    ? `${users.find((u: any) => u.id === data.createdById).firstName} ${users.find((u: any) => u.id === data.createdById).lastName}`
+    : 'N/A';
 
   return (
-    <>
-      <PatientSelectorDialog
-        open={patientDialogOpen}
-        onOpenChange={setPatientDialogOpen}
-        patients={patients}
-        selectedPatientId={data.patientId}
-        onSelectPatient={(patientId) => onChange({ ...data, patientId })}
-        title="Sélectionner un patient"
-      />
-
-      <MedicalDeviceSelectorDialog
-        open={deviceDialogOpen}
-        onOpenChange={setDeviceDialogOpen}
-        devices={devices}
-        selectedDeviceId={data.medicalDeviceId}
-        onSelectDevice={(deviceId) => onChange({ ...data, medicalDeviceId: deviceId })}
-        title="Sélectionner un appareil"
-      />
-
-      <tr className="bg-blue-50 border-b-2 border-blue-200">
-        <td className="px-4 py-3">
-          <Badge variant="outline" className="text-xs font-mono bg-indigo-50 text-indigo-700 border-indigo-200">
-            {data.rentalCode || 'N/A'}
-          </Badge>
-        </td>
-        <td className="px-4 py-3">
-          <PatientDisplay
-            patient={selectedPatient}
-            onClick={() => setPatientDialogOpen(true)}
-            placeholder="Sélectionner patient"
-          />
-        </td>
-        <td className="px-4 py-3">
-          <DeviceDisplay
-            device={selectedDevice}
-            onClick={() => setDeviceDialogOpen(true)}
-            placeholder="Sélectionner appareil"
-          />
-        </td>
+    <tr className="bg-blue-50 border-b-2 border-blue-200">
+      <td className="px-4 py-3">
+        <Badge variant="outline" className="text-xs font-mono bg-indigo-50 text-indigo-700 border-indigo-200">
+          {data.rentalCode || 'N/A'}
+        </Badge>
+      </td>
+      <td className="px-4 py-3">
+        <PatientSelectorDialog
+          onSelect={(type, id, name) => {
+            onChange({ ...data, patientId: id });
+            setSelectedPatientName(name);
+          }}
+          selectedId={data.patientId}
+          selectedName={selectedPatientName}
+        />
+      </td>
+      <td className="px-4 py-3">
+        <MedicalDeviceSelectorDialog
+          onSelect={(id, name) => {
+            onChange({ ...data, medicalDeviceId: id });
+            setSelectedDeviceName(name);
+          }}
+          selectedId={data.medicalDeviceId}
+          selectedName={selectedDeviceName}
+          excludeRented={false}
+        />
+      </td>
       <td className="px-4 py-3">
         <div className="space-y-1">
           <Input
@@ -1179,39 +1212,21 @@ function EditRowComponent({ data, onChange, onSave, onCancel, patients, devices,
         </label>
       </td>
       <td className="px-4 py-3">
-        <Select
-          value={data.createdById || ''}
-          onValueChange={(value) => onChange({ ...data, createdById: value || undefined })}
-        >
-          <SelectTrigger className="text-xs">
-            <SelectValue placeholder="Sélectionner" />
-          </SelectTrigger>
-          <SelectContent>
-            {users.map((u: any) => (
-              <SelectItem key={u.id} value={u.id}>
-                {u.firstName} {u.lastName}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="text-xs text-slate-600 bg-slate-50 px-3 py-2 rounded border border-slate-200">
+          {createdByName}
+        </div>
       </td>
       <td className="px-4 py-3">
-        <Select
-          value={data.assignedToId || 'none'}
-          onValueChange={(value) => onChange({ ...data, assignedToId: value === 'none' ? null : value })}
-        >
-          <SelectTrigger className="text-xs">
-            <SelectValue placeholder="Non assigné" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">Non assigné</SelectItem>
-            {users.map((u: any) => (
-              <SelectItem key={u.id} value={u.id}>
-                {u.firstName} {u.lastName}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <EmployeeSelectorDialog
+          onSelect={(id, name) => {
+            onChange({ ...data, assignedToId: id || undefined });
+            setSelectedAssignedToName(name);
+          }}
+          selectedId={data.assignedToId}
+          selectedName={selectedAssignedToName}
+          placeholder="Non assigné"
+          allowNone={true}
+        />
       </td>
       <td className="px-4 py-3 text-right">
         <div className="flex justify-end gap-2">
@@ -1224,6 +1239,5 @@ function EditRowComponent({ data, onChange, onSave, onCancel, patients, devices,
         </div>
       </td>
     </tr>
-    </>
   );
 }

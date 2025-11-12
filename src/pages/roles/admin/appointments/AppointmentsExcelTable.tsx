@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import Link from 'next/link';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -25,6 +26,7 @@ interface Patient {
   lastName: string;
   name: string;
   telephone?: string;
+  patientCode?: string;
 }
 
 interface Employee {
@@ -42,6 +44,7 @@ interface Appointment {
     firstName: string;
     lastName: string;
     telephone?: string;
+    patientCode?: string;
   };
   appointmentType: string;
   scheduledDate: Date | string;
@@ -543,10 +546,21 @@ export default function AppointmentsExcelTable() {
         );
 
       case 'patientId':
-        const patientFullName = appointment.patient
-          ? `${appointment.patient.firstName || ''} ${appointment.patient.lastName || ''}`.trim()
-          : '-';
-        return <span className="text-xs">{patientFullName || '-'}</span>;
+        if (!appointment.patient) return <span className="text-xs">-</span>;
+        const patientFullName = `${appointment.patient.firstName || ''} ${appointment.patient.lastName || ''}`.trim();
+        return (
+          <div className="flex flex-col gap-0.5">
+            <Link
+              href={`/roles/admin/renseignement/patient/${appointment.patientId}`}
+              className="text-xs text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+            >
+              {patientFullName || '-'}
+            </Link>
+            {appointment.patient.patientCode && (
+              <span className="text-xs font-mono text-gray-500">{appointment.patient.patientCode}</span>
+            )}
+          </div>
+        );
 
       case 'appointmentType':
         const typeLabel = APPOINTMENT_TYPES.find(t => t.value === appointment.appointmentType)?.label || appointment.appointmentType;

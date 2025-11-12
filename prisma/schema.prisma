@@ -298,7 +298,6 @@ model Payment {
   paymentCode      String?         @unique
   paymentType      PaymentType     @default(RENTAL)
   source           PaymentSource   @default(AUTRE) // Source of payment: SALE, RENTAL, DIAGNOSTIC, AUTRE
-  rentalPeriodId   String?
   cnamBonId        String?         @map("cnamBondId") // Link to CNAM bon for CNAM payments
   amount           Decimal         @db.Decimal(10, 2)
   method           PaymentMethod
@@ -318,6 +317,8 @@ model Payment {
   paymentDate      DateTime        @default(now())
   periodStartDate  DateTime? // Start date of payment period
   periodEndDate    DateTime? // End date of payment period
+  periodNumber     Int? // Period number (1, 2, 3, etc.) - calculated based on payment order
+  gapDays          Int? // Number of gap days between previous period end and current period start
   referenceNumber  String?
   saleId           String?
   cNAMDossierId    String?
@@ -333,9 +334,8 @@ model Payment {
   company          Company?        @relation(fields: [companyId], references: [id])
   patient          Patient?        @relation(fields: [patientId], references: [id])
   rental           Rental?         @relation(fields: [rentalId], references: [id])
-  rentalPeriod     RentalPeriod?   @relation(fields: [rentalPeriodId], references: [id])
+  sale             Sale?           @relation(fields: [saleId], references: [id])
   paymentDetails   PaymentDetail[]
-  sale             Sale?
 }
 
 model PaymentDetail {
@@ -506,7 +506,6 @@ model Rental {
   accessories   RentalAccessory[]
   configuration RentalConfiguration?
   gaps          RentalGap[]
-  rentalPeriods RentalPeriod[]
 
   @@index([assignedToId])
 }
@@ -571,14 +570,13 @@ model Sale {
   assignedToId  String? // Employee responsible for managing this sale
   patientId     String?
   companyId     String?
-  paymentId     String?         @unique
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
   cnamDossiers  CNAMDossier[]
   cnamBons      CNAMBonRental[] // CNAM Bons for sales (category: ACHAT)
   company       Company?        @relation(fields: [companyId], references: [id])
   patient       Patient?        @relation(fields: [patientId], references: [id])
-  payment       Payment?        @relation(fields: [paymentId], references: [id])
+  payments      Payment[]       // Multiple payments can be linked to a sale via Payment.saleId
   processedBy   User            @relation(fields: [processedById], references: [id])
   assignedTo    User?           @relation("AssignedSales", fields: [assignedToId], references: [id])
   items         SaleItem[]
@@ -609,10 +607,13 @@ model SaleConfiguration {
   saleItemId String @unique
 
   // CPAP parameters
-  pression      String?
-  pressionRampe String?
-  dureeRampe    Int?
-  epr           String?
+  pression           String?
+  pressionRampe      String?
+  dureeRampe         Int?
+  epr                String?
+  auto1              Boolean?
+  auto2              Boolean?
+  pressionTraitement Int?
 
   // VNI parameters
   ipap                  String?
@@ -785,7 +786,6 @@ model CNAMBonRental {
   patient             Patient        @relation(fields: [patientId], references: [id])
   rental              Rental?        @relation(fields: [rentalId], references: [id])
   sale                Sale?          @relation(fields: [saleId], references: [id])
-  rentalPeriods       RentalPeriod[]
   payments            Payment[] // Link CNAM payments to bons
 
   @@index([patientId])
@@ -796,33 +796,6 @@ model CNAMBonRental {
   @@index([category])
   @@index([bonType(sort: Asc)], map: "CNAMBondRental_bondType_idx")
   @@map("CNAMBonRental")
-}
-
-model RentalPeriod {
-  id                    String         @id @default(cuid())
-  rentalId              String
-  periodNumber          Int? // Sequential period number (1, 2, 3, etc.)
-  gapDays               Int? // Number of days between this period and previous period
-  startDate             DateTime
-  endDate               DateTime
-  expectedAmount        Decimal        @db.Decimal(10, 2)
-  cnamExpectedAmount    Decimal?       @db.Decimal(10, 2) // CNAM portion (e.g., 570 DT)
-  patientExpectedAmount Decimal?       @db.Decimal(10, 2) // Patient portion/complement (e.g., 100 DT)
-  isGapPeriod           Boolean        @default(false)
-  gapReason             String?
-  notes                 String?
-  cnamBonId             String?        @map("cnamBondId")
-  createdAt             DateTime       @default(now())
-  updatedAt             DateTime       @updatedAt
-  cnamBon               CNAMBonRental? @relation(fields: [cnamBonId], references: [id])
-  payments              Payment[]
-  rental                Rental         @relation(fields: [rentalId], references: [id], onDelete: Cascade)
-
-  @@index([rentalId])
-  @@index([startDate])
-  @@index([endDate])
-  @@index([isGapPeriod])
-  @@index([periodNumber])
 }
 
 model RentalAccessory {
@@ -1020,7 +993,7 @@ enum CNAMBonType {
   VNI
   CONCENTRATEUR_OXYGENE
 
-  @@map("CNAMBondType")
+  @@map("CNAMBonType")
 }
 
 enum CNAMBonCategory {

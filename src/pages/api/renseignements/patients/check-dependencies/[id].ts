@@ -47,10 +47,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     if (!patient) {
-      return res.status(404).json({
-        error: 'Patient not found',
-        message: 'Le patient n\'existe pas ou a déjà été supprimé'
-      });
+      return res.status(404).json({ error: 'Patient not found' });
     }
 
     // Check all dependencies
@@ -76,8 +73,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Cascadable - These can be deleted with patient
       prisma.file.count({ where: { patientId: id } }),
       prisma.notification.count({ where: { patientId: id } }),
-      // MedicalDevice doesn't have patientId - devices are linked through rentals/sales
-      Promise.resolve(0), // medicalDevicesCount placeholder
+      // Medical devices are now related through rentals, not directly
+      prisma.rental.count({ where: { patientId: id } }),
       prisma.medicalDeviceParametre.count({ where: { patientId: id } }),
       prisma.patientHistory.count({ where: { patientId: id } })
     ]);

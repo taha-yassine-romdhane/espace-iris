@@ -15,7 +15,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           lastName: 'asc',
         },
       });
-      res.status(200).json(patients);
+
+      // Transform patients to include name field
+      const transformedPatients = patients.map(patient => ({
+        ...patient,
+        name: `${patient.firstName || ''} ${patient.lastName || ''}`.trim() || 'Patient sans nom'
+      }));
+
+      res.status(200).json(transformedPatients);
     } catch (error) {
       console.error('Error fetching patients:', error);
       res.status(500).json({ message: 'Internal Server Error' });

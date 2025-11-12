@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]';
-import { prisma } from '@/lib/prisma';
+import prisma from '@/lib/db';
 import { generatePaymentCode } from '@/utils/idGenerator';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -41,6 +41,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                   id: true,
                   firstName: true,
                   lastName: true,
+                  patientCode: true,
                 },
               },
               medicalDevice: {
@@ -50,12 +51,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                   deviceCode: true,
                 },
               },
-            },
-          },
-          rentalPeriod: {
-            select: {
-              periodNumber: true,
-              gapDays: true,
             },
           },
         },
@@ -76,8 +71,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         paymentDate: payment.paymentDate.toISOString().split('T')[0],
         periodStartDate: payment.periodStartDate ? payment.periodStartDate.toISOString().split('T')[0] : null,
         periodEndDate: payment.periodEndDate ? payment.periodEndDate.toISOString().split('T')[0] : null,
-        periodNumber: payment.rentalPeriod?.periodNumber ?? null,
-        gapDays: payment.rentalPeriod?.gapDays ?? null,
+        periodNumber: payment.periodNumber, // Period number (1, 2, 3, etc.)
+        gapDays: payment.gapDays, // Number of gap days
         paymentMethod: payment.method, // Keep for backward compatibility
         status: payment.status,
         rental: payment.rental ? {
@@ -102,7 +97,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(400).json({ error: 'Missing required fields: rentalId, amount, paymentDate' });
       }
 
-      // Get rental to verify it exists
+      // Get rental to verify it exists and get configuration for rate calculation
       const rental = await prisma.rental.findUnique({
         where: { id: rentalId },
         include: {
@@ -111,6 +106,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               id: true,
               firstName: true,
               lastName: true,
+              patientCode: true,
             },
           },
           medicalDevice: {
@@ -118,6 +114,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               id: true,
               name: true,
               deviceCode: true,
+            },
+          },
+          configuration: {
+            select: {
+              rentalRate: true,
+              billingCycle: true,
             },
           },
         },
@@ -128,25 +130,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       const paymentCode = await generatePaymentCode(prisma as any, 'RENTAL');
-
-      // Create or use existing rental period
-      let rentalPeriodIdToUse = rentalPeriodId;
-
-      // If we have period dates and no existing period ID, create a new rental period
-      if (!rentalPeriodIdToUse && periodStartDate && periodEndDate) {
-        const rentalPeriod = await prisma.rentalPeriod.create({
-          data: {
-            rentalId,
-            periodNumber: periodNumber !== undefined ? periodNumber : null,
-            gapDays: gapDays !== undefined ? gapDays : null,
-            startDate: new Date(periodStartDate),
-            endDate: new Date(periodEndDate),
-            expectedAmount: amount,
-            isGapPeriod: false,
-          },
-        });
-        rentalPeriodIdToUse = rentalPeriod.id;
-      }
 
       const payment = await prisma.payment.create({
         data: {
@@ -166,11 +149,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           patient: {
             connect: { id: rental.patientId }
           },
-          ...(rentalPeriodIdToUse && {
-            rentalPeriod: {
-              connect: { id: rentalPeriodIdToUse }
-            }
-          }),
         },
       });
 

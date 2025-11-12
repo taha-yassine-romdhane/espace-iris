@@ -122,12 +122,6 @@ export default async function handler(
               method: true,
               paymentType: true,
               status: true,
-              rentalPeriod: {
-                select: {
-                  periodNumber: true,
-                  gapDays: true,
-                },
-              },
             },
             orderBy: {
               periodStartDate: 'asc', // Order by period start date ascending to get all payments in chronological order
@@ -180,8 +174,6 @@ export default async function handler(
             method: p.method,
             paymentType: p.paymentType,
             status: p.status,
-            periodNumber: p.rentalPeriod?.periodNumber || null,
-            gapDays: p.rentalPeriod?.gapDays || null,
           })),
 
           patient: rental.patient,

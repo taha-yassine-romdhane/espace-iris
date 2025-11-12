@@ -30,6 +30,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               firstName: true,
               lastName: true,
               telephone: true,
+              patientCode: true,
             },
           },
           assignedTo: {
@@ -101,6 +102,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               firstName: true,
               lastName: true,
               telephone: true,
+              patientCode: true,
             },
           },
           assignedTo: {

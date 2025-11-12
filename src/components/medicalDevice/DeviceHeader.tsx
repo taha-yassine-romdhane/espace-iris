@@ -4,10 +4,16 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface DeviceHeaderProps {
-  device: MedicalDevice & { stockLocation?: { name: string } | null };
+  device: MedicalDevice & {
+    stockLocation?: { name: string } | null;
+    Rental?: Array<{ status: string }>;
+  };
 }
 
 export const DeviceHeader: React.FC<DeviceHeaderProps> = ({ device }) => {
+  // Determine actual device status based on active rentals
+  const hasActiveRental = device.Rental?.some(rental => rental.status === 'ACTIVE');
+  const actualStatus = hasActiveRental ? 'RESERVED' : device.status;
   const getStatusColor = (status: string) => {
     switch (status.toUpperCase()) {
       case 'ACTIVE':
@@ -57,43 +63,63 @@ export const DeviceHeader: React.FC<DeviceHeaderProps> = ({ device }) => {
     <Card className="mb-6">
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
-          <div>
-            <CardTitle className="text-2xl font-bold">{device.name}</CardTitle>
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-2">
+              <CardTitle className="text-2xl font-bold">{device.name}</CardTitle>
+              {device.deviceCode && (
+                <Badge variant="outline" className="font-mono text-sm bg-blue-50 text-blue-700 border-blue-200">
+                  {device.deviceCode}
+                </Badge>
+              )}
+            </div>
             <p className="text-gray-500">
               {device.brand} / {device.model} {device.serialNumber && `• SN: ${device.serialNumber}`}
             </p>
           </div>
-          <Badge className={getStatusColor(device.status)}>
-            {getStatusLabel(device.status)}
+          <Badge className={getStatusColor(actualStatus)}>
+            {getStatusLabel(actualStatus)}
           </Badge>
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {device.deviceCode && (
+            <div>
+              <h3 className="text-sm font-medium text-gray-500">Code Appareil</h3>
+              <p className="font-mono font-semibold text-blue-700">{device.deviceCode}</p>
+            </div>
+          )}
           <div>
             <h3 className="text-sm font-medium text-gray-500">Type</h3>
             <p>{getDeviceTypeLabel(device.type)}</p>
           </div>
           <div>
             <h3 className="text-sm font-medium text-gray-500">Prix de vente</h3>
-            <p>{device.sellingPrice ? `${device.sellingPrice} DT` : 'Non défini'}</p>
+            <p className="font-semibold">{device.sellingPrice ? `${device.sellingPrice} DT` : 'Non défini'}</p>
           </div>
           <div>
             <h3 className="text-sm font-medium text-gray-500">Prix de location</h3>
-            <p>{device.rentalPrice ? `${device.rentalPrice} DT` : 'Non défini'}</p>
+            <p className="font-semibold">{device.rentalPrice ? `${device.rentalPrice} DT/mois` : 'Non défini'}</p>
           </div>
           <div>
-            <h3 className="text-sm font-medium text-gray-500">Disponible pour location</h3>
-            <p>{(device as any).availableForRent ? 'Oui' : 'Non'}</p>
+            <h3 className="text-sm font-medium text-gray-500">Emplacement Stock</h3>
+            <p>{device.stockLocation?.name || <span className="text-orange-600 italic">Non assigné</span>}</p>
           </div>
-          <div>
-            <h3 className="text-sm font-medium text-gray-500">Nécessite maintenance</h3>
-            <p>{device.requiresMaintenance ? 'Oui' : 'Non'}</p>
-          </div>
-          <div>
-            <h3 className="text-sm font-medium text-gray-500">Emplacement</h3>
-            <p>{device.stockLocation?.name || 'Non défini'}</p>
-          </div>
+          {device.purchaseDate && (
+            <div>
+              <h3 className="text-sm font-medium text-gray-500">Date d'achat</h3>
+              <p>{new Date(device.purchaseDate).toLocaleDateString('fr-FR')}</p>
+            </div>
+          )}
+          {device.warrantyExpiration && (
+            <div>
+              <h3 className="text-sm font-medium text-gray-500">Garantie expire le</h3>
+              <p className={new Date(device.warrantyExpiration) < new Date() ? 'text-red-600 font-semibold' : ''}>
+                {new Date(device.warrantyExpiration).toLocaleDateString('fr-FR')}
+                {new Date(device.warrantyExpiration) < new Date() && ' (Expirée)'}
+              </p>
+            </div>
+          )}
         </div>
         {device.description && (
           <div className="mt-4">
@@ -103,8 +129,8 @@ export const DeviceHeader: React.FC<DeviceHeaderProps> = ({ device }) => {
         )}
         {device.technicalSpecs && (
           <div className="mt-4">
-            <h3 className="text-sm font-medium text-gray-500">Spécifications techniques</h3>
-            <p className="mt-1">{device.technicalSpecs}</p>
+            <h3 className="text-sm font-medium text-gray-500">Compteur (heures de fonctionnement)</h3>
+            <p className="mt-1 font-semibold text-lg">{device.technicalSpecs} heures</p>
           </div>
         )}
       </CardContent>

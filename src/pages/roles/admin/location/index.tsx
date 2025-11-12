@@ -7,14 +7,16 @@ import {
   Package,
   Shield,
   BarChart3,
-  Laptop,
+  Stethoscope,
+  Calendar,
 } from "lucide-react";
 import ComprehensiveRentalsTable from './components/ComprehensiveRentalsTable';
 import PaymentsTable from './components/PaymentsTable';
 import RentalAccessoriesTable from './components/RentalAccessoriesTable';
 import CNAMBondsTable from './components/CNAMBondsTable';
 import RentalStatistics from './components/RentalStatistics';
-import RentedDevicesTrackingTable from './components/RentedDevicesTrackingTable';
+import RentalDevicesTable from './components/RentalDevicesTable';
+import { RentalWorkflowGuideDialog } from '@/components/dialogs/RentalWorkflowGuideDialog';
 
 export default function LocationPage() {
   const [activeTab, setActiveTab] = useState("rentals");
@@ -33,6 +35,7 @@ export default function LocationPage() {
               Système de gestion complet des locations et paiements
             </p>
           </div>
+          <RentalWorkflowGuideDialog />
         </div>
 
         {/* Main Tabs */}
@@ -50,8 +53,8 @@ export default function LocationPage() {
                 value="devices"
                 className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm"
               >
-                <Laptop className="h-4 w-4" />
-                <span className="hidden sm:inline">Appareils</span>
+                <Stethoscope className="h-4 w-4" />
+                <span className="hidden sm:inline">Articles</span>
               </TabsTrigger>
               <TabsTrigger
                 value="cnam"
@@ -88,7 +91,7 @@ export default function LocationPage() {
             </TabsContent>
 
             <TabsContent value="devices" className="p-6">
-              <RentedDevicesTrackingTable />
+              <RentalDevicesTable />
             </TabsContent>
 
             <TabsContent value="cnam" className="p-6">

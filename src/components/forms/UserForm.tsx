@@ -34,7 +34,6 @@ interface UserFormProps {
   onChange: (name: string, value: string | boolean) => void;
   onSubmit: () => void;
   onCancel: () => void;
-  restrictRole?: Role; // If provided, only this role can be selected
 }
 
 const UserForm: React.FC<UserFormProps> = ({
@@ -42,8 +41,7 @@ const UserForm: React.FC<UserFormProps> = ({
   isEditMode = false,
   onChange,
   onSubmit,
-  onCancel,
-  restrictRole
+  onCancel
 }) => {
   const [showPassword, setShowPassword] = useState(false);
 
@@ -126,7 +124,7 @@ const UserForm: React.FC<UserFormProps> = ({
                       name="email"
                       value={formData.email}
                       onChange={handleInputChange}
-                      placeholder="exemple@iris-medical.tn"
+                      placeholder="exemple@elite-medical.tn"
                       className="border-gray-200 focus:border-[#1e3a8a] focus:ring-[#1e3a8a]"
                       required
                     />
@@ -199,61 +197,41 @@ const UserForm: React.FC<UserFormProps> = ({
                       <Briefcase className="w-4 h-4 text-gray-400" />
                       Rôle
                     </Label>
-                    {restrictRole ? (
-                      <div className="px-3 py-2 border border-gray-200 rounded-md bg-gray-50">
-                        <div className="flex items-center gap-2 text-sm text-gray-700">
-                          <div className={`w-2 h-2 rounded-full ${
-                            restrictRole === 'DOCTOR' ? 'bg-red-500' :
-                            restrictRole === 'ADMIN' ? 'bg-blue-500' :
-                            restrictRole === 'MANAGER' ? 'bg-purple-500' :
-                            'bg-green-500'
-                          }`}></div>
-                          <span className="font-medium">
-                            {restrictRole === 'DOCTOR' && 'Médecin'}
-                            {restrictRole === 'ADMIN' && 'Administrateur'}
-                            {restrictRole === 'MANAGER' && 'Manager'}
-                            {restrictRole === 'EMPLOYEE' && 'Employé'}
-                          </span>
-                          <span className="text-xs text-gray-500 ml-auto">(Rôle fixe)</span>
-                        </div>
-                      </div>
-                    ) : (
-                      <Select
-                        name="role"
-                        value={formData.role}
-                        onValueChange={(value) => onChange('role', value)}
-                      >
-                        <SelectTrigger className="border-gray-200 focus:border-[#1e3a8a] focus:ring-[#1e3a8a]">
-                          <SelectValue placeholder="Sélectionner un rôle" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="ADMIN">
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                              Administrateur
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="MANAGER">
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                              Manager
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="DOCTOR">
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                              Médecin
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="EMPLOYEE">
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                              Employé
-                            </div>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
+                    <Select 
+                      name="role" 
+                      value={formData.role} 
+                      onValueChange={(value) => onChange('role', value)}
+                    >
+                      <SelectTrigger className="border-gray-200 focus:border-[#1e3a8a] focus:ring-[#1e3a8a]">
+                        <SelectValue placeholder="Sélectionner un rôle" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ADMIN">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                            Administrateur
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="MANAGER">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                            Manager
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="DOCTOR">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                            Médecin
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="EMPLOYEE">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            Employé
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="bg-gray-50 rounded-lg p-4">

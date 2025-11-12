@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -55,10 +56,10 @@ const medicalDeviceSchema = z.object({
   sellingPrice: z.string().transform(val => val ? parseFloat(val) : null).nullable(),
   technicalSpecs: z.string().optional().nullable(),
   configuration: z.string().optional().nullable(),
+  description: z.string().optional().nullable(),
   status: z.enum(["ACTIVE", "MAINTENANCE", "RETIRED", "RESERVED", "SOLD"]).default("ACTIVE"),
   destination: z.enum(["FOR_SALE", "FOR_RENT"]).default("FOR_SALE"),
   rentalPrice: z.string().transform(val => val ? parseFloat(val) : null).nullable(),
-  requiresMaintenance: z.boolean().default(false),
 }).refine((data) => {
   if (data.name === 'Autre') {
     return !!data.customName && data.customName.length >= 2;
@@ -120,7 +121,6 @@ export function MedicalDeviceForm({ initialData, onSubmit, stockLocations, isEdi
       name: isCustomName ? 'Autre' : initialData?.name,
       customName: isCustomName ? initialData.name : undefined,
       type: "MEDICAL_DEVICE",
-      requiresMaintenance: initialData?.requiresMaintenance || false,
       status: initialData?.status || "ACTIVE",
       destination: initialData?.destination || "FOR_SALE"
     },
@@ -444,20 +444,20 @@ export function MedicalDeviceForm({ initialData, onSubmit, stockLocations, isEdi
 
                     <FormField
                       control={form.control}
-                      name="requiresMaintenance"
+                      name="description"
                       render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                          <div className="space-y-0.5">
-                            <FormLabel className="text-base">
-                              Nécessite Maintenance
-                            </FormLabel>
-                          </div>
+                        <FormItem>
+                          <FormLabel>Description / Notes</FormLabel>
                           <FormControl>
-                            <Switch
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
+                            <Textarea
+                              placeholder="Ajouter des notes ou une description de l'appareil..."
+                              className="resize-none"
+                              rows={4}
+                              {...field}
+                              value={field.value || ''}
                             />
                           </FormControl>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />

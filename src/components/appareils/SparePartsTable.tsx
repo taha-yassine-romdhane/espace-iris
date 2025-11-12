@@ -179,7 +179,7 @@ export function SparePartsTable({
       case 'FOR_SALE':
       case 'ACTIVE':
         return 'default';
-      case 'EN_REPARATION':
+      case 'IN_REPAIR':
       case 'MAINTENANCE':
         return 'secondary';
       case 'VENDU':
@@ -195,7 +195,7 @@ export function SparePartsTable({
       case 'FOR_SALE':
       case 'ACTIVE':
         return 'EN VENTE';
-      case 'EN_REPARATION':
+      case 'IN_REPAIR':
       case 'MAINTENANCE':
         return 'EN RÉPARATION';
       case 'VENDU':
@@ -208,36 +208,17 @@ export function SparePartsTable({
     }
   };
 
-  const renderLocations = (part: Product) => {
-    // Show all stock locations with quantities as badges
-    if (part.stocks && part.stocks.length > 0) {
-      return (
-        <div className="flex flex-col gap-1">
-          {part.stocks.map((stock, index) => (
-            <div key={index} className="flex items-center gap-1">
-              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 flex items-center gap-1">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                </svg>
-                <span className="font-medium">{stock.location?.name || 'Non assigné'}</span>
-              </Badge>
-              <Badge variant="secondary" className="bg-green-50 text-green-700 border-green-200">
-                {stock.quantity}
-              </Badge>
-            </div>
-          ))}
-        </div>
-      );
-    }
-    // Fallback for backwards compatibility
+  const getLocationName = (part: Product) => {
+    // Prefer the name from the primary stockLocation object if it exists
     if (part.stockLocation && part.stockLocation.name) {
-      return (
-        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-          {part.stockLocation.name}
-        </Badge>
-      );
+      return part.stockLocation.name;
     }
-    return <span className="text-gray-400">Non assigné</span>;
+    // Fallback to the location name from the first entry in the stocks array
+    if (part.stocks && part.stocks.length > 0 && part.stocks[0].location && part.stocks[0].location.name) {
+      return part.stocks[0].location.name;
+    }
+    // If no location can be determined, return "Non assigné"
+    return "Non assigné";
   };
 
   if (allSpareParts.length === 0) {
@@ -376,9 +357,8 @@ export function SparePartsTable({
               <TableHead className="py-1">Nom</TableHead>
               <TableHead className="py-1">Marque</TableHead>
               <TableHead className="py-1">Modèle</TableHead>
-              <TableHead className="py-1">Emplacements</TableHead>
-              <TableHead className="py-1">Quantité Totale</TableHead>
-              <TableHead className="py-1">Statut</TableHead>
+              <TableHead>Emplacements (Quantités)</TableHead>
+              <TableHead>Quantité Totale</TableHead>
               <TableHead className="py-1">Prix d&apos;achat</TableHead>
               <TableHead className="py-1">Prix de vente</TableHead>
               <TableHead className="py-1 text-right">Actions</TableHead>
@@ -387,19 +367,29 @@ export function SparePartsTable({
           <TableBody>
             {paginatedData.map((part) => (
             <TableRow key={part.id} className="h-8">
-              <TableCell className="py-2">{part.name}</TableCell>
-              <TableCell className="py-2">{part.brand || '-'}</TableCell>
-              <TableCell className="py-2">{part.model || '-'}</TableCell>
-              <TableCell className="py-2">{renderLocations(part)}</TableCell>
+              <TableCell className="py-1">{part.name}</TableCell>
+              <TableCell className="py-1">{part.brand || '-'}</TableCell>
+              <TableCell className="py-1">{part.model || '-'}</TableCell>
               <TableCell className="py-2">
-                <Badge variant="outline" className="bg-gray-50 font-semibold">
-                  {part.stocks ? part.stocks.reduce((acc, stock) => acc + stock.quantity, 0) : 0}
-                </Badge>
+                {part.stocks && part.stocks.length > 0 ? (
+                  <div className="flex flex-col gap-1">
+                    {part.stocks.map((stock: any) => (
+                      <div key={stock.id} className="text-xs flex items-center gap-2">
+                        <span className="font-medium text-blue-600">{stock.location?.name || 'N/A'}</span>
+                        <span className="text-gray-500">→</span>
+                        <span className="font-semibold">{stock.quantity}</span>
+                        <Badge variant="outline" className="text-xs py-0 px-1">
+                          {getStatusLabel(stock.status)}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-gray-400 text-xs">Aucun stock</span>
+                )}
               </TableCell>
-              <TableCell>
-                <Badge variant={getStatusBadgeVariant(part.status)}>
-                  {getStatusLabel(part.status)}
-                </Badge>
+              <TableCell className="py-1 font-semibold">
+                {part.stocks ? part.stocks.reduce((acc: number, stock: any) => acc + stock.quantity, 0) : 0}
               </TableCell>
               <TableCell className="py-1">{part.purchasePrice ? `${part.purchasePrice} DT` : '-'}</TableCell>
               <TableCell className="py-1">{part.sellingPrice ? `${part.sellingPrice} DT` : '-'}</TableCell>

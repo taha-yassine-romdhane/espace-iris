@@ -94,6 +94,8 @@ interface CNAMRappelRow {
     method: string;
   }>;
   totalPaid?: number;
+  saleAmount?: number; // Total sale amount (finalAmount)
+  remainingAmount?: number; // Amount still to be paid
 
   // CNAM data
   cnamBonNumber?: string;
@@ -121,10 +123,11 @@ export default function CNAMRappelsTable() {
   const router = useRouter();
 
   // Fetch sales with related data - UNIQUE KEY for CNAMRappelsTable
+  // Disable pagination to get all sales for rappel calculations
   const { data: salesData, isLoading: salesLoading } = useQuery({
     queryKey: ['cnam-rappels-sales'],
     queryFn: async () => {
-      const response = await fetch('/api/sales');
+      const response = await fetch('/api/sales?paginate=false&details=true');
       if (!response.ok) throw new Error('Failed to fetch sales');
       const data = await response.json();
       return data.sales || [];
@@ -205,15 +208,29 @@ export default function CNAMRappelsTable() {
       // Get ALL payments for this sale
       const salePayments: Array<{ paymentCode: string; amount: number; method: string }> = [];
 
-      // PRIORITY 1: Use the embedded payment from sale if it exists
-      if (sale.payment && sale.payment.paymentCode) {
-        salePayments.push({
-          paymentCode: sale.payment.paymentCode,
-          amount: Number(sale.payment.amount) || 0,
-          method: sale.payment.method || 'N/A',
+      // PRIORITY 1: Use sale.payments array if it exists (from API with details=true)
+      if (sale.payments && Array.isArray(sale.payments) && sale.payments.length > 0) {
+        sale.payments.forEach((payment: any) => {
+          if (payment.paymentCode) {
+            salePayments.push({
+              paymentCode: payment.paymentCode,
+              amount: Number(payment.amount) || 0,
+              method: payment.method || 'N/A',
+            });
+          }
         });
       }
-      // PRIORITY 2: If no embedded payment but we have standalone payments, use those
+      // PRIORITY 2: Use the aggregated payment.paymentDetails from sale.payment if it exists
+      else if (sale.payment && sale.payment.paymentDetails && Array.isArray(sale.payment.paymentDetails)) {
+        sale.payment.paymentDetails.forEach((detail: any) => {
+          salePayments.push({
+            paymentCode: detail.paymentCode || sale.payment.paymentCode || 'N/A',
+            amount: Number(detail.amount) || 0,
+            method: detail.method || sale.payment.method || 'N/A',
+          });
+        });
+      }
+      // PRIORITY 3: Use standalone payments data if available
       else if (salePaymentsData && Array.isArray(salePaymentsData)) {
         const standalonePayments = salePaymentsData.filter((payment: any) =>
           payment.saleId === sale.id
@@ -232,6 +249,8 @@ export default function CNAMRappelsTable() {
 
       // Calculate total paid
       const totalPaid = salePayments.reduce((sum, p) => sum + Number(p.amount), 0);
+      const saleAmount = Number(sale.finalAmount) || 0;
+      const remainingAmount = saleAmount - totalPaid;
 
       return {
         saleId: sale.id,
@@ -250,6 +269,8 @@ export default function CNAMRappelsTable() {
 
         payments: salePayments,
         totalPaid,
+        saleAmount,
+        remainingAmount,
 
         cnamBonNumber: cnamBon?.bonNumber || cnamBon?.dossierNumber,
         cnamBonType: cnamBon?.bonType,
@@ -539,6 +560,124 @@ export default function CNAMRappelsTable() {
         </div>
       </div>
 
+      {/* Pagination - Top */}
+      <div className="flex items-center justify-between px-4 py-3 bg-white border border-slate-200 rounded-lg mb-3">
+        <div className="flex items-center space-x-4">
+          <div className="text-sm text-slate-600">
+            <span className="font-semibold text-slate-900">{filteredRows.length}</span> rappel(s) au total
+          </div>
+          <Select value={itemsPerPage.toString()} onValueChange={(value) => setItemsPerPage(Number(value))}>
+            <SelectTrigger className="w-[140px] h-9 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="25">25 par page</SelectItem>
+              <SelectItem value="50">50 par page</SelectItem>
+              <SelectItem value="100">100 par page</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex items-center space-x-3">
+          {/* First Page Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(1)}
+            disabled={currentPage === 1}
+            className="h-9 px-2"
+            title="Première page"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className="h-4 w-4 -ml-2" />
+          </Button>
+
+          {/* Previous Page Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+            disabled={currentPage === 1}
+            className="h-9 px-3"
+          >
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Précédent
+          </Button>
+
+          {/* Page Numbers */}
+          <div className="flex items-center space-x-1">
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              let pageNum;
+              if (totalPages <= 5) {
+                pageNum = i + 1;
+              } else if (currentPage <= 3) {
+                pageNum = i + 1;
+              } else if (currentPage >= totalPages - 2) {
+                pageNum = totalPages - 4 + i;
+              } else {
+                pageNum = currentPage - 2 + i;
+              }
+
+              return (
+                <Button
+                  key={pageNum}
+                  variant={currentPage === pageNum ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCurrentPage(pageNum)}
+                  className="h-9 w-9 p-0"
+                >
+                  {pageNum}
+                </Button>
+              );
+            })}
+          </div>
+
+          {/* Next Page Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+            disabled={currentPage === totalPages}
+            className="h-9 px-3"
+          >
+            Suivant
+            <ChevronRight className="h-4 w-4 ml-1" />
+          </Button>
+
+          {/* Last Page Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(totalPages)}
+            disabled={currentPage === totalPages}
+            className="h-9 px-2"
+            title="Dernière page"
+          >
+            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className="h-4 w-4 -ml-2" />
+          </Button>
+
+          {/* Page Jump Input */}
+          <div className="flex items-center space-x-2 ml-2 pl-2 border-l border-slate-300">
+            <span className="text-sm text-slate-600">Aller à:</span>
+            <Input
+              type="number"
+              min="1"
+              max={totalPages}
+              value={currentPage}
+              onChange={(e) => {
+                const page = parseInt(e.target.value);
+                if (page >= 1 && page <= totalPages) {
+                  setCurrentPage(page);
+                }
+              }}
+              className="h-9 w-16 text-sm text-center"
+            />
+            <span className="text-sm text-slate-600">/ {totalPages || 1}</span>
+          </div>
+        </div>
+      </div>
+
       {/* Excel-like Table */}
       <div className="border rounded-lg overflow-hidden bg-white">
         <div className="overflow-x-auto">
@@ -551,7 +690,9 @@ export default function CNAMRappelsTable() {
                 <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[200px]">Client</th>
                 <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[120px]">Code Paiement</th>
                 <th className="px-3 py-3 text-center text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[100px]">Méthode</th>
-                <th className="px-3 py-3 text-right text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[100px]">Montant</th>
+                <th className="px-3 py-3 text-right text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[100px]">Montant Payé</th>
+                <th className="px-3 py-3 text-right text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[100px]">Prix Appareil</th>
+                <th className="px-3 py-3 text-right text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[100px]">Reste à Payer</th>
                 <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[120px]">N° Bon CNAM</th>
                 <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[180px]">Rappel Accessoires (2 ans)</th>
                 <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[180px]">Rappel Appareil (7 ans)</th>
@@ -562,7 +703,7 @@ export default function CNAMRappelsTable() {
             <tbody>
               {paginatedRows.length === 0 ? (
                 <tr>
-                  <td colSpan={12} className="px-3 py-12 text-center">
+                  <td colSpan={14} className="px-3 py-12 text-center">
                     <div className="flex flex-col items-center justify-center space-y-3">
                       <AlertCircle className="h-12 w-12 text-slate-300" />
                       <div className="text-slate-500 font-medium">Aucune vente trouvée</div>
@@ -621,11 +762,27 @@ export default function CNAMRappelsTable() {
                       ) : (
                         <Building2 className="h-4 w-4 text-purple-600" />
                       )}
-                      <div>
-                        <div>{row.clientName}</div>
-                        <Badge variant="outline" className="text-xs mt-1">
+                      <div className="flex flex-col gap-1">
+                        <div
+                          className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer transition-colors"
+                          onClick={() => {
+                            if (row.clientType === 'patient') {
+                              router.push(`/roles/admin/renseignement/patient/${row.clientId}`);
+                            }
+                          }}
+                        >
+                          {row.clientName}
+                        </div>
+                        <div
+                          className="text-xs text-slate-500 font-mono cursor-pointer hover:text-blue-600 transition-colors"
+                          onClick={() => {
+                            if (row.clientType === 'patient') {
+                              router.push(`/roles/admin/renseignement/patient/${row.clientId}`);
+                            }
+                          }}
+                        >
                           {row.clientCode}
-                        </Badge>
+                        </div>
                       </div>
                     </div>
                   </td>
@@ -675,6 +832,34 @@ export default function CNAMRappelsTable() {
                             {row.payments.length} paiements
                           </div>
                         )}
+                      </div>
+                    ) : (
+                      '-'
+                    )}
+                  </td>
+
+                  {/* Sale Amount (Device Price) */}
+                  <td className="px-3 py-2.5 text-right text-sm font-medium border-r border-slate-100">
+                    {row.saleAmount ? (
+                      <div className="font-bold text-blue-700">
+                        {formatCurrency(Number(row.saleAmount))}
+                      </div>
+                    ) : (
+                      '-'
+                    )}
+                  </td>
+
+                  {/* Remaining Amount */}
+                  <td className="px-3 py-2.5 text-right text-sm font-medium border-r border-slate-100">
+                    {row.remainingAmount !== undefined ? (
+                      <div className={`font-bold ${
+                        row.remainingAmount > 0
+                          ? 'text-red-700'
+                          : row.remainingAmount === 0
+                            ? 'text-green-700'
+                            : 'text-orange-700'
+                      }`}>
+                        {formatCurrency(Number(row.remainingAmount))}
                       </div>
                     ) : (
                       '-'
@@ -753,53 +938,6 @@ export default function CNAMRappelsTable() {
               )}
             </tbody>
           </table>
-        </div>
-      </div>
-
-      {/* Pagination */}
-      <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-slate-200 rounded-b-lg">
-        <div className="flex items-center space-x-4">
-          <div className="text-sm text-slate-600">
-            <span className="font-semibold text-slate-900">{filteredRows.length}</span> vente(s) au total
-          </div>
-          <Select value={itemsPerPage.toString()} onValueChange={(value) => setItemsPerPage(Number(value))}>
-            <SelectTrigger className="w-[140px] h-9 text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="25">25 par page</SelectItem>
-              <SelectItem value="50">50 par page</SelectItem>
-              <SelectItem value="100">100 par page</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-            disabled={currentPage === 1}
-            className="h-9 px-3"
-          >
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            Précédent
-          </Button>
-
-          <div className="text-sm text-slate-600">
-            Page {currentPage} sur {totalPages || 1}
-          </div>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-            disabled={currentPage === totalPages || totalPages === 0}
-            className="h-9 px-3"
-          >
-            Suivant
-            <ChevronRight className="h-4 w-4 ml-1" />
-          </Button>
         </div>
       </div>
     </div>

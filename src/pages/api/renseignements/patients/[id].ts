@@ -68,36 +68,24 @@ export default async function handler(
       return res.status(200).json(patient);
     } else if (req.method === 'DELETE') {
       console.log(`Attempting to delete patient with ID: ${id}`);
-
-      // Check if patient exists first
-      const patientExists = await prisma.patient.findUnique({
-        where: { id }
-      });
-
-      if (!patientExists) {
-        return res.status(404).json({
-          error: 'Patient not found',
-          message: 'Le patient n\'existe pas ou a déjà été supprimé'
-        });
-      }
-
+      
       // First delete associated files
       await prisma.file.deleteMany({
         where: {
           patientId: id
         }
       });
-
+      
       console.log(`Deleted associated files for patient: ${id}`);
 
       // Then delete the patient
       const deletedPatient = await prisma.patient.delete({
         where: { id }
       });
-
+      
       console.log(`Successfully deleted patient: ${id}`);
 
-      return res.status(200).json({
+      return res.status(200).json({ 
         message: 'Patient deleted successfully',
         deletedPatient
       });

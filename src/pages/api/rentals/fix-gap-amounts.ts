@@ -32,7 +32,7 @@ export default async function handler(
         rentalPeriods: {
           orderBy: { startDate: 'asc' }
         },
-        cnamBonds: true,
+        cnamBons: true,
         medicalDevice: true,
         configuration: true,
         patient: true
@@ -52,15 +52,16 @@ export default async function handler(
     const { fixedPeriods, corrections } = fixInflatedGapPeriods(
       rental.rentalPeriods.map(p => ({
         ...p,
-        amount: parseFloat(p.amount.toString()),
+        amount: parseFloat(p.expectedAmount.toString()),
+        paymentMethod: 'CASH' as any, // Default since RentalPeriod doesn't have this field
         startDate: p.startDate,
         endDate: p.endDate
       })),
       monthlyPrice,
-      rental.cnamBonds.map(b => ({
+      rental.cnamBons.map(b => ({
         ...b,
-        monthlyAmount: parseFloat(b.monthlyAmount.toString()),
-        totalAmount: parseFloat(b.totalAmount.toString()),
+        monthlyAmount: parseFloat(b.bonAmount.toString()),
+        totalAmount: parseFloat(b.bonAmount.toString()),
         coveredMonths: b.coveredMonths
       }))
     );
@@ -93,7 +94,7 @@ export default async function handler(
           await tx.rentalPeriod.update({
             where: { id: correction.periodId },
             data: {
-              amount: correction.newAmount,
+              expectedAmount: correction.newAmount,
               notes: `Montant corrigé le ${new Date().toLocaleDateString('fr-FR')} - Ancien: ${correction.oldAmount.toFixed(2)} TND`
             }
           });

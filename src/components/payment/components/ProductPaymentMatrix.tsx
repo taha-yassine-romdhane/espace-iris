@@ -35,12 +35,12 @@ interface PaymentAssignment {
   amount: number;
   paymentDetails?: any;
   cnamInfo?: {
-    bondType: string;
+    bonType: string;
     currentStep: number;
     totalSteps: number;
     status: 'en_attente_approbation' | 'approuve' | 'termine' | 'refuse';
     notes?: string;
-    bondAmount?: number;
+    bonAmount?: number;
     devicePrice?: number;
     complementAmount?: number;
   };
@@ -92,7 +92,7 @@ export const ProductPaymentMatrix: React.FC<ProductPaymentMatrixProps> = ({
     selectedProducts: [] as string[],
     paymentMethod: '',
     amount: 0,
-    cnamBondType: ''
+    cnamBonType: ''
   });
 
   // Calculate allocated and remaining amounts per product
@@ -139,7 +139,7 @@ export const ProductPaymentMatrix: React.FC<ProductPaymentMatrixProps> = ({
       amount: newGroupData.amount,
       ...(newGroupData.paymentMethod === 'cnam' && {
         cnamInfo: {
-          bondType: newGroupData.cnamBondType,
+          bonType: newGroupData.cnamBonType,
           currentStep: 1,
           totalSteps: 9,
           status: 'en_attente_approbation' as const
@@ -155,7 +155,7 @@ export const ProductPaymentMatrix: React.FC<ProductPaymentMatrixProps> = ({
       selectedProducts: [],
       paymentMethod: '',
       amount: 0,
-      cnamBondType: ''
+      cnamBonType: ''
     });
     setIsCreatingGroup(false);
   };
@@ -279,7 +279,7 @@ export const ProductPaymentMatrix: React.FC<ProductPaymentMatrixProps> = ({
                   
                   {assignment.cnamInfo && (
                     <div className="text-sm text-blue-600 mt-1">
-                      Bond CNAM: {CNAM_BOND_TYPES.find(b => b.id === assignment.cnamInfo?.bondType)?.label}
+                      Bond CNAM: {CNAM_BOND_TYPES.find(b => b.id === assignment.cnamInfo?.bonType)?.label}
                     </div>
                   )}
                 </div>
@@ -337,9 +337,9 @@ export const ProductPaymentMatrix: React.FC<ProductPaymentMatrixProps> = ({
                   if (value === 'cnam' && newGroupData.selectedProducts.length > 0) {
                     const selectedProduct = products.find(p => newGroupData.selectedProducts.includes(p.id));
                     if (selectedProduct?.type === 'MEDICAL_DEVICE') {
-                      setNewGroupData(prev => ({ ...prev, cnamBondType: 'cpap', amount: 1475 }));
+                      setNewGroupData(prev => ({ ...prev, cnamBonType: 'cpap', amount: 1475 }));
                     } else if (selectedProduct?.name.toLowerCase().includes('masque')) {
-                      setNewGroupData(prev => ({ ...prev, cnamBondType: 'masque', amount: 200 }));
+                      setNewGroupData(prev => ({ ...prev, cnamBonType: 'masque', amount: 200 }));
                     }
                   }
                 }}
@@ -366,13 +366,13 @@ export const ProductPaymentMatrix: React.FC<ProductPaymentMatrixProps> = ({
               <div>
                 <Label>Type de bond CNAM</Label>
                 <Select
-                  value={newGroupData.cnamBondType}
+                  value={newGroupData.cnamBonType}
                   onValueChange={(value) => {
-                    const bondType = CNAM_BOND_TYPES.find(b => b.id === value);
+                    const bonType = CNAM_BOND_TYPES.find(b => b.id === value);
                     setNewGroupData(prev => ({ 
                       ...prev, 
-                      cnamBondType: value, 
-                      amount: bondType?.amount || 0 
+                      cnamBonType: value, 
+                      amount: bonType?.amount || 0 
                     }));
                   }}
                 >
@@ -449,7 +449,7 @@ export const ProductPaymentMatrix: React.FC<ProductPaymentMatrixProps> = ({
                   selectedProducts: [],
                   paymentMethod: '',
                   amount: 0,
-                  cnamBondType: ''
+                  cnamBonType: ''
                 });
               }}
             >

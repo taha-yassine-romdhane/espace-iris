@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useRouter } from 'next/router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,9 +48,9 @@ interface Payment {
   isRentalPayment: boolean;
   rental?: {
     rentalCode: string;
-    patient?: { firstName: string; lastName: string };
+    patient?: { id: string; firstName: string; lastName: string; patientCode?: string };
     company?: { companyName: string };
-    medicalDevice?: { name: string; deviceCode: string };
+    medicalDevice?: { id: string; name: string; deviceCode: string };
   };
 }
 
@@ -91,6 +92,7 @@ const getStatusLabel = (status: string) => {
 
 export default function PaymentsTable() {
   const { toast } = useToast();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newRow, setNewRow] = useState<Partial<Payment> | null>(null);
@@ -921,11 +923,40 @@ export default function PaymentsTable() {
                     <Badge variant="secondary">{payment.rental?.rentalCode}</Badge>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="text-sm font-medium text-slate-900">{clientName}</div>
+                    {payment.rental?.patient ? (
+                      <div>
+                        <div
+                          className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer transition-colors"
+                          onClick={() => router.push(`/roles/admin/renseignement/patient/${payment.rental?.patient?.id}`)}
+                        >
+                          {clientName}
+                        </div>
+                        {payment.rental.patient.patientCode && (
+                          <div
+                            className="text-xs text-slate-500 font-mono cursor-pointer hover:text-blue-600 transition-colors"
+                            onClick={() => router.push(`/roles/admin/renseignement/patient/${payment.rental?.patient?.id}`)}
+                          >
+                            {payment.rental.patient.patientCode}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-sm font-medium text-slate-900">{clientName}</div>
+                    )}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="text-sm text-slate-700">{payment.rental?.medicalDevice?.name || 'N/A'}</div>
-                    <div className="text-xs text-slate-500">{payment.rental?.medicalDevice?.deviceCode}</div>
+                    <div
+                      className="text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer transition-colors"
+                      onClick={() => router.push(`/roles/admin/appareils/medical-device/${payment.rental?.medicalDevice?.id}`)}
+                    >
+                      {payment.rental?.medicalDevice?.name || 'N/A'}
+                    </div>
+                    <div
+                      className="text-xs text-slate-500 font-mono cursor-pointer hover:text-blue-600 transition-colors"
+                      onClick={() => router.push(`/roles/admin/appareils/medical-device/${payment.rental?.medicalDevice?.id}`)}
+                    >
+                      {payment.rental?.medicalDevice?.deviceCode}
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <span className="text-sm font-semibold text-green-700">

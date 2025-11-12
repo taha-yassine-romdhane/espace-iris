@@ -50,12 +50,12 @@ interface PaymentAssignment {
   amount: number;
   paymentDetails?: any;
   cnamInfo?: {
-    bondType: string;
+    bonType: string;
     currentStep: number;
     totalSteps: number;
     status: 'en_attente_approbation' | 'approuve' | 'termine' | 'refuse';
     notes?: string;
-    bondAmount?: number;
+    bonAmount?: number;
     devicePrice?: number;
     complementAmount?: number;
   };

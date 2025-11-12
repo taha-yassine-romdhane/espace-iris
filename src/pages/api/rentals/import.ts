@@ -168,24 +168,8 @@ export default async function handler(
             }
           });
 
-          // 7. Create rental period if dates are provided
-          if (startDate && endDate) {
-            const periodPrice = pricingMode === 'MONTHLY' 
-              ? dailyPrice 
-              : dailyPrice * Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-
-            await tx.rentalPeriod.create({
-              data: {
-                rentalId: rental.id,
-                startDate: startDate,
-                endDate: endDate,
-                amount: periodPrice,
-                paymentMethod: depositMethod as any,
-                notes: `Période importée depuis Excel - ${notes}`,
-                createdAt: startDate
-              }
-            });
-          }
+          // Note: Rental periods are no longer created here
+          // They will be created when payments are recorded
 
           console.log(`✅ Rental imported successfully for ${fullName} - ${serialNumber}`);
         });

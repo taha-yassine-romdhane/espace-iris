@@ -1,21 +1,13 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../auth/[...nextauth]';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const session = await getServerSession(req, res, authOptions);
-  if (!session?.user?.id) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
   const { id } = req.query;
 
   if (!id || typeof id !== 'string') {
-    return res.status(400).json({ error: 'Invalid CNAM bon ID' });
+    return res.status(400).json({ error: 'Invalid bond ID' });
   }
 
-  // GET - Fetch single CNAM bon
   if (req.method === 'GET') {
     try {
       const cnamBon = await prisma.cNAMBonRental.findUnique({
@@ -42,28 +34,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               },
             },
           },
-          sale: {
-            select: {
-              id: true,
-              saleCode: true,
-              invoiceNumber: true,
-              totalAmount: true,
-            },
-          },
-          rentalPeriods: {
-            select: {
-              id: true,
-              startDate: true,
-              endDate: true,
-              expectedAmount: true,
-            },
-          },
           payments: {
             select: {
               id: true,
               paymentCode: true,
               amount: true,
               paymentDate: true,
+              method: true,
               status: true,
             },
           },
@@ -71,58 +48,73 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
 
       if (!cnamBon) {
-        return res.status(404).json({ error: 'CNAM bon not found' });
+        return res.status(404).json({ error: 'CNAM bond not found' });
       }
 
       return res.status(200).json(cnamBon);
     } catch (error) {
-      console.error('Error fetching CNAM bon:', error);
-      return res.status(500).json({ error: 'Failed to fetch CNAM bon' });
+      console.error('Error fetching CNAM bond:', error);
+      return res.status(500).json({ error: 'Failed to fetch CNAM bond' });
     }
   }
 
-  // PATCH/PUT - Update CNAM bon
   if (req.method === 'PATCH' || req.method === 'PUT') {
     try {
       const {
         bonNumber,
-        validationDate,
-        startDate,
-        endDate,
-        amount,
-        status,
         bonType,
-        notes,
+        status,
         category,
         currentStep,
+        dossierNumber,
+        submissionDate,
+        approvalDate,
+        startDate,
+        endDate,
         cnamMonthlyRate,
         deviceMonthlyRate,
         coveredMonths,
-        bonAmount,
-        devicePrice,
-        complementAmount,
+        renewalReminderDays,
+        notes,
       } = req.body;
 
+      // Build update data
       const updateData: any = {};
 
       if (bonNumber !== undefined) updateData.bonNumber = bonNumber;
-      if (validationDate !== undefined) updateData.validationDate = validationDate ? new Date(validationDate) : null;
-      if (startDate !== undefined) updateData.startDate = startDate ? new Date(startDate) : null;
-      if (endDate !== undefined) updateData.endDate = endDate ? new Date(endDate) : null;
-      if (amount !== undefined) updateData.amount = amount;
-      if (status !== undefined) updateData.status = status;
       if (bonType !== undefined) updateData.bonType = bonType;
-      if (notes !== undefined) updateData.notes = notes;
+      if (status !== undefined) updateData.status = status;
       if (category !== undefined) updateData.category = category;
       if (currentStep !== undefined) updateData.currentStep = parseInt(currentStep);
-      if (cnamMonthlyRate !== undefined) updateData.cnamMonthlyRate = parseFloat(cnamMonthlyRate);
-      if (deviceMonthlyRate !== undefined) updateData.deviceMonthlyRate = parseFloat(deviceMonthlyRate);
-      if (coveredMonths !== undefined) updateData.coveredMonths = parseInt(coveredMonths);
-      if (bonAmount !== undefined) updateData.bonAmount = parseFloat(bonAmount);
-      if (devicePrice !== undefined) updateData.devicePrice = parseFloat(devicePrice);
-      if (complementAmount !== undefined) updateData.complementAmount = parseFloat(complementAmount);
+      if (dossierNumber !== undefined) updateData.dossierNumber = dossierNumber;
+      if (submissionDate !== undefined) updateData.submissionDate = submissionDate ? new Date(submissionDate) : null;
+      if (approvalDate !== undefined) updateData.approvalDate = approvalDate ? new Date(approvalDate) : null;
+      if (startDate !== undefined) updateData.startDate = startDate ? new Date(startDate) : null;
+      if (endDate !== undefined) updateData.endDate = endDate ? new Date(endDate) : null;
+      if (renewalReminderDays !== undefined) updateData.renewalReminderDays = parseInt(renewalReminderDays);
+      if (notes !== undefined) updateData.notes = notes;
 
-      const updatedBon = await prisma.cNAMBonRental.update({
+      // If any pricing fields change, recalculate all amounts
+      if (cnamMonthlyRate !== undefined || deviceMonthlyRate !== undefined || coveredMonths !== undefined) {
+        // Get current bond to use existing values if not provided
+        const currentBond = await prisma.cNAMBonRental.findUnique({ where: { id } });
+        if (!currentBond) {
+          return res.status(404).json({ error: 'CNAM bond not found' });
+        }
+
+        const finalCnamRate = cnamMonthlyRate !== undefined ? parseFloat(cnamMonthlyRate) : parseFloat(currentBond.cnamMonthlyRate.toString());
+        const finalDeviceRate = deviceMonthlyRate !== undefined ? parseFloat(deviceMonthlyRate) : parseFloat(currentBond.deviceMonthlyRate.toString());
+        const finalMonths = coveredMonths !== undefined ? parseInt(coveredMonths) : currentBond.coveredMonths;
+
+        updateData.cnamMonthlyRate = finalCnamRate;
+        updateData.deviceMonthlyRate = finalDeviceRate;
+        updateData.coveredMonths = finalMonths;
+        updateData.bonAmount = finalCnamRate * finalMonths;
+        updateData.devicePrice = finalDeviceRate * finalMonths;
+        updateData.complementAmount = (finalDeviceRate * finalMonths) - (finalCnamRate * finalMonths);
+      }
+
+      const updatedBond = await prisma.cNAMBonRental.update({
         where: { id },
         data: updateData,
         include: {
@@ -138,78 +130,46 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             select: {
               id: true,
               rentalCode: true,
-              medicalDevice: {
-                select: {
-                  id: true,
-                  name: true,
-                  deviceCode: true,
-                },
-              },
-            },
-          },
-          sale: {
-            select: {
-              id: true,
-              saleCode: true,
-              invoiceNumber: true,
-              totalAmount: true,
             },
           },
         },
       });
 
-      return res.status(200).json(updatedBon);
+      return res.status(200).json(updatedBond);
     } catch (error) {
-      console.error('Error updating CNAM bon:', error);
-      return res.status(500).json({
-        error: 'Failed to update CNAM bon',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      });
+      console.error('Error updating CNAM bond:', error);
+      return res.status(500).json({ error: 'Failed to update CNAM bond' });
     }
   }
 
-  // DELETE - Delete CNAM bon
   if (req.method === 'DELETE') {
     try {
-      // Check if the bon exists
-      const existingBon = await prisma.cNAMBonRental.findUnique({
+      // Check if bond has related payments
+      const bond = await prisma.cNAMBonRental.findUnique({
         where: { id },
         include: {
-          rentalPeriods: true,
           payments: true,
         },
       });
 
-      if (!existingBon) {
-        return res.status(404).json({ error: 'CNAM bon not found' });
+      if (!bond) {
+        return res.status(404).json({ error: 'CNAM bond not found' });
       }
 
-      // Check if there are associated payments
-      if (existingBon.payments && existingBon.payments.length > 0) {
+      if (bond.payments.length > 0) {
         return res.status(400).json({
-          error: 'Cannot delete CNAM bon with existing payments. Please delete payments first.'
+          error: 'Cannot delete CNAM bond with existing payments. Please remove them first.',
         });
       }
 
-      // Delete associated rental periods first
-      if (existingBon.rentalPeriods && existingBon.rentalPeriods.length > 0) {
-        await prisma.rentalPeriod.deleteMany({
-          where: { cnamBonId: id },
-        });
-      }
-
-      // Delete the CNAM bon
       await prisma.cNAMBonRental.delete({
         where: { id },
       });
 
-      return res.status(200).json({ message: 'CNAM bon deleted successfully' });
+      return res.status(200).json({ message: 'CNAM bond deleted successfully' });
     } catch (error) {
-      console.error('Error deleting CNAM bon:', error);
-      return res.status(500).json({
-        error: 'Failed to delete CNAM bon',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      });
+      console.error('Error deleting CNAM bond:', error);
+      return res.status(500).json({ error: 'Failed to delete CNAM bond' });
     }
   }
 

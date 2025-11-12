@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePicker } from '@/components/ui/date-picker';
 import { useToast } from '@/components/ui/use-toast';
-import { Edit2, Trash2, Check, X, Plus, Search, Stethoscope } from 'lucide-react';
+import { Edit2, Trash2, Check, X, Plus, Search, Stethoscope, ChevronLeft, ChevronRight } from 'lucide-react';
 import { PatientSelector } from '@/components/forms/components/PatientSelector';
 
 interface Diagnostic {
@@ -66,8 +67,13 @@ const getStatusLabel = (status: string): string => {
   return labels[status] || status;
 };
 
-// Calculate severity based on IAH value
-const getSeverity = (iah: number | null | undefined): { label: string; color: string } => {
+// Calculate severity based on IAH value or equipment status
+const getSeverity = (iah: number | null | undefined, hasSale?: boolean, hasRental?: boolean): { label: string; color: string } => {
+  // If patient is equipped (has sale or rental), they are severe
+  if (hasSale || hasRental) {
+    return { label: 'Sévère', color: 'bg-red-100 text-red-800 border-red-300' };
+  }
+
   if (iah === null || iah === undefined) {
     return { label: '-', color: 'bg-gray-100 text-gray-800' };
   }
@@ -105,6 +111,10 @@ export default function DiagnosticsExcelTable() {
     status: 'PENDING',
     diagnosticDate: new Date()
   });
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(50);
 
   // Filter State
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
@@ -351,7 +361,7 @@ export default function DiagnosticsExcelTable() {
 
     // Severity filter
     if (filterSeverity !== 'ALL') {
-      const severity = getSeverity(diag.result?.iah);
+      const severity = getSeverity(diag.result?.iah, diag.hasSale, diag.hasRental);
       if (severity.label !== filterSeverity) return false;
     }
 
@@ -378,6 +388,12 @@ export default function DiagnosticsExcelTable() {
 
     return true;
   });
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredDiagnostics.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedDiagnostics = filteredDiagnostics.slice(startIndex, endIndex);
 
   const renderCell = (diagnostic: Diagnostic, field: string, isEditing: boolean) => {
     const value = isEditing && editedDiagnostic ? (editedDiagnostic as any)[field] : (diagnostic as any)[field];
@@ -534,8 +550,8 @@ export default function DiagnosticsExcelTable() {
           );
 
         case 'severity':
-          // Severity is calculated from IAH, display in edit mode
-          const editSeverity = getSeverity(editedDiagnostic.result?.iah);
+          // Severity is calculated from IAH and equipment status, display in edit mode
+          const editSeverity = getSeverity(editedDiagnostic.result?.iah, editedDiagnostic.hasSale, editedDiagnostic.hasRental);
           return (
             <Badge variant="outline" className={`text-xs ${editSeverity.color}`}>
               {editSeverity.label}
@@ -569,25 +585,54 @@ export default function DiagnosticsExcelTable() {
     // Display mode
     switch (field) {
       case 'diagnosticCode':
+        if (!diagnostic.patient?.id) {
+          return (
+            <Badge variant="outline" className="text-xs font-mono bg-blue-50 text-blue-700 border-blue-200">
+              {diagnostic.diagnosticCode || 'N/A'}
+            </Badge>
+          );
+        }
         return (
-          <Badge variant="outline" className="text-xs font-mono bg-blue-50 text-blue-700 border-blue-200">
-            {diagnostic.diagnosticCode || 'N/A'}
-          </Badge>
+          <Link
+            href={`/roles/admin/renseignement/patient/${diagnostic.patient.id}`}
+            className="inline-block hover:opacity-80 transition-opacity"
+          >
+            <Badge variant="outline" className="text-xs font-mono bg-blue-50 text-blue-700 border-blue-200 cursor-pointer hover:bg-blue-100">
+              {diagnostic.diagnosticCode || 'N/A'}
+            </Badge>
+          </Link>
         );
 
       case 'patientId':
         const patientName = diagnostic.patient
           ? `${diagnostic.patient.firstName || ''} ${diagnostic.patient.lastName || ''}`.trim()
           : '-';
-        return <span className="text-xs whitespace-nowrap">{patientName}</span>;
+        if (!diagnostic.patient?.id || patientName === '-') {
+          return <span className="text-xs whitespace-nowrap">{patientName}</span>;
+        }
+        return (
+          <Link
+            href={`/roles/admin/renseignement/patient/${diagnostic.patient.id}`}
+            className="text-xs whitespace-nowrap text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+          >
+            {patientName}
+          </Link>
+        );
 
       case 'patientCode':
         const patientCode = (diagnostic.patient as any)?.patientCode;
-        if (!patientCode) return <span className="text-xs">-</span>;
+        if (!patientCode || !diagnostic.patient?.id) {
+          return <span className="text-xs">-</span>;
+        }
         return (
-          <Badge variant="outline" className="text-xs font-mono bg-purple-50 text-purple-700 border-purple-200 whitespace-nowrap">
-            {patientCode}
-          </Badge>
+          <Link
+            href={`/roles/admin/renseignement/patient/${diagnostic.patient.id}`}
+            className="inline-block hover:opacity-80 transition-opacity"
+          >
+            <Badge variant="outline" className="text-xs font-mono bg-purple-50 text-purple-700 border-purple-200 whitespace-nowrap cursor-pointer hover:bg-purple-100">
+              {patientCode}
+            </Badge>
+          </Link>
         );
 
       case 'patientPhone':
@@ -634,7 +679,7 @@ export default function DiagnosticsExcelTable() {
         return <span className="text-xs">{diagnostic.result?.idValue !== null && diagnostic.result?.idValue !== undefined ? diagnostic.result.idValue.toFixed(1) : '-'}</span>;
 
       case 'severity':
-        const severity = getSeverity(diagnostic.result?.iah);
+        const severity = getSeverity(diagnostic.result?.iah, diagnostic.hasSale, diagnostic.hasRental);
         return (
           <Badge variant="outline" className={`text-xs ${severity.color}`}>
             {severity.label}
@@ -766,7 +811,7 @@ export default function DiagnosticsExcelTable() {
       </td>
       <td className="px-2 py-2">
         {(() => {
-          const newSeverity = getSeverity((newDiagnostic as any).iah);
+          const newSeverity = getSeverity((newDiagnostic as any).iah, false, false);
           return (
             <Badge variant="outline" className={`text-xs ${newSeverity.color}`}>
               {newSeverity.label}
@@ -821,6 +866,124 @@ export default function DiagnosticsExcelTable() {
           <Plus className="h-4 w-4" />
           Ajouter
         </Button>
+      </div>
+
+      {/* Pagination - Top */}
+      <div className="flex items-center justify-between px-4 py-3 bg-white border border-slate-200 rounded-lg">
+        <div className="flex items-center space-x-4">
+          <div className="text-sm text-slate-600">
+            <span className="font-semibold text-slate-900">{filteredDiagnostics.length}</span> diagnostic(s) au total
+          </div>
+          <Select value={itemsPerPage.toString()} onValueChange={(value) => setItemsPerPage(Number(value))}>
+            <SelectTrigger className="w-[140px] h-9 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="25">25 par page</SelectItem>
+              <SelectItem value="50">50 par page</SelectItem>
+              <SelectItem value="100">100 par page</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex items-center space-x-3">
+          {/* First Page Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(1)}
+            disabled={currentPage === 1}
+            className="h-9 px-2"
+            title="Première page"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className="h-4 w-4 -ml-2" />
+          </Button>
+
+          {/* Previous Page Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+            disabled={currentPage === 1}
+            className="h-9 px-3"
+          >
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Précédent
+          </Button>
+
+          {/* Page Numbers */}
+          <div className="flex items-center space-x-1">
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              let pageNum;
+              if (totalPages <= 5) {
+                pageNum = i + 1;
+              } else if (currentPage <= 3) {
+                pageNum = i + 1;
+              } else if (currentPage >= totalPages - 2) {
+                pageNum = totalPages - 4 + i;
+              } else {
+                pageNum = currentPage - 2 + i;
+              }
+
+              return (
+                <Button
+                  key={pageNum}
+                  variant={currentPage === pageNum ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCurrentPage(pageNum)}
+                  className="h-9 w-9 p-0"
+                >
+                  {pageNum}
+                </Button>
+              );
+            })}
+          </div>
+
+          {/* Next Page Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+            disabled={currentPage === totalPages}
+            className="h-9 px-3"
+          >
+            Suivant
+            <ChevronRight className="h-4 w-4 ml-1" />
+          </Button>
+
+          {/* Last Page Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(totalPages)}
+            disabled={currentPage === totalPages}
+            className="h-9 px-2"
+            title="Dernière page"
+          >
+            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className="h-4 w-4 -ml-2" />
+          </Button>
+
+          {/* Page Jump Input */}
+          <div className="flex items-center space-x-2 ml-2 pl-2 border-l border-slate-300">
+            <span className="text-sm text-slate-600">Aller à:</span>
+            <Input
+              type="number"
+              min="1"
+              max={totalPages}
+              value={currentPage}
+              onChange={(e) => {
+                const page = parseInt(e.target.value);
+                if (page >= 1 && page <= totalPages) {
+                  setCurrentPage(page);
+                }
+              }}
+              className="h-9 w-16 text-sm text-center"
+            />
+            <span className="text-sm text-slate-600">/ {totalPages}</span>
+          </div>
+        </div>
       </div>
 
       {/* Filters */}
@@ -977,7 +1140,7 @@ export default function DiagnosticsExcelTable() {
             <tbody>
               {isAddingNew && renderNewRow()}
 
-              {filteredDiagnostics.length === 0 ? (
+              {paginatedDiagnostics.length === 0 ? (
                 <tr>
                   <td colSpan={15} className="px-2 py-8 text-center">
                     <div className="flex flex-col items-center gap-2 text-gray-500">
@@ -987,7 +1150,7 @@ export default function DiagnosticsExcelTable() {
                   </td>
                 </tr>
               ) : (
-                filteredDiagnostics.map((diagnostic: Diagnostic) => {
+                paginatedDiagnostics.map((diagnostic: Diagnostic) => {
                   const isEditing = editingId === diagnostic.id;
                   return (
                     <tr key={diagnostic.id} className={`border-b ${isEditing ? 'bg-yellow-50' : 'hover:bg-gray-50'}`}>
@@ -1033,11 +1196,6 @@ export default function DiagnosticsExcelTable() {
             </tbody>
           </table>
         </div>
-      </div>
-
-      {/* Summary */}
-      <div className="text-sm text-gray-600">
-        {filteredDiagnostics.length} diagnostic(s) trouvé(s)
       </div>
     </div>
   );

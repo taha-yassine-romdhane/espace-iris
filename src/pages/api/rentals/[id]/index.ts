@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../auth/[...nextauth]';
-import { prisma } from '@/lib/prisma';
+import { authOptions } from '@/pages/api/auth/[...nextauth]';
+import prisma from '@/lib/db';
 
 export default async function handler(
   req: NextApiRequest,
@@ -69,16 +69,6 @@ export default async function handler(
             orderBy: {
               createdAt: 'desc'
             }
-          },
-          // Include rental periods
-          rentalPeriods: {
-            include: {
-              payments: true,
-              cnamBon: true,
-            },
-            orderBy: {
-              startDate: 'asc'
-            }
           }
         },
       });
@@ -97,17 +87,38 @@ export default async function handler(
     case 'PATCH':
       try {
         const updateData = req.body;
-        
-        // Update the rental
-        const updatedRental = await prisma.rental.update({
+
+        // Handle in a transaction to ensure placeholder period is managed correctly
+        const updatedRental = await prisma.$transaction(async (tx) => {
+          // Update the rental
+          const rental = await tx.rental.update({
+            where: { id },
+            data: {
+              ...(updateData.startDate && { startDate: new Date(updateData.startDate) }),
+              ...(updateData.endDate && { endDate: new Date(updateData.endDate) }),
+              ...(updateData.notes !== undefined && { notes: updateData.notes }),
+              ...(updateData.status && { status: updateData.status }),
+              ...(updateData.metadata && { metadata: updateData.metadata }),
+
+              // Statistics dashboard fields
+              ...(updateData.alertDate !== undefined && {
+                alertDate: updateData.alertDate ? new Date(updateData.alertDate) : null
+              }),
+              ...(updateData.titrationReminderDate !== undefined && {
+                titrationReminderDate: updateData.titrationReminderDate ? new Date(updateData.titrationReminderDate) : null
+              }),
+              ...(updateData.appointmentDate !== undefined && {
+                appointmentDate: updateData.appointmentDate ? new Date(updateData.appointmentDate) : null
+              }),
+            },
+          });
+
+          return rental;
+        });
+
+        // Fetch complete rental data with all includes
+        const completeRental = await prisma.rental.findUnique({
           where: { id },
-          data: {
-            ...(updateData.startDate && { startDate: new Date(updateData.startDate) }),
-            ...(updateData.endDate && { endDate: new Date(updateData.endDate) }),
-            ...(updateData.notes !== undefined && { notes: updateData.notes }),
-            ...(updateData.status && { status: updateData.status }),
-            ...(updateData.metadata && { metadata: updateData.metadata }),
-          },
           include: {
             medicalDevice: true,
             patient: {
@@ -115,8 +126,7 @@ export default async function handler(
                 doctor: true,
               }
             },
-            Company: true,
-            payment: {
+            payments: {
               include: {
                 paymentDetails: true,
               },
@@ -141,26 +151,17 @@ export default async function handler(
                 startDate: 'asc'
               }
             },
-            cnamBonds: {
+            cnamBons: {
               orderBy: {
                 createdAt: 'desc'
-              }
-            },
-            rentalPeriods: {
-              include: {
-                payment: true,
-                cnamBond: true,
-              },
-              orderBy: {
-                startDate: 'asc'
               }
             }
           },
         });
-        
-        return res.status(200).json({ 
-          success: true, 
-          rental: updatedRental 
+
+        return res.status(200).json({
+          success: true,
+          rental: completeRental
         });
         
       } catch (error) {
@@ -181,7 +182,6 @@ export default async function handler(
             include: {
               medicalDevice: true,
               patient: true,
-              Company: true,
             }
           });
           
@@ -189,15 +189,9 @@ export default async function handler(
             throw new Error('Rental not found');
           }
           
-          // Update the medical device to remove patient/company association
-          await tx.medicalDevice.update({
-            where: { id: rental.medicalDeviceId },
-            data: {
-              patientId: null,
-              companyId: null,
-            }
-          });
-          
+          // Note: Device assignment is now tracked through rentals, not direct fields
+          // No need to update device separately
+
           // Delete related accessories and restore stock
           const accessories = await tx.rentalAccessory.findMany({
             where: { rentalId: id }
@@ -237,14 +231,9 @@ export default async function handler(
           await tx.rentalGap.deleteMany({
             where: { rentalId: id }
           });
-          
-          // Delete related rental periods
-          await tx.rentalPeriod.deleteMany({
-            where: { rentalId: id }
-          });
-          
-          // Update CNAM bonds to remove rental association
-          await tx.cNAMBondRental.updateMany({
+
+          // Update CNAM bons to remove rental association
+          await tx.cNAMBonRental.updateMany({
             where: { rentalId: id },
             data: { rentalId: null }
           });

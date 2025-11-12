@@ -39,6 +39,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           patient: {
             select: {
               id: true,
+              patientCode: true,
               firstName: true,
               lastName: true,
               cnamId: true,
@@ -63,14 +64,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               saleCode: true,
               invoiceNumber: true,
               totalAmount: true,
-            },
-          },
-          rentalPeriods: {
-            select: {
-              id: true,
-              startDate: true,
-              endDate: true,
-              expectedAmount: true,
             },
           },
           payments: {
@@ -116,7 +109,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         saleId,
         patientId,
         category,
-        currentStep,
       } = req.body;
 
       // Validate required fields
@@ -126,18 +118,45 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
       }
 
+      // Auto-generate bonNumber if not provided - synchronized with DB
+      let finalBonNumber = bonNumber;
+      let finalDossierNumber = dossierNumber;
+
+      if (!finalBonNumber) {
+        // Get total count of all bonds to determine next BL number
+        const totalBonds = await prisma.cNAMBonRental.count();
+        const nextNumber = totalBonds + 1;
+        finalBonNumber = `BL-2025-${String(nextNumber).padStart(4, '0')}`;
+      }
+
+      // Auto-generate dossierNumber if not provided
+      if (!finalDossierNumber) {
+        const bondCategory = category || 'LOCATION';
+        if (bondCategory === 'LOCATION') {
+          const locationCount = await prisma.cNAMBonRental.count({
+            where: { category: 'LOCATION' }
+          });
+          finalDossierNumber = `DOSS-LOC-${String(locationCount + 1).padStart(4, '0')}`;
+        } else {
+          const achatCount = await prisma.cNAMBonRental.count({
+            where: { category: 'ACHAT' }
+          });
+          finalDossierNumber = `DOSS-VEN-${String(achatCount + 1).padStart(4, '0')}`;
+        }
+      }
+
       // Auto-calculate amounts
       const bonAmount = parseFloat(cnamMonthlyRate) * parseInt(coveredMonths);
       const devicePrice = parseFloat(deviceMonthlyRate) * parseInt(coveredMonths);
-      const complementAmount = devicePrice - bonAmount;
+      const complementAmount = Math.max(0, devicePrice - bonAmount);
 
       const cnamBon = await prisma.cNAMBonRental.create({
         data: {
-          bonNumber,
+          bonNumber: finalBonNumber,
           bonType,
           category: category || 'LOCATION', // Default to LOCATION if not specified
           status: status || 'EN_ATTENTE_APPROBATION',
-          dossierNumber,
+          dossierNumber: finalDossierNumber,
           submissionDate: submissionDate ? new Date(submissionDate) : null,
           approvalDate: approvalDate ? new Date(approvalDate) : null,
           startDate: startDate ? new Date(startDate) : null,
@@ -149,7 +168,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           devicePrice,
           complementAmount,
           renewalReminderDays: renewalReminderDays || 30,
-          currentStep: currentStep !== undefined ? parseInt(currentStep) : 1,
           notes,
           patient: {
             connect: { id: patientId },
@@ -169,6 +187,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           patient: {
             select: {
               id: true,
+              patientCode: true,
               firstName: true,
               lastName: true,
               cnamId: true,

@@ -606,9 +606,9 @@ export const SimpleCNAMForm: React.FC<SimplePaymentFormProps & { selectedProduct
   initialValues,
   selectedProducts = []
 }) => {
-  const [bondType, setBondType] = useState(initialValues?.bondType || '');
+  const [bonType, setBondType] = useState(initialValues?.bonType || '');
   const [dossierNumber, setDossierNumber] = useState(initialValues?.dossierNumber || '');
-  const [bondAmount, setBondAmount] = useState(initialValues?.bondAmount || 0);
+  const [bonAmount, setBondAmount] = useState(initialValues?.bonAmount || 0);
   const [productAllocations, setProductAllocations] = useState<Record<string, number>>(
     initialValues?.productAllocations || {}
   );
@@ -621,12 +621,12 @@ export const SimpleCNAMForm: React.FC<SimplePaymentFormProps & { selectedProduct
 
   // Calculate total allocated and remaining
   const totalAllocated = Object.values(productAllocations).reduce((sum, amount) => sum + (amount || 0), 0);
-  const remainingToAllocate = bondAmount - totalAllocated;
+  const remainingToAllocate = bonAmount - totalAllocated;
   const isFullyAllocated = Math.abs(remainingToAllocate) < 0.01;
 
   // Calculate if complement is needed
-  const needsComplement = totalRequired > bondAmount;
-  const complementAmount = needsComplement ? totalRequired - bondAmount : 0;
+  const needsComplement = totalRequired > bonAmount;
+  const complementAmount = needsComplement ? totalRequired - bonAmount : 0;
 
   const handleBondTypeChange = (type: string) => {
     setBondType(type);
@@ -650,7 +650,7 @@ export const SimpleCNAMForm: React.FC<SimplePaymentFormProps & { selectedProduct
     
     // Use cascading allocation algorithm
     const newAllocations: Record<string, number> = {};
-    let remainingAmount = bondAmount;
+    let remainingAmount = bonAmount;
     const unfulfilledProducts = [...selectedProducts];
     
     while (remainingAmount > 0.01 && unfulfilledProducts.length > 0) {
@@ -679,9 +679,9 @@ export const SimpleCNAMForm: React.FC<SimplePaymentFormProps & { selectedProduct
       if (!redistributed) break;
     }
     
-    // Final adjustment to ensure total exactly matches bondAmount
+    // Final adjustment to ensure total exactly matches bonAmount
     const totalAllocated = Object.values(newAllocations).reduce((sum, amount) => sum + amount, 0);
-    const difference = roundToCents(bondAmount - totalAllocated);
+    const difference = roundToCents(bonAmount - totalAllocated);
     
     if (Math.abs(difference) > 0.001 && selectedProducts.length > 0) {
       // Find the product with the most room to absorb the difference
@@ -720,13 +720,13 @@ export const SimpleCNAMForm: React.FC<SimplePaymentFormProps & { selectedProduct
 
     // Use cascading allocation algorithm
     const newAllocations: Record<string, number> = {};
-    let remainingAmount = bondAmount;
+    let remainingAmount = bonAmount;
     
     // Calculate ideal proportional shares
     const idealShares: Record<string, number> = {};
     selectedProducts.forEach(product => {
       const productPrice = Number(product.sellingPrice || 0) * (product.quantity || 1);
-      idealShares[product.id] = (productPrice / totalValue) * bondAmount;
+      idealShares[product.id] = (productPrice / totalValue) * bonAmount;
     });
 
     // Cascading allocation
@@ -782,9 +782,9 @@ export const SimpleCNAMForm: React.FC<SimplePaymentFormProps & { selectedProduct
       }
     }
     
-    // Final adjustment to ensure total exactly matches bondAmount
+    // Final adjustment to ensure total exactly matches bonAmount
     const totalAllocated = Object.values(newAllocations).reduce((sum, amount) => sum + amount, 0);
-    const difference = roundToCents(bondAmount - totalAllocated);
+    const difference = roundToCents(bonAmount - totalAllocated);
     
     if (Math.abs(difference) > 0.001 && selectedProducts.length > 0) {
       // Find the product with the most room to absorb the difference
@@ -829,17 +829,17 @@ export const SimpleCNAMForm: React.FC<SimplePaymentFormProps & { selectedProduct
     
     onSubmit({
       type: 'cnam',
-      amount: bondAmount, // CNAM payment is the bond amount
-      bondType,
+      amount: bonAmount, // CNAM payment is the bond amount
+      bonType,
       dossierNumber,
       classification: 'principale',
       productAllocations, // Include the custom allocations
       cnamInfo: {
-        bondType,
+        bonType,
         currentStep: 1, // Step 1 = En attente d'approbation CNAM
         totalSteps: 7,
         status: 'en_attente_approbation', // Waiting for CNAM approval
-        bondAmount,
+        bonAmount,
         devicePrice: totalRequired,
         complementAmount: needsComplement ? complementAmount : 0,
         productAllocations // Store allocations in CNAM info as well
@@ -863,7 +863,7 @@ export const SimpleCNAMForm: React.FC<SimplePaymentFormProps & { selectedProduct
             <div className="space-y-1">
               <p><strong>Complément requis:</strong></p>
               <p>Prix total: {totalRequired.toFixed(2)} DT</p>
-              <p>Bond CNAM: {bondAmount.toFixed(2)} DT</p>
+              <p>Bond CNAM: {bonAmount.toFixed(2)} DT</p>
               <p className="font-medium text-amber-800">Complément: {complementAmount.toFixed(2)} DT</p>
               <p className="text-sm">Un paiement supplémentaire sera nécessaire.</p>
             </div>
@@ -872,8 +872,8 @@ export const SimpleCNAMForm: React.FC<SimplePaymentFormProps & { selectedProduct
       )}
 
       <div>
-        <Label htmlFor="bondType">Type de bond</Label>
-        <Select value={bondType} onValueChange={handleBondTypeChange}>
+        <Label htmlFor="bonType">Type de bond</Label>
+        <Select value={bonType} onValueChange={handleBondTypeChange}>
           <SelectTrigger className="mt-1">
             <SelectValue placeholder="Sélectionnez un type de bond" />
           </SelectTrigger>
@@ -900,16 +900,16 @@ export const SimpleCNAMForm: React.FC<SimplePaymentFormProps & { selectedProduct
       </div>
 
       <div>
-        <Label htmlFor="bondAmount">Montant du bond CNAM</Label>
+        <Label htmlFor="bonAmount">Montant du bond CNAM</Label>
         <Input
-          id="bondAmount"
+          id="bonAmount"
           type="number"
           step="0.01"
-          value={bondAmount}
+          value={bonAmount}
           onChange={(e) => setBondAmount(parseFloat(e.target.value) || 0)}
           className="mt-1"
           required
-          disabled={bondType && bondType !== 'autre'}
+          disabled={bonType && bonType !== 'autre'}
         />
         <p className="text-xs text-gray-500 mt-1">
           Ce montant sera payé maintenant. {needsComplement && `Le complément de ${complementAmount.toFixed(2)} DT sera payé séparément.`}
@@ -917,7 +917,7 @@ export const SimpleCNAMForm: React.FC<SimplePaymentFormProps & { selectedProduct
       </div>
 
       {/* Product Allocation Section */}
-      {bondAmount > 0 && selectedProducts.length > 0 && (
+      {bonAmount > 0 && selectedProducts.length > 0 && (
         <div className="border rounded-lg p-4 bg-gray-50">
           <div className="flex justify-between items-center mb-4">
             <Label className="text-base font-medium">
@@ -970,7 +970,7 @@ export const SimpleCNAMForm: React.FC<SimplePaymentFormProps & { selectedProduct
                       type="number"
                       step="0.01"
                       min="0"
-                      max={bondAmount}
+                      max={bonAmount}
                       value={allocatedAmount}
                       onChange={(e) => handleProductAllocationChange(product.id, parseFloat(e.target.value) || 0)}
                       className="w-24 text-right"
@@ -987,7 +987,7 @@ export const SimpleCNAMForm: React.FC<SimplePaymentFormProps & { selectedProduct
           <div className="mt-4 p-3 bg-white rounded border">
             <div className="flex justify-between items-center text-sm">
               <span>Total du bond:</span>
-              <span className="font-medium">{bondAmount.toFixed(2)} DT</span>
+              <span className="font-medium">{bonAmount.toFixed(2)} DT</span>
             </div>
             <div className="flex justify-between items-center text-sm">
               <span>Total alloué:</span>

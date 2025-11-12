@@ -74,6 +74,11 @@ export const DeviceRelations: React.FC<DeviceRelationsProps> = ({ device }) => {
     return `${diffDays} jours`;
   };
 
+  // Find the active rental to determine current assignment
+  const activeRental = device.Rental && Array.isArray(device.Rental)
+    ? device.Rental.find(rental => rental.status === 'ACTIVE')
+    : null;
+
   return (
     <Card className="mb-6">
       <CardHeader>
@@ -84,7 +89,38 @@ export const DeviceRelations: React.FC<DeviceRelationsProps> = ({ device }) => {
           {/* Current Assignment */}
           <div>
             <h3 className="text-sm font-medium text-slate-600 mb-3">Assigné à</h3>
-            {device.Patient ? (
+            {activeRental?.patient ? (
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 border">
+                <div className="flex-shrink-0">
+                  <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center">
+                    <UserIcon className="h-4 w-4 text-white" />
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <Link href={`/roles/admin/renseignement/patient/${activeRental.patientId}`} className="font-medium text-slate-900 hover:text-blue-600 transition-colors">
+                    {activeRental.patient.firstName} {activeRental.patient.lastName}
+                  </Link>
+                  <p className="text-sm text-slate-500">Patient (Location active)</p>
+                  {activeRental.patient.patientCode && (
+                    <p className="text-xs text-slate-400 font-mono">{activeRental.patient.patientCode}</p>
+                  )}
+                </div>
+              </div>
+            ) : activeRental?.Company ? (
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 border">
+                <div className="flex-shrink-0">
+                  <div className="h-8 w-8 rounded-full bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center">
+                    <BuildingIcon className="h-4 w-4 text-white" />
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <Link href={`/roles/admin/companies/${activeRental.companyId}`} className="font-medium text-slate-900 hover:text-blue-600 transition-colors">
+                    {activeRental.Company.companyName}
+                  </Link>
+                  <p className="text-sm text-slate-500">Société (Location active)</p>
+                </div>
+              </div>
+            ) : device.Patient ? (
               <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 border">
                 <div className="flex-shrink-0">
                   <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center">
@@ -122,7 +158,7 @@ export const DeviceRelations: React.FC<DeviceRelationsProps> = ({ device }) => {
           {/* Rental History */}
           <div>
             <h3 className="text-sm font-medium text-slate-600 mb-3">Historique des locations</h3>
-            {device.Rental && device.Rental.length > 0 ? (
+            {device.Rental && Array.isArray(device.Rental) && device.Rental.length > 0 ? (
               <div className="space-y-3">
                 {device.Rental.slice(0, 5).map((rental) => (
                   <div key={rental.id} className="border rounded-lg p-4 bg-white hover:shadow-sm transition-shadow">
@@ -184,7 +220,7 @@ export const DeviceRelations: React.FC<DeviceRelationsProps> = ({ device }) => {
           {/* Diagnostics */}
           <div>
             <h3 className="text-sm font-medium text-slate-600 mb-3">Diagnostics</h3>
-            {device.Diagnostic && device.Diagnostic.length > 0 ? (
+            {device.Diagnostic && Array.isArray(device.Diagnostic) && device.Diagnostic.length > 0 ? (
               <div className="space-y-2">
                 {device.Diagnostic.slice(0, 3).map((diagnostic) => (
                   <div key={diagnostic.id} className="flex items-center gap-3 p-3 rounded-lg border bg-white hover:bg-slate-50 transition-colors">

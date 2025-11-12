@@ -123,9 +123,9 @@ const CNAMDossierManager: React.FC<CNAMDossierManagerProps> = ({ payment, onUpda
           </div>
         </div>
         <CardDescription>
-          {payment.cnamBondType && (
+          {payment.cnamBonType && (
             <span className="block mt-1">
-              Type de bon: <span className="font-medium">{bondTypeLabels[payment.cnamBondType as keyof typeof bondTypeLabels]}</span>
+              Type de bon: <span className="font-medium">{bondTypeLabels[payment.cnamBonType as keyof typeof bondTypeLabels]}</span>
             </span>
           )}
           <span className="block mt-1">

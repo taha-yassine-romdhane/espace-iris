@@ -100,8 +100,8 @@ export default function UsersExcelTable({ roleFilter }: UsersExcelTableProps) {
 
   // Filter users by role
   const filteredUsers = useMemo(() => {
-    if (!usersData) return [];
-    let filtered = usersData;
+    if (!usersData || !usersData.users) return [];
+    let filtered = usersData.users;
 
     // Apply role filter
     if (roleFilter && roleFilter !== 'all') {
@@ -162,8 +162,12 @@ export default function UsersExcelTable({ roleFilter }: UsersExcelTableProps) {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const response = await fetch(`/api/users?id=${id}`, { method: 'DELETE' });
-      if (!response.ok) throw new Error('Failed to delete user');
-      return response.json();
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Failed to delete user' }));
+        throw new Error(error.error || 'Failed to delete user');
+      }
+      // 204 No Content response has no body, don't try to parse JSON
+      return response.status === 204 ? null : response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
@@ -171,8 +175,13 @@ export default function UsersExcelTable({ roleFilter }: UsersExcelTableProps) {
       setIsDeleteDialogOpen(false);
       setDeleteUserId(null);
     },
-    onError: () => {
-      toast({ title: 'Error', description: 'Failed to delete user', variant: 'destructive' });
+    onError: (error) => {
+      console.error('Delete error:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to delete user',
+        variant: 'destructive'
+      });
     },
   });
 

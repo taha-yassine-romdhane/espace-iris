@@ -241,9 +241,9 @@ export function AppointmentsTable({ onViewDetails }: AppointmentsTableProps) {
   // Get appointment type display
   const getAppointmentTypeDisplay = (type: string) => {
     switch (type) {
-      case "POLYGRAPHIE":
+      case "DIAGNOSTIC_VISIT":
         return {
-          label: "Polygraphie",
+          label: "Visite Diagnostique",
           badge: "bg-purple-100 text-purple-800 border-purple-200",
           icon: <Home className="h-3 w-3" />
         };
@@ -252,6 +252,12 @@ export function AppointmentsTable({ onViewDetails }: AppointmentsTableProps) {
           label: "Consultation",
           badge: "bg-blue-100 text-blue-800 border-blue-200",
           icon: <Stethoscope className="h-3 w-3" />
+        };
+      case "DIAGNOSTIC":
+        return {
+          label: "Diagnostic",
+          badge: "bg-teal-100 text-teal-800 border-teal-200",
+          icon: <Microscope className="h-3 w-3" />
         };
       case "LOCATION":
         return {
@@ -454,8 +460,9 @@ export function AppointmentsTable({ onViewDetails }: AppointmentsTableProps) {
                 className="w-full px-4 py-3 pr-10 bg-white border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-[#1e3a8a] text-sm shadow-sm hover:shadow-md transition-all duration-200 appearance-none cursor-pointer"
               >
                 <option value="all">Tous les types</option>
-                <option value="POLYGRAPHIE">Polygraphie</option>
+                <option value="DIAGNOSTIC_VISIT">Visite Diagnostique</option>
                 <option value="CONSULTATION">Consultation</option>
+                <option value="DIAGNOSTIC">Diagnostic</option>
                 <option value="LOCATION">Location</option>
                 <option value="VENTE">Vente</option>
                 <option value="MAINTENANCE">Maintenance</option>
@@ -554,8 +561,9 @@ export function AppointmentsTable({ onViewDetails }: AppointmentsTableProps) {
                               </span>
                               <span className="sm:hidden">
                                 {/* Abbreviated labels for mobile */}
-                                {appointment.appointmentType === 'POLYGRAPHIE' ? 'Poly.' :
+                                {appointment.appointmentType === 'DIAGNOSTIC_VISIT' ? 'Visite' :
                                  appointment.appointmentType === 'CONSULTATION' ? 'Consult.' :
+                                 appointment.appointmentType === 'DIAGNOSTIC' ? 'Diag.' :
                                  appointment.appointmentType === 'LOCATION' ? 'Loc.' :
                                  appointment.appointmentType === 'VENTE' ? 'Vente' :
                                  appointment.appointmentType === 'MAINTENANCE' ? 'Maint.' :
@@ -563,12 +571,12 @@ export function AppointmentsTable({ onViewDetails }: AppointmentsTableProps) {
                                  'Autre'}
                               </span>
                             </div>
-                            {/* Show indicator only for polygraphie */}
-                            {appointment.appointmentType === 'POLYGRAPHIE' && (
+                            {/* Show Polygraphie as a small indicator only for diagnostic visits */}
+                            {appointment.appointmentType === 'DIAGNOSTIC_VISIT' && (
                               <div className="text-xs text-purple-600 flex items-center gap-1">
                                 <Stethoscope className="h-3 w-3" />
-                                <span className="hidden md:inline">Diagnostic à domicile</span>
-                                <span className="md:hidden">Diag.</span>
+                                <span className="hidden md:inline">Polygraphie</span>
+                                <span className="md:hidden">Poly.</span>
                               </div>
                             )}
                           </div>

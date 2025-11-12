@@ -25,6 +25,7 @@ interface Patient {
   lastName: string;
   name: string;
   telephone?: string;
+  patientCode?: string;
 }
 
 interface Employee {
@@ -42,6 +43,7 @@ interface Appointment {
     firstName: string;
     lastName: string;
     telephone?: string;
+    patientCode?: string;
   };
   appointmentType: string;
   scheduledDate: Date | string;
@@ -224,6 +226,8 @@ export default function AppointmentsPage() {
     status: 'SCHEDULED',
     location: ''
   });
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [appointmentToDelete, setAppointmentToDelete] = useState<Appointment | null>(null);
 
   // Pagination & Filters
   const [currentPage, setCurrentPage] = useState(1);
@@ -375,11 +379,23 @@ export default function AppointmentsPage() {
     await updateMutation.mutateAsync(editedAppointment);
   };
 
-  const handleDelete = async (appointment: Appointment) => {
+  const handleDelete = (appointment: Appointment) => {
     if (!appointment.id) return;
-    if (confirm("Êtes-vous sûr de vouloir supprimer ce rendez-vous ?")) {
-      await deleteMutation.mutateAsync(appointment.id);
+    setAppointmentToDelete(appointment);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (appointmentToDelete?.id) {
+      await deleteMutation.mutateAsync(appointmentToDelete.id);
+      setDeleteDialogOpen(false);
+      setAppointmentToDelete(null);
     }
+  };
+
+  const cancelDelete = () => {
+    setDeleteDialogOpen(false);
+    setAppointmentToDelete(null);
   };
 
   const handleAddNew = () => setIsAddingNew(true);
@@ -547,7 +563,26 @@ export default function AppointmentsPage() {
         const patientFullName = appointment.patient
           ? `${appointment.patient.firstName || ''} ${appointment.patient.lastName || ''}`.trim()
           : '-';
-        return <span className="text-xs">{patientFullName || '-'}</span>;
+        return appointment.patient ? (
+          <div className="flex flex-col gap-1">
+            <div
+              className="text-xs text-blue-600 hover:text-blue-800 hover:underline cursor-pointer transition-colors font-medium"
+              onClick={() => router.push(`/roles/admin/renseignement/patient/${appointment.patient.id}`)}
+            >
+              {patientFullName}
+            </div>
+            {appointment.patient.patientCode && (
+              <div
+                className="text-xs text-slate-500 font-mono cursor-pointer hover:text-blue-600 transition-colors"
+                onClick={() => router.push(`/roles/admin/renseignement/patient/${appointment.patient.id}`)}
+              >
+                {appointment.patient.patientCode}
+              </div>
+            )}
+          </div>
+        ) : (
+          <span className="text-xs">-</span>
+        );
 
       case 'appointmentType':
         const typeLabel = APPOINTMENT_TYPES.find(t => t.value === appointment.appointmentType)?.label || appointment.appointmentType;
@@ -900,6 +935,84 @@ export default function AppointmentsPage() {
           </Button>
         </div>
       </div>
+
+      {/* Custom Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <Trash2 className="h-5 w-5" />
+              Confirmer la suppression
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-slate-700">
+              Êtes-vous sûr de vouloir supprimer ce rendez-vous ?
+            </p>
+            {appointmentToDelete && (
+              <div className="bg-slate-50 p-3 rounded-md border border-slate-200 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-slate-600">Code:</span>
+                  <Badge variant="outline" className="text-xs font-mono bg-blue-50 text-blue-700 border-blue-200">
+                    {appointmentToDelete.appointmentCode || 'N/A'}
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-slate-600">Type:</span>
+                  <Badge variant="outline" className={`text-xs ${getAppointmentTypeColor(appointmentToDelete.appointmentType)}`}>
+                    {APPOINTMENT_TYPES.find(t => t.value === appointmentToDelete.appointmentType)?.label || appointmentToDelete.appointmentType}
+                  </Badge>
+                </div>
+                {appointmentToDelete.patient && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-slate-600">Patient:</span>
+                    <span className="text-xs text-slate-700">
+                      {appointmentToDelete.patient.firstName} {appointmentToDelete.patient.lastName}
+                    </span>
+                  </div>
+                )}
+                {appointmentToDelete.scheduledDate && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-slate-600">Date:</span>
+                    <span className="text-xs text-slate-700">
+                      {format(new Date(appointmentToDelete.scheduledDate), 'dd/MM/yyyy à HH:mm', { locale: fr })}
+                    </span>
+                  </div>
+                )}
+                {appointmentToDelete.location && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-slate-600">Lieu:</span>
+                    <span className="text-xs text-slate-700">
+                      {appointmentToDelete.location}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+            <p className="text-xs text-red-600 font-medium">
+              ⚠️ Cette action est irréversible
+            </p>
+          </div>
+          <div className="flex gap-3 justify-end">
+            <Button
+              variant="outline"
+              onClick={cancelDelete}
+              disabled={deleteMutation.isPending}
+            >
+              Annuler
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={deleteMutation.isPending}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Supprimer définitivement
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

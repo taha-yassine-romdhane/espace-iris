@@ -630,8 +630,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   } else if (req.method === 'GET') {
     try {
+      // Build where clauses based on user role
+      const patientWhereClause: any = {};
+      const companyWhereClause: any = {};
+
+      if (session.user.role === 'EMPLOYEE') {
+        // Employees only see patients and companies assigned to them
+        patientWhereClause.OR = [
+          { technicianId: session.user.id },
+          { supervisorId: session.user.id },
+          { userId: session.user.id }
+        ];
+        companyWhereClause.OR = [
+          { technicianId: session.user.id },
+          { userId: session.user.id }
+        ];
+      }
+      // ADMIN and DOCTOR see all patients and companies
+
       const [patients, companies] = await Promise.all([
         prisma.patient.findMany({
+          where: patientWhereClause,
           include: {
             doctor: {
               include: {
@@ -641,13 +660,92 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             technician: true,
             supervisor: true,
             assignedTo: true,
-            files: true
+            files: true,
+            rentals: {
+              select: {
+                id: true,
+                rentalCode: true,
+                status: true,
+                startDate: true,
+                endDate: true
+              }
+            },
+            sales: {
+              select: {
+                id: true,
+                saleCode: true,
+                status: true,
+                createdAt: true
+              }
+            },
+            diagnostics: {
+              select: {
+                id: true,
+                diagnosticCode: true,
+                status: true,
+                diagnosticDate: true
+              }
+            },
+            appointments: {
+              select: {
+                id: true,
+                appointmentCode: true,
+                status: true,
+                scheduledDate: true
+              }
+            },
+            payments: {
+              select: {
+                id: true,
+                paymentCode: true,
+                amount: true,
+                paymentDate: true
+              }
+            },
+            cnamBonRentals: {
+              select: {
+                id: true,
+                bonNumber: true,
+                dossierNumber: true,
+                status: true
+              }
+            },
+            cnamDossiers: {
+              select: {
+                id: true,
+                dossierNumber: true,
+                status: true
+              }
+            },
+            deviceParameters: {
+              select: {
+                id: true,
+                deviceType: true,
+                createdAt: true
+              }
+            },
+            notifications: {
+              select: {
+                id: true,
+                title: true,
+                status: true,
+                isRead: true
+              }
+            },
+            PatientHistory: {
+              select: {
+                id: true,
+                actionType: true,
+                createdAt: true
+              }
+            }
           },
           orderBy: {
             createdAt: 'desc'
           }
         }),
         prisma.company.findMany({
+          where: companyWhereClause,
           include: {
             technician: true,
             assignedTo: true,
@@ -704,6 +802,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           type: file.type,
           createdAt: file.createdAt
         })) || [],
+        rentals: patient.rentals || [],
+        sales: patient.sales || [],
+        diagnostics: patient.diagnostics || [],
+        appointments: patient.appointments || [],
+        payments: patient.payments || [],
+        cnamBonRentals: patient.cnamBonRentals || [],
+        cnamDossiers: patient.cnamDossiers || [],
+        deviceParameters: patient.deviceParameters || [],
+        notifications: patient.notifications || [],
+        PatientHistory: patient.PatientHistory || [],
         createdAt: patient.createdAt
       }));
 

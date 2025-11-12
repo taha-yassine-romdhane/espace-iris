@@ -17,12 +17,12 @@ import {
 import { cn } from '@/lib/utils';
 
 interface CNAMInfo {
-  bondType: string;
+  bonType: string;
   currentStep: number;
   totalSteps: number;
   status: 'en_attente_approbation' | 'approuve' | 'termine' | 'refuse';
   notes?: string;
-  bondAmount?: number;
+  bonAmount?: number;
   devicePrice?: number;
   complementAmount?: number;
 }
@@ -90,10 +90,10 @@ export const CNAMStepSelector: React.FC<CNAMStepSelectorProps> = ({
   const currentStatus = CNAM_STATUSES.find(s => s.id === cnamInfo.status);
   
   // Calculate if complement is required
-  const needsComplement = cnamInfo.devicePrice && cnamInfo.bondAmount && 
-    cnamInfo.devicePrice > cnamInfo.bondAmount;
+  const needsComplement = cnamInfo.devicePrice && cnamInfo.bonAmount && 
+    cnamInfo.devicePrice > cnamInfo.bonAmount;
   const complementAmount = needsComplement ? 
-    (cnamInfo.devicePrice! - cnamInfo.bondAmount!) : 0;
+    (cnamInfo.devicePrice! - cnamInfo.bonAmount!) : 0;
   
   // Auto-set step based on status
   const actualCurrentStep = 
@@ -145,7 +145,7 @@ export const CNAMStepSelector: React.FC<CNAMStepSelectorProps> = ({
               </div>
               <div className="text-sm text-amber-700">
                 <p>Prix de l'appareil: {cnamInfo.devicePrice?.toFixed(2)} DT</p>
-                <p>Montant du bond CNAM: {cnamInfo.bondAmount?.toFixed(2)} DT</p>
+                <p>Montant du bond CNAM: {cnamInfo.bonAmount?.toFixed(2)} DT</p>
                 <p className="font-medium">Complément à payer: {complementAmount.toFixed(2)} DT</p>
               </div>
             </div>
@@ -212,7 +212,7 @@ export const CNAMStepSelector: React.FC<CNAMStepSelectorProps> = ({
           
           <div className="text-sm text-gray-600">
             <p><strong>Étape actuelle:</strong> {actualCurrentStep} / 7</p>
-            <p><strong>Type de bond:</strong> {cnamInfo.bondType}</p>
+            <p><strong>Type de bond:</strong> {cnamInfo.bonType}</p>
             {cnamInfo.notes && (
               <p><strong>Notes:</strong> {cnamInfo.notes}</p>
             )}
@@ -358,7 +358,7 @@ export const CNAMStepSelector: React.FC<CNAMStepSelectorProps> = ({
             
             <div className="text-sm text-gray-600">
               <p><strong>Étape actuelle:</strong> {cnamInfo.currentStep} / {cnamInfo.totalSteps}</p>
-              <p><strong>Type de bond:</strong> {cnamInfo.bondType}</p>
+              <p><strong>Type de bond:</strong> {cnamInfo.bonType}</p>
               {cnamInfo.notes && (
                 <p><strong>Notes:</strong> {cnamInfo.notes}</p>
               )}

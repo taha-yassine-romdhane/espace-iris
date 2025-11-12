@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]';
-import { prisma } from '@/lib/prisma';
+import prisma from '@/lib/db';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const session = await getServerSession(req, res, authOptions);
@@ -42,10 +42,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         dueDate
       } = req.body;
 
-      // Get the existing payment to check if it has a rental period
+      // Get the existing payment
       const existingPayment = await prisma.payment.findUnique({
         where: { id },
-        include: { rentalPeriod: true },
       });
 
       if (!existingPayment) {
@@ -80,36 +79,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // IMPORTANT: Preserve paymentCode and source - never change these on update
       // They should remain as they were when the payment was created
-
-      // Update or create rental period if we have period data
-      if (existingPayment.rentalPeriodId && (periodNumber !== undefined || gapDays !== undefined || periodStartDate !== undefined || periodEndDate !== undefined)) {
-        // Update existing rental period
-        const rentalPeriodUpdate: any = {};
-        if (periodNumber !== undefined) rentalPeriodUpdate.periodNumber = periodNumber;
-        if (gapDays !== undefined) rentalPeriodUpdate.gapDays = gapDays;
-        if (periodStartDate !== undefined) rentalPeriodUpdate.startDate = new Date(periodStartDate);
-        if (periodEndDate !== undefined) rentalPeriodUpdate.endDate = new Date(periodEndDate);
-        if (amount !== undefined) rentalPeriodUpdate.expectedAmount = Number(amount);
-
-        await prisma.rentalPeriod.update({
-          where: { id: existingPayment.rentalPeriodId },
-          data: rentalPeriodUpdate,
-        });
-      } else if (!existingPayment.rentalPeriodId && periodStartDate && periodEndDate && existingPayment.rentalId) {
-        // Create new rental period if it doesn't exist
-        const rentalPeriod = await prisma.rentalPeriod.create({
-          data: {
-            rentalId: existingPayment.rentalId,
-            periodNumber: periodNumber !== undefined ? periodNumber : null,
-            gapDays: gapDays !== undefined ? gapDays : null,
-            startDate: new Date(periodStartDate),
-            endDate: new Date(periodEndDate),
-            expectedAmount: amount || existingPayment.amount,
-            isGapPeriod: false,
-          },
-        });
-        updateData.rentalPeriodId = rentalPeriod.id;
-      }
 
       console.log('[PAYMENT UPDATE] Update data:', updateData);
 
@@ -214,13 +183,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           where: { paymentId: id },
         });
 
-        // 2. Remove payment reference from Sale if exists
-        await tx.sale.updateMany({
-          where: { paymentId: id },
-          data: { paymentId: null },
-        });
-
-        // 3. Now safe to delete the payment
+        // 2. Delete the payment (no need to update Sale since it uses payments[] relation)
+        // The Sale.payments relation is managed automatically by Prisma
         await tx.payment.delete({
           where: { id },
         });

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'next/router';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -48,8 +49,10 @@ interface Payment {
     saleCode: string;
     invoiceNumber: string;
     patient?: {
+      id: string;
       firstName: string;
       lastName: string;
+      patientCode?: string;
     };
     company?: {
       companyName: string;
@@ -64,6 +67,7 @@ interface Payment {
 }
 
 export default function PaymentsExcelTable() {
+  const router = useRouter();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editedData, setEditedData] = useState<Partial<Payment>>({});
@@ -101,11 +105,11 @@ export default function PaymentsExcelTable() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch payments from sales
+  // Fetch sales (minimal data, we only need basic sale info for dropdown)
   const { data: salesData, isLoading: salesLoading } = useQuery({
     queryKey: ['sales'],
     queryFn: async () => {
-      const response = await fetch('/api/sales');
+      const response = await fetch('/api/sales?paginate=false');
       if (!response.ok) throw new Error('Failed to fetch sales');
       const data = await response.json();
       return data.sales || [];
@@ -427,45 +431,43 @@ export default function PaymentsExcelTable() {
   // Create mutation
   const createMutation = useMutation({
     mutationFn: async (paymentData: any) => {
-      // Format payment data for the sales payment API
-      const formattedPayment = {
-        type: paymentData.method.toLowerCase(),
-        amount: paymentData.amount,
-        classification: 'principale',
-        paymentDate: paymentData.paymentDate,
-        notes: paymentData.notes || null,
-        // Add method-specific fields
-        ...(paymentData.method === 'CHEQUE' && {
-          chequeNumber: paymentData.chequeNumber || paymentData.referenceNumber,
-          bank: paymentData.bankName,
-        }),
-        ...(paymentData.method === 'VIREMENT' && {
-          reference: paymentData.referenceNumber,
-          bank: paymentData.bankName,
-        }),
-        ...(paymentData.method === 'TRAITE' && {
-          traiteNumber: paymentData.referenceNumber,
-          bank: paymentData.bankName,
-          dueDate: paymentData.dueDate,
-        }),
-        ...(paymentData.method === 'MANDAT' && {
-          mandatNumber: paymentData.referenceNumber,
-        }),
-        ...(paymentData.method === 'CNAM' && {
-          dossierNumber: paymentData.referenceNumber,
-          cnamCardNumber: paymentData.cnamCardNumber,
-          cnamBonId: paymentData.cnamBonId,
-        }),
-        // For CASH or any other method, add reference if provided
-        ...(paymentData.referenceNumber && !['CHEQUE', 'VIREMENT', 'TRAITE', 'MANDAT', 'CNAM'].includes(paymentData.method) && {
-          reference: paymentData.referenceNumber,
-        }),
-      };
-
+      // Use POST method to ADD a new payment (instead of PUT which replaces all)
       const response = await fetch(`/api/sales/${paymentData.saleId}/payments`, {
-        method: 'PUT',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ payments: [formattedPayment] }),
+        body: JSON.stringify({
+          type: paymentData.method.toLowerCase(),
+          amount: paymentData.amount,
+          classification: 'principale',
+          paymentDate: paymentData.paymentDate,
+          notes: paymentData.notes || null,
+          // Add method-specific fields
+          ...(paymentData.method === 'CHEQUE' && {
+            chequeNumber: paymentData.chequeNumber || paymentData.referenceNumber,
+            bank: paymentData.bankName,
+          }),
+          ...(paymentData.method === 'VIREMENT' && {
+            reference: paymentData.referenceNumber,
+            bank: paymentData.bankName,
+          }),
+          ...(paymentData.method === 'TRAITE' && {
+            traiteNumber: paymentData.referenceNumber,
+            bank: paymentData.bankName,
+            dueDate: paymentData.dueDate,
+          }),
+          ...(paymentData.method === 'MANDAT' && {
+            mandatNumber: paymentData.referenceNumber,
+          }),
+          ...(paymentData.method === 'CNAM' && {
+            dossierNumber: paymentData.referenceNumber,
+            cnamCardNumber: paymentData.cnamCardNumber,
+            cnamBonId: paymentData.cnamBonId,
+          }),
+          // For CASH or any other method, add reference if provided
+          ...(paymentData.referenceNumber && !['CHEQUE', 'VIREMENT', 'TRAITE', 'MANDAT', 'CNAM'].includes(paymentData.method) && {
+            reference: paymentData.referenceNumber,
+          }),
+        }),
       });
       if (!response.ok) {
         const errorData = await response.json();
@@ -664,17 +666,6 @@ export default function PaymentsExcelTable() {
 
   return (
     <div className="space-y-4">
-      {/* Add Payment Button */}
-      <div className="flex justify-end mb-4">
-        <Button
-          className="bg-green-600 hover:bg-green-700 text-white gap-2"
-          onClick={() => setIsAddingNew(true)}
-        >
-          <Plus className="h-4 w-4" />
-          Ajouter Paiement
-        </Button>
-      </div>
-
       {/* Comprehensive Filter Panel */}
       <div className="bg-gradient-to-r from-blue-50 to-slate-50 border border-blue-200 rounded-lg p-6">
         {/* Filter Header */}
@@ -695,17 +686,26 @@ export default function PaymentsExcelTable() {
               </p>
             </div>
           </div>
-          {activeFiltersCount > 0 && (
+          <div className="flex items-center gap-2">
             <Button
-              variant="outline"
-              size="sm"
-              onClick={handleResetFilters}
-              className="gap-2 text-red-600 border-red-300 hover:bg-red-50"
+              className="bg-green-600 hover:bg-green-700 text-white gap-2"
+              onClick={() => setIsAddingNew(true)}
             >
-              <X className="h-4 w-4" />
-              Réinitialiser
+              <Plus className="h-4 w-4" />
+              Ajouter Paiement
             </Button>
-          )}
+            {activeFiltersCount > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleResetFilters}
+                className="gap-2 text-red-600 border-red-300 hover:bg-red-50"
+              >
+                <X className="h-4 w-4" />
+                Réinitialiser
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Search Bar */}
@@ -846,6 +846,124 @@ export default function PaymentsExcelTable() {
         </div>
       </div>
 
+      {/* Pagination - Top */}
+      <div className="flex items-center justify-between px-4 py-3 bg-white border border-slate-200 rounded-lg mb-3">
+        <div className="flex items-center space-x-4">
+          <div className="text-sm text-slate-600">
+            <span className="font-semibold text-slate-900">{filteredPayments.length}</span> paiement(s) au total
+          </div>
+          <Select value={itemsPerPage.toString()} onValueChange={(value) => setItemsPerPage(Number(value))}>
+            <SelectTrigger className="w-[140px] h-9 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="25">25 par page</SelectItem>
+              <SelectItem value="50">50 par page</SelectItem>
+              <SelectItem value="100">100 par page</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex items-center space-x-3">
+          {/* First Page Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(1)}
+            disabled={currentPage === 1}
+            className="h-9 px-2"
+            title="Première page"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className="h-4 w-4 -ml-2" />
+          </Button>
+
+          {/* Previous Page Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+            disabled={currentPage === 1}
+            className="h-9 px-3"
+          >
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Précédent
+          </Button>
+
+          {/* Page Numbers */}
+          <div className="flex items-center space-x-1">
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              let pageNum;
+              if (totalPages <= 5) {
+                pageNum = i + 1;
+              } else if (currentPage <= 3) {
+                pageNum = i + 1;
+              } else if (currentPage >= totalPages - 2) {
+                pageNum = totalPages - 4 + i;
+              } else {
+                pageNum = currentPage - 2 + i;
+              }
+
+              return (
+                <Button
+                  key={pageNum}
+                  variant={currentPage === pageNum ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCurrentPage(pageNum)}
+                  className="h-9 w-9 p-0"
+                >
+                  {pageNum}
+                </Button>
+              );
+            })}
+          </div>
+
+          {/* Next Page Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+            disabled={currentPage === totalPages}
+            className="h-9 px-3"
+          >
+            Suivant
+            <ChevronRight className="h-4 w-4 ml-1" />
+          </Button>
+
+          {/* Last Page Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(totalPages)}
+            disabled={currentPage === totalPages}
+            className="h-9 px-2"
+            title="Dernière page"
+          >
+            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className="h-4 w-4 -ml-2" />
+          </Button>
+
+          {/* Page Jump Input */}
+          <div className="flex items-center space-x-2 ml-2 pl-2 border-l border-slate-300">
+            <span className="text-sm text-slate-600">Aller à:</span>
+            <Input
+              type="number"
+              min="1"
+              max={totalPages}
+              value={currentPage}
+              onChange={(e) => {
+                const page = parseInt(e.target.value);
+                if (page >= 1 && page <= totalPages) {
+                  setCurrentPage(page);
+                }
+              }}
+              className="h-9 w-16 text-sm text-center"
+            />
+            <span className="text-sm text-slate-600">/ {totalPages || 1}</span>
+          </div>
+        </div>
+      </div>
+
       {/* Excel-like Table */}
       <div className="border rounded-lg overflow-hidden bg-white">
         <div className="overflow-x-auto">
@@ -973,7 +1091,9 @@ export default function PaymentsExcelTable() {
                           setNewPayment({
                             ...newPayment,
                             cnamBonId: value,
-                            amount: selectedBon ? parseFloat(selectedBon.bonAmount || selectedBon.bondAmount || 0) : 0
+                            amount: selectedBon ? parseFloat(selectedBon.bonAmount || selectedBon.bondAmount || 0) : 0,
+                            // Also update the cnamCardNumber with the dossierNumber from the bon
+                            cnamCardNumber: selectedBon?.dossierNumber || newPayment.cnamCardNumber
                           });
                         }}
                         disabled={!newPayment.saleId}
@@ -1018,16 +1138,26 @@ export default function PaymentsExcelTable() {
                     </Select>
                   </td>
 
-                  {/* Reference */}
-                  {/* CNAM Bon - show the selected bon number */}
+                  {/* Reference / CNAM Number */}
                   <td className="px-3 py-2.5 border-r border-slate-100">
-                    {newPayment.method === 'CNAM' && newPayment.cnamBonId ? (
-                      <Badge variant="outline" className="text-xs font-mono bg-blue-50 text-blue-700 border-blue-200 whitespace-nowrap">
-                        {(() => {
-                          const bon = cnamBonsData?.find((b: any) => b.id === newPayment.cnamBonId);
-                          return bon?.bonNumber || bon?.dossierNumber || 'N/A';
-                        })()}
-                      </Badge>
+                    {newPayment.method === 'CNAM' ? (
+                      <div className="flex flex-col gap-2">
+                        {newPayment.cnamBonId && (
+                          <Badge variant="outline" className="text-xs font-mono bg-blue-50 text-blue-700 border-blue-200 whitespace-nowrap">
+                            {(() => {
+                              const bon = cnamBonsData?.find((b: any) => b.id === newPayment.cnamBonId);
+                              return bon?.bonNumber || bon?.dossierNumber || 'N/A';
+                            })()}
+                          </Badge>
+                        )}
+                        <Input
+                          type="text"
+                          placeholder="N° Dossier CNAM"
+                          value={newPayment.cnamCardNumber || ''}
+                          onChange={(e) => setNewPayment({ ...newPayment, cnamCardNumber: e.target.value })}
+                          className="h-8 text-xs font-mono"
+                        />
+                      </div>
                     ) : (
                       <div className="text-xs text-slate-400">-</div>
                     )}
@@ -1127,9 +1257,22 @@ export default function PaymentsExcelTable() {
                     {/* Client */}
                     <td className="px-3 py-2.5 text-sm font-medium text-slate-900 border-r border-slate-100">
                       {payment.sale?.patient ? (
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-blue-600" />
-                          <span>{clientName}</span>
+                        <div className="flex flex-col gap-1">
+                          <div
+                            className="flex items-center gap-2 text-blue-600 hover:text-blue-800 hover:underline cursor-pointer transition-colors"
+                            onClick={() => router.push(`/roles/admin/renseignement/patient/${payment.sale.patient.id}`)}
+                          >
+                            <User className="h-4 w-4" />
+                            <span>{clientName}</span>
+                          </div>
+                          {payment.sale.patient.patientCode && (
+                            <div
+                              className="text-xs text-slate-500 font-mono cursor-pointer hover:text-blue-600 transition-colors ml-6"
+                              onClick={() => router.push(`/roles/admin/renseignement/patient/${payment.sale.patient.id}`)}
+                            >
+                              {payment.sale.patient.patientCode}
+                            </div>
+                          )}
                         </div>
                       ) : payment.sale?.company ? (
                         <div className="flex items-center gap-2">
@@ -1225,44 +1368,65 @@ export default function PaymentsExcelTable() {
                       )}
                     </td>
 
-                    {/* CNAM Bon */}
+                    {/* CNAM Number */}
                     <td className="px-3 py-2.5 text-xs text-slate-600 border-r border-slate-100">
                       {isEditing && payment.method === 'CNAM' ? (
-                        <Select
-                          value={currentData.cnamBonId || payment.cnamBonId || ''}
-                          onValueChange={(value) => {
-                            const selectedBon = cnamBonsData?.find((bon: any) => bon.id === value);
-                            handleFieldChange('cnamBonId', value);
-                            if (selectedBon) {
-                              handleFieldChange('amount', parseFloat(selectedBon.bonAmount || selectedBon.bondAmount || 0));
-                            }
-                          }}
-                          disabled={!payment.saleId}
-                        >
-                          <SelectTrigger className="h-8 text-xs">
-                            <SelectValue placeholder="Sélectionner bon" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {cnamBonsData?.filter((bon: any) => bon.saleId === payment.saleId).map((bon: any) => (
-                              <SelectItem key={bon.id} value={bon.id}>
-                                {bon.bonNumber || bon.dossierNumber} - {bon.bonType}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : payment.method === 'CNAM' && payment.cnamBonId ? (
-                        <Badge variant="outline" className="text-xs font-mono bg-blue-50 text-blue-700 border-blue-200 whitespace-nowrap">
-                          {(() => {
-                            const bon = cnamBonsData?.find((b: any) => b.id === payment.cnamBonId);
-                            return bon?.bonNumber || bon?.dossierNumber || 'N/A';
-                          })()}
-                        </Badge>
+                        <div className="flex flex-col gap-2">
+                          <Select
+                            value={currentData.cnamBonId || payment.cnamBonId || ''}
+                            onValueChange={(value) => {
+                              const selectedBon = cnamBonsData?.find((bon: any) => bon.id === value);
+                              handleFieldChange('cnamBonId', value);
+                              if (selectedBon) {
+                                handleFieldChange('amount', parseFloat(selectedBon.bonAmount || selectedBon.bondAmount || 0));
+                                // Also update the cnamCardNumber with the dossierNumber from the bon
+                                if (selectedBon.dossierNumber) {
+                                  handleFieldChange('cnamCardNumber', selectedBon.dossierNumber);
+                                }
+                              }
+                            }}
+                            disabled={!payment.saleId}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="Sélectionner bon" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {cnamBonsData?.filter((bon: any) => bon.saleId === payment.saleId).map((bon: any) => (
+                                <SelectItem key={bon.id} value={bon.id}>
+                                  {bon.bonNumber || bon.dossierNumber} - {bon.bonType}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Input
+                            type="text"
+                            placeholder="N° Dossier CNAM"
+                            value={currentData.cnamCardNumber || payment.cnamCardNumber || ''}
+                            onChange={(e) => handleFieldChange('cnamCardNumber', e.target.value)}
+                            className="h-8 text-xs font-mono"
+                          />
+                        </div>
+                      ) : payment.method === 'CNAM' ? (
+                        <div className="flex flex-col gap-1">
+                          {payment.cnamBonId ? (
+                            <Badge variant="outline" className="text-xs font-mono bg-blue-50 text-blue-700 border-blue-200 whitespace-nowrap">
+                              {(() => {
+                                const bon = cnamBonsData?.find((b: any) => b.id === payment.cnamBonId);
+                                return bon?.bonNumber || bon?.dossierNumber || 'N/A';
+                              })()}
+                            </Badge>
+                          ) : payment.cnamCardNumber ? (
+                            <span className="text-xs font-mono text-blue-700">{payment.cnamCardNumber}</span>
+                          ) : (
+                            <div className="text-slate-400">-</div>
+                          )}
+                        </div>
                       ) : (
                         <div className="text-slate-400">-</div>
                       )}
                     </td>
 
-                    {/* Due Date */}
+                    {/* Due Date (Échéance) */}
                     <td className="px-3 py-2.5 text-xs text-slate-600 border-r border-slate-100">
                       {isEditing ? (
                         <Input
@@ -1270,11 +1434,14 @@ export default function PaymentsExcelTable() {
                           value={currentData.dueDate ? new Date(currentData.dueDate).toISOString().split('T')[0] : (payment as any).dueDate ? new Date((payment as any).dueDate).toISOString().split('T')[0] : ''}
                           onChange={(e) => handleFieldChange('dueDate', e.target.value)}
                           className="h-8 text-xs"
-                          disabled={payment.method !== 'TRAITE'}
                         />
                       ) : (
                         <div className="text-xs">
-                          {(payment as any).dueDate ? new Date((payment as any).dueDate).toLocaleDateString('fr-FR') : '-'}
+                          {(payment as any).dueDate ? (
+                            <span className="text-orange-600 font-medium">
+                              {new Date((payment as any).dueDate).toLocaleDateString('fr-FR')}
+                            </span>
+                          ) : '-'}
                         </div>
                       )}
                     </td>
@@ -1349,53 +1516,6 @@ export default function PaymentsExcelTable() {
               })}
             </tbody>
           </table>
-        </div>
-      </div>
-
-      {/* Pagination */}
-      <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-slate-200 rounded-b-lg">
-        <div className="flex items-center space-x-4">
-          <div className="text-sm text-slate-600">
-            <span className="font-semibold text-slate-900">{filteredPayments.length}</span> paiement(s) au total
-          </div>
-          <Select value={itemsPerPage.toString()} onValueChange={(value) => setItemsPerPage(Number(value))}>
-            <SelectTrigger className="w-[140px] h-9 text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="25">25 par page</SelectItem>
-              <SelectItem value="50">50 par page</SelectItem>
-              <SelectItem value="100">100 par page</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-            disabled={currentPage === 1}
-            className="h-9 px-3"
-          >
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            Précédent
-          </Button>
-
-          <div className="text-sm text-slate-600">
-            Page {currentPage} sur {totalPages || 1}
-          </div>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-            disabled={currentPage === totalPages || totalPages === 0}
-            className="h-9 px-3"
-          >
-            Suivant
-            <ChevronRight className="h-4 w-4 ml-1" />
-          </Button>
         </div>
       </div>
 

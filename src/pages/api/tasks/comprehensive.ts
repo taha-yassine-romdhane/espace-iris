@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import prisma from '@/lib/db';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]';
+import { TASK_TIME_CONSTANTS } from '@/lib/taskConstants';
 
 interface ComprehensiveTask {
   id: string;
@@ -29,6 +30,7 @@ interface ComprehensiveTask {
     name: string;
     type: 'patient' | 'company';
     telephone?: string;
+    patientCode?: string;
     avatar?: string;
   };
   
@@ -40,7 +42,7 @@ interface ComprehensiveTask {
     rentalId?: string;
     appointmentId?: string;
     paymentId?: string;
-    bondNumber?: string;
+    bonNumber?: string;
     lastMaintenance?: Date;
   };
   
@@ -72,9 +74,9 @@ export default async function handler(
 
     const { startDate, endDate, filter = 'all', assignedUserId, assignedToMe, type } = req.query;
     const tasks: ComprehensiveTask[] = [];
-    
+
     const start = startDate ? new Date(startDate as string) : new Date();
-    const end = endDate ? new Date(endDate as string) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    const end = endDate ? new Date(endDate as string) : new Date(Date.now() + TASK_TIME_CONSTANTS.DEFAULT_RANGE_DAYS * 24 * 60 * 60 * 1000);
 
     // Determine if we should filter by current user
     const filterByCurrentUser = assignedToMe === 'true' || assignedUserId === session.user.id;
@@ -84,11 +86,17 @@ export default async function handler(
     if (filter === 'all' || filter === 'TASK' || type === 'TASK') {
       const dbTasks = await prisma.task.findMany({
         where: {
-          ...(currentUserId && { 
+          ...(currentUserId && {
             userId: currentUserId // Tasks assigned to user (only field available)
           }),
-          startDate: { gte: start },
-          endDate: { lte: end }
+          OR: [
+            {
+              AND: [
+                { startDate: { lte: end } },
+                { endDate: { gte: start } }
+              ]
+            }
+          ]
         },
         include: {
           assignedTo: true,
@@ -112,18 +120,19 @@ export default async function handler(
           priority: task.priority as any,
           startDate: task.startDate,
           endDate: task.endDate,
-          assignedTo: {
+          assignedTo: task.assignedTo ? {
             id: task.assignedTo.id,
             firstName: task.assignedTo.firstName,
             lastName: task.assignedTo.lastName,
             email: task.assignedTo.email,
             role: task.assignedTo.role
-          },
+          } : undefined,
           client: task.diagnostic?.patient ? {
             id: task.diagnostic.patient.id,
             name: `${task.diagnostic.patient.firstName} ${task.diagnostic.patient.lastName}`,
             type: 'patient',
-            telephone: task.diagnostic.patient.telephone
+            telephone: task.diagnostic.patient.telephone,
+            patientCode: task.diagnostic.patient.patientCode
           } : undefined,
           relatedData: task.diagnostic ? {
             deviceName: task.diagnostic.medicalDevice.name,
@@ -175,7 +184,7 @@ export default async function handler(
       });
 
       pendingDiagnostics.forEach(diagnostic => {
-        const daysSince = Math.ceil((Date.now() - diagnostic.diagnosticDate.getTime()) / (1000 * 60 * 60 * 1000 * 24));
+        const daysSince = Math.ceil((Date.now() - diagnostic.diagnosticDate.getTime()) / (1000 * 60 * 60 * 24));
         
         // Determine who should handle this diagnostic result
         const responsibleUser = diagnostic.patient?.technicianId ? 
@@ -186,10 +195,10 @@ export default async function handler(
           title: `Résultat de diagnostic en attente`,
           description: `Diagnostic réalisé il y a ${daysSince} jours`,
           type: 'DIAGNOSTIC_PENDING',
-          status: daysSince > 7 ? 'OVERDUE' : daysSince > 3 ? 'IN_PROGRESS' : 'TODO',
-          priority: daysSince > 7 ? 'URGENT' : daysSince > 3 ? 'HIGH' : 'MEDIUM',
+          status: daysSince > TASK_TIME_CONSTANTS.DIAGNOSTIC_PENDING.URGENT_DAYS ? 'OVERDUE' : daysSince > TASK_TIME_CONSTANTS.DIAGNOSTIC_PENDING.WARNING_DAYS ? 'IN_PROGRESS' : 'TODO',
+          priority: daysSince > TASK_TIME_CONSTANTS.DIAGNOSTIC_PENDING.URGENT_DAYS ? 'URGENT' : daysSince > TASK_TIME_CONSTANTS.DIAGNOSTIC_PENDING.WARNING_DAYS ? 'HIGH' : 'MEDIUM',
           startDate: diagnostic.diagnosticDate,
-          dueDate: new Date(diagnostic.diagnosticDate.getTime() + 3 * 24 * 60 * 60 * 1000),
+          dueDate: new Date(diagnostic.diagnosticDate.getTime() + TASK_TIME_CONSTANTS.DIAGNOSTIC_PENDING.DUE_DAYS * 24 * 60 * 60 * 1000),
           assignedTo: responsibleUser ? {
             id: responsibleUser.id,
             firstName: responsibleUser.firstName,
@@ -201,7 +210,8 @@ export default async function handler(
             id: diagnostic.patient.id,
             name: `${diagnostic.patient.firstName} ${diagnostic.patient.lastName}`,
             type: 'patient',
-            telephone: diagnostic.patient.telephone
+            telephone: diagnostic.patient.telephone,
+            patientCode: diagnostic.patient.patientCode
           } : diagnostic.Company ? {
             id: diagnostic.Company.id,
             name: diagnostic.Company.companyName,
@@ -257,8 +267,8 @@ export default async function handler(
           title: `Location expirante - ${rental.medicalDevice.name}`,
           description: `Expire dans ${daysUntil} jours`,
           type: 'RENTAL_EXPIRING',
-          status: daysUntil <= 0 ? 'OVERDUE' : daysUntil <= 7 ? 'IN_PROGRESS' : 'TODO',
-          priority: daysUntil <= 7 ? 'HIGH' : daysUntil <= 15 ? 'MEDIUM' : 'LOW',
+          status: daysUntil <= 0 ? 'OVERDUE' : daysUntil <= TASK_TIME_CONSTANTS.RENTAL_EXPIRING.WARNING_DAYS ? 'IN_PROGRESS' : 'TODO',
+          priority: daysUntil <= TASK_TIME_CONSTANTS.RENTAL_EXPIRING.WARNING_DAYS ? 'HIGH' : daysUntil <= TASK_TIME_CONSTANTS.RENTAL_EXPIRING.NOTICE_DAYS ? 'MEDIUM' : 'LOW',
           startDate: rental.startDate,
           endDate: rental.endDate!,
           dueDate: rental.endDate!,
@@ -273,7 +283,8 @@ export default async function handler(
             id: rental.patient.id,
             name: `${rental.patient.firstName} ${rental.patient.lastName}`,
             type: 'patient',
-            telephone: rental.patient.telephone
+            telephone: rental.patient.telephone,
+            patientCode: rental.patient.patientCode
           } : undefined,
           relatedData: {
             deviceName: rental.medicalDevice.name,
@@ -332,14 +343,15 @@ export default async function handler(
           description: `${Number(payment.amount).toFixed(2)} TND - ${payment.method}`,
           type: 'PAYMENT_DUE',
           status: daysOverdue > 0 ? 'OVERDUE' : 'TODO',
-          priority: daysOverdue > 7 ? 'URGENT' : daysOverdue > 0 ? 'HIGH' : 'MEDIUM',
+          priority: daysOverdue > TASK_TIME_CONSTANTS.PAYMENT_DUE.URGENT_DAYS ? 'URGENT' : daysOverdue > 0 ? 'HIGH' : 'MEDIUM',
           startDate: payment.createdAt,
           dueDate: payment.dueDate!,
           client: payment.patient ? {
             id: payment.patient.id,
             name: `${payment.patient.firstName} ${payment.patient.lastName}`,
             type: 'patient',
-            telephone: payment.patient.telephone
+            telephone: payment.patient.telephone,
+            patientCode: payment.patient.patientCode
           } : payment.company ? {
             id: payment.company.id,
             name: payment.company.companyName,
@@ -369,7 +381,23 @@ export default async function handler(
           ...(currentUserId && {
             OR: [
               { assignedToId: currentUserId }, // Appointments assigned to user
-              { appointmentType: 'POLYGRAPHIE' } // ALL polygraphie appointments (for all employees)
+              { createdById: currentUserId },  // Appointments created by user
+              { 
+                patient: {
+                  OR: [
+                    { technicianId: currentUserId }, // Patient assigned to user as technician
+                    { userId: currentUserId }        // Patient assigned to user
+                  ]
+                }
+              },
+              { 
+                company: {
+                  OR: [
+                    { technicianId: currentUserId }, // Company assigned to user as technician
+                    { userId: currentUserId }        // Company assigned to user
+                  ]
+                }
+              }
             ]
           })
         },
@@ -403,7 +431,8 @@ export default async function handler(
             id: appointment.patient.id,
             name: `${appointment.patient.firstName} ${appointment.patient.lastName}`,
             type: 'patient',
-            telephone: appointment.patient.telephone
+            telephone: appointment.patient.telephone,
+            patientCode: appointment.patient.patientCode
           } : appointment.company ? {
             id: appointment.company.id,
             name: appointment.company.companyName,
@@ -424,7 +453,7 @@ export default async function handler(
 
     // 6. Fetch CNAM renewals
     if (filter === 'all' || filter === 'CNAM_RENEWAL' || type === 'CNAM_RENEWAL') {
-      const expiringBonds = await prisma.cNAMBondRental.findMany({
+      const expiringBonds = await prisma.cNAMBonRental.findMany({
         where: {
           endDate: { gte: start, lte: end },
           status: 'APPROUVE',
@@ -438,7 +467,11 @@ export default async function handler(
           })
         },
         include: {
-          patient: true,
+          patient: {
+            include: {
+              technician: true
+            }
+          },
           rental: {
             include: { medicalDevice: true }
           }
@@ -447,25 +480,43 @@ export default async function handler(
 
       expiringBonds.forEach(bond => {
         const daysUntil = Math.ceil((bond.endDate!.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+
+        // Use best available identifier: bonNumber > dossierNumber > equipment name > bonType
+        const bondIdentifier = bond.bonNumber
+          || bond.dossierNumber
+          || (bond.rental?.medicalDevice?.name)
+          || bond.bonType;
+
+        // Determine responsible user (technician assigned to patient)
+        const responsibleUser = bond.patient?.technician;
+
         tasks.push({
           id: `cnam-${bond.id}`,
-          title: `Renouvellement CNAM - ${bond.bondType}`,
-          description: `Bon ${bond.bondNumber || 'N/A'} expire dans ${daysUntil} jours`,
+          title: `Renouvellement CNAM - ${bond.bonType}`,
+          description: `${bondIdentifier} expire dans ${daysUntil} jours`,
           type: 'CNAM_RENEWAL',
-          status: daysUntil <= 0 ? 'OVERDUE' : daysUntil <= 30 ? 'IN_PROGRESS' : 'TODO',
-          priority: daysUntil <= 30 ? 'HIGH' : 'MEDIUM',
+          status: daysUntil <= 0 ? 'OVERDUE' : daysUntil <= TASK_TIME_CONSTANTS.CNAM_RENEWAL.WARNING_DAYS ? 'IN_PROGRESS' : 'TODO',
+          priority: daysUntil <= TASK_TIME_CONSTANTS.CNAM_RENEWAL.WARNING_DAYS ? 'HIGH' : 'MEDIUM',
           startDate: bond.startDate || bond.createdAt,
           endDate: bond.endDate!,
           dueDate: bond.endDate!,
+          assignedTo: responsibleUser ? {
+            id: responsibleUser.id,
+            firstName: responsibleUser.firstName,
+            lastName: responsibleUser.lastName,
+            email: responsibleUser.email,
+            role: responsibleUser.role
+          } : undefined,
           client: {
             id: bond.patient.id,
             name: `${bond.patient.firstName} ${bond.patient.lastName}`,
             type: 'patient',
-            telephone: bond.patient.telephone
+            telephone: bond.patient.telephone,
+            patientCode: bond.patient.patientCode
           },
           relatedData: {
-            bondNumber: bond.bondNumber || undefined,
-            amount: Number(bond.monthlyAmount),
+            bonNumber: bond.bonNumber || undefined,
+            amount: Number(bond.bonAmount),
             deviceName: bond.rental?.medicalDevice?.name
           },
           actionUrl: bond.rentalId ? (session.user.role === 'ADMIN' ? `/roles/admin/rentals/${bond.rentalId}` : `/roles/employee/rentals/${bond.rentalId}`) : '#',

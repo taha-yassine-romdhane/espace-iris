@@ -178,12 +178,12 @@ const SaleInvoice: React.FC<SaleInvoiceProps> = ({ sale }) => {
             <div className="relative h-16 w-32 mr-4">
               <img 
                 src="/logo_No_BG.png" 
-                alt="Iris Medicale Services" 
+                alt="Elite Medicale Services" 
                 className="object-contain w-full h-auto"
               />
             </div>
             <div>
-              <div className="text-xl font-bold text-blue-800">Iris Medicale Services</div>
+              <div className="text-xl font-bold text-blue-800">Elite Medicale Services</div>
               <div className="text-sm text-gray-600">Matériel et Services Médicaux</div>
             </div>
           </div>
@@ -325,9 +325,9 @@ const SaleInvoice: React.FC<SaleInvoiceProps> = ({ sale }) => {
         
         {/* Footer */}
         <div className="mt-8 pt-4 border-t text-center text-sm text-gray-500">
-          <div className="font-medium mb-1">Iris Médicale Services</div>
+          <div className="font-medium mb-1">Elite Médicale Services</div>
           <div>Matériel et Services Médicaux</div>
-          <div className="mt-2">Tél: +216 55 820 000 | Email: contact@irismedicalservices.tn</div>
+          <div className="mt-2">Tél: +216 55 820 000 | Email: contact@elitemedicalservices.tn</div>
           <div className="mt-4 text-xs">Recu générée le {new Date().toLocaleDateString('fr-TN')} à {new Date().toLocaleTimeString('fr-TN')}</div>
         </div>
       </div>

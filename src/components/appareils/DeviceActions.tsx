@@ -56,25 +56,23 @@ export const DeviceActions: React.FC<DeviceActionsProps> = ({ device, stockLocat
               <span>Maintenance</span>
             </Button>
             
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="flex items-center justify-center gap-2"
               onClick={() => setIsEditDialogOpen(true)}
             >
               <Pencil className="h-4 w-4" />
               <span>Modifier</span>
             </Button>
-            
-            {!device.patientId && !device.companyId && (
-              <Button 
-                variant="outline" 
-                className="flex items-center justify-center gap-2"
-                onClick={() => setIsAssignDialogOpen(true)}
-              >
-                <UserIcon className="h-4 w-4" />
-                <span>Assigner</span>
-              </Button>
-            )}
+
+            <Button
+              variant="outline"
+              className="flex items-center justify-center gap-2"
+              onClick={() => setIsAssignDialogOpen(true)}
+            >
+              <UserIcon className="h-4 w-4" />
+              <span>Assigner</span>
+            </Button>
           </div>
         </CardContent>
       </Card>

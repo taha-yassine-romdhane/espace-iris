@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Shield, Plus, Pencil, Trash2, Download, Check, X, Save, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Shield, Plus, Pencil, Trash2, Download, Check, X, Save } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -59,10 +59,6 @@ export default function CNAMManagement() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [addingNew, setAddingNew] = useState(false);
   const [editForm, setEditForm] = useState<Partial<CNAMNomenclature>>({});
-
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 20;
 
   // Fetch nomenclature data
   const { data: nomenclature = [], isLoading } = useQuery({
@@ -217,12 +213,6 @@ export default function CNAMManagement() {
 
   const locationItems = nomenclature.filter((item: CNAMNomenclature) => item.category === 'LOCATION');
   const achatItems = nomenclature.filter((item: CNAMNomenclature) => item.category === 'ACHAT');
-
-  // Reset pagination when changing tabs
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab);
-    setCurrentPage(1);
-  };
 
   const renderTableRow = (item: CNAMNomenclature, isEditing: boolean, showCategory: boolean = true) => {
     if (isEditing) {
@@ -505,182 +495,60 @@ export default function CNAMManagement() {
     );
   };
 
-  const renderPagination = (totalItems: number) => {
-    const totalPages = Math.ceil(totalItems / itemsPerPage);
-
-    if (totalPages <= 1) return null;
-
-    return (
-      <div className="flex items-center justify-between px-4 py-3 bg-white border border-gray-300 rounded-lg shadow-sm mb-4">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">
-            Affichage de {((currentPage - 1) * itemsPerPage) + 1} à {Math.min(currentPage * itemsPerPage, totalItems)} sur {totalItems} résultats
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-            disabled={currentPage === 1}
-            className="h-9 w-9 p-0"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-
-          <div className="flex items-center gap-1">
-            {totalPages <= 7 ? (
-              // Show all pages if 7 or less
-              Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                <Button
-                  key={page}
-                  variant={currentPage === page ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setCurrentPage(page)}
-                  className="h-9 w-9 p-0"
-                >
-                  {page}
-                </Button>
-              ))
-            ) : (
-              // Show smart pagination for many pages
-              <>
-                <Button
-                  variant={currentPage === 1 ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setCurrentPage(1)}
-                  className="h-9 w-9 p-0"
-                >
-                  1
-                </Button>
-
-                {currentPage > 3 && <span className="px-2">...</span>}
-
-                {currentPage > 2 && currentPage < totalPages - 1 && (
-                  <>
-                    {currentPage > 3 && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage(currentPage - 1)}
-                        className="h-9 w-9 p-0"
-                      >
-                        {currentPage - 1}
-                      </Button>
-                    )}
-                    <Button
-                      variant="default"
-                      size="sm"
-                      className="h-9 w-9 p-0"
-                    >
-                      {currentPage}
-                    </Button>
-                    {currentPage < totalPages - 2 && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage(currentPage + 1)}
-                        className="h-9 w-9 p-0"
-                      >
-                        {currentPage + 1}
-                      </Button>
-                    )}
-                  </>
-                )}
-
-                {currentPage < totalPages - 2 && <span className="px-2">...</span>}
-
-                <Button
-                  variant={currentPage === totalPages ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setCurrentPage(totalPages)}
-                  className="h-9 w-9 p-0"
-                >
-                  {totalPages}
-                </Button>
-              </>
-            )}
-          </div>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-            disabled={currentPage === totalPages}
-            className="h-9 w-9 p-0"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-    );
-  };
-
   const renderTable = (data: CNAMNomenclature[], showCategory: boolean = true) => {
     const colSpan = showCategory ? 8 : 7;
-
-    // Paginate data
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    const paginatedData = data.slice(startIndex, endIndex);
-
     return (
-      <>
-        {renderPagination(data.length)}
-
-        <div className="border border-gray-300 rounded-lg overflow-hidden bg-white">
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse" style={{ minWidth: '100%' }}>
-              <thead>
-                <tr className="bg-gray-100 border-b-2 border-gray-300">
-                  <th className="px-4 py-3 text-sm font-semibold text-gray-700 border-r border-gray-300 text-left sticky left-0 z-20 bg-gray-100" style={{ width: '220px' }}>
-                    Type de Bon
-                  </th>
-                  {showCategory && (
-                    <th className="px-4 py-3 text-sm font-semibold text-gray-700 border-r border-gray-300 text-center" style={{ width: '120px' }}>
-                      Catégorie
-                    </th>
-                  )}
-                  <th className="px-4 py-3 text-sm font-semibold text-gray-700 border-r border-gray-300 text-right" style={{ width: '150px' }}>
-                    Montant
-                  </th>
-                  <th className="px-4 py-3 text-sm font-semibold text-gray-700 border-r border-gray-300 text-left" style={{ width: '250px' }}>
-                    Description
-                  </th>
-                  <th className="px-4 py-3 text-sm font-semibold text-gray-700 border-r border-gray-300 text-center" style={{ width: '100px' }}>
-                    Statut
-                  </th>
+      <div className="border border-gray-300 rounded-lg overflow-hidden bg-white">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse" style={{ minWidth: '100%' }}>
+            <thead>
+              <tr className="bg-gray-100 border-b-2 border-gray-300">
+                <th className="px-4 py-3 text-sm font-semibold text-gray-700 border-r border-gray-300 text-left sticky left-0 z-20 bg-gray-100" style={{ width: '220px' }}>
+                  Type de Bon
+                </th>
+                {showCategory && (
                   <th className="px-4 py-3 text-sm font-semibold text-gray-700 border-r border-gray-300 text-center" style={{ width: '120px' }}>
-                    Date Effective
+                    Catégorie
                   </th>
-                  <th className="px-4 py-3 text-sm font-semibold text-gray-700 border-r border-gray-300 text-center" style={{ width: '120px' }}>
-                    Dernière MAJ
-                  </th>
-                  <th className="px-4 py-3 text-sm font-semibold text-gray-700 text-center" style={{ width: '120px' }}>
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {currentPage === 1 && renderNewRow(showCategory)}
-                {paginatedData.map((item) => renderTableRow(item, editingId === item.id, showCategory))}
-                {data.length === 0 && !addingNew && (
-                  <tr>
-                    <td colSpan={colSpan} className="px-4 py-8 text-center text-gray-500">
-                      Aucun tarif trouvé
-                    </td>
-                  </tr>
                 )}
-              </tbody>
-            </table>
-          </div>
-          <div className="mt-2 px-4 pb-2 text-xs text-gray-500 flex items-center justify-between">
-            <span>Faites défiler horizontalement pour voir toutes les colonnes</span>
-            <span>{data.length} ligne{data.length !== 1 ? 's' : ''} au total</span>
-          </div>
+                <th className="px-4 py-3 text-sm font-semibold text-gray-700 border-r border-gray-300 text-right" style={{ width: '150px' }}>
+                  Montant
+                </th>
+                <th className="px-4 py-3 text-sm font-semibold text-gray-700 border-r border-gray-300 text-left" style={{ width: '250px' }}>
+                  Description
+                </th>
+                <th className="px-4 py-3 text-sm font-semibold text-gray-700 border-r border-gray-300 text-center" style={{ width: '100px' }}>
+                  Statut
+                </th>
+                <th className="px-4 py-3 text-sm font-semibold text-gray-700 border-r border-gray-300 text-center" style={{ width: '120px' }}>
+                  Date Effective
+                </th>
+                <th className="px-4 py-3 text-sm font-semibold text-gray-700 border-r border-gray-300 text-center" style={{ width: '120px' }}>
+                  Dernière MAJ
+                </th>
+                <th className="px-4 py-3 text-sm font-semibold text-gray-700 text-center" style={{ width: '120px' }}>
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {renderNewRow(showCategory)}
+              {data.map((item) => renderTableRow(item, editingId === item.id, showCategory))}
+              {data.length === 0 && !addingNew && (
+                <tr>
+                  <td colSpan={colSpan} className="px-4 py-8 text-center text-gray-500">
+                    Aucun tarif trouvé
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
-      </>
+        <div className="mt-2 px-4 pb-2 text-xs text-gray-500 flex items-center justify-between">
+          <span>Faites défiler horizontalement pour voir toutes les colonnes</span>
+          <span>{data.length} ligne{data.length !== 1 ? 's' : ''}</span>
+        </div>
+      </div>
     );
   };
 
@@ -721,7 +589,7 @@ export default function CNAMManagement() {
       {/* Excel Tables with Tabs */}
       <Card>
         <CardContent className="p-6">
-          <Tabs value={activeTab} onValueChange={handleTabChange}>
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="all">
                 Tous les Tarifs ({nomenclature.length})
@@ -730,7 +598,7 @@ export default function CNAMManagement() {
                 Bons de Location ({locationItems.length})
               </TabsTrigger>
               <TabsTrigger value="achat" className="text-green-700">
-                Bons d&apos;Achat ({achatItems.length})
+                Bons d&acirc;Achat ({achatItems.length})
               </TabsTrigger>
             </TabsList>
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar, AlertCircle, Clock } from 'lucide-react';
-import { 
+import { ClipboardCheck, AlertCircle, Clock, User, UserCheck } from 'lucide-react';
+import {
   Table,
   TableBody,
   TableCell,
@@ -11,58 +11,101 @@ import {
 } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
 
+interface ManualTask {
+  id: string;
+  taskCode?: string;
+  taskType: string;
+  adminNotes?: string;
+  employeeNotes?: string;
+  status: string;
+  completedAt?: Date;
+  createdAt: Date;
+  assignedTo: {
+    id: string;
+    firstName: string;
+    lastName: string;
+  };
+  createdBy: {
+    id: string;
+    firstName: string;
+    lastName: string;
+  };
+}
+
 interface PatientAppointmentsProps {
-  appointments: any[];
+  manualTasks?: ManualTask[];
   isLoading?: boolean;
 }
 
-export const PatientAppointments = ({ appointments = [], isLoading = false }: PatientAppointmentsProps) => {
+export const PatientAppointments = ({ manualTasks = [], isLoading = false }: PatientAppointmentsProps) => {
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'SCHEDULED':
-        return 'bg-blue-100 text-blue-800';
+      case 'PENDING':
+        return 'bg-amber-100 text-amber-800';
       case 'COMPLETED':
         return 'bg-green-100 text-green-800';
       case 'CANCELLED':
         return 'bg-red-100 text-red-800';
-      case 'PENDING':
-        return 'bg-amber-100 text-amber-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
   };
 
-  // Function to format time from date object
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('fr-FR', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'PENDING':
+        return 'En attente';
+      case 'COMPLETED':
+        return 'Terminée';
+      case 'CANCELLED':
+        return 'Annulée';
+      default:
+        return status;
+    }
   };
 
-  // Sort appointments by date (most recent first)
-  const sortedAppointments = [...appointments].sort((a, b) => {
-    return new Date(b.appointmentDate).getTime() - new Date(a.appointmentDate).getTime();
+  const getTaskTypeLabel = (taskType: string) => {
+    switch (taskType) {
+      case 'DIAGNOSTIC':
+        return 'Diagnostic';
+      case 'INSTALLATION':
+        return 'Installation';
+      case 'MAINTENANCE':
+        return 'Maintenance';
+      case 'PICKUP':
+        return 'Récupération';
+      case 'DELIVERY':
+        return 'Livraison';
+      case 'FOLLOW_UP':
+        return 'Suivi';
+      case 'CONSULTATION':
+        return 'Consultation';
+      case 'OTHER':
+        return 'Autre';
+      default:
+        return taskType;
+    }
+  };
+
+  // Sort tasks by date (most recent first)
+  const sortedTasks = [...manualTasks].sort((a, b) => {
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
 
-  // Split appointments into upcoming and past
-  const now = new Date();
-  const upcomingAppointments = sortedAppointments.filter(
-    app => new Date(app.appointmentDate) >= now
-  );
-  const pastAppointments = sortedAppointments.filter(
-    app => new Date(app.appointmentDate) < now
-  );
+  // Split tasks into pending and completed
+  const pendingTasks = sortedTasks.filter(task => task.status === 'PENDING');
+  const completedTasks = sortedTasks.filter(task => task.status === 'COMPLETED');
+  const cancelledTasks = sortedTasks.filter(task => task.status === 'CANCELLED');
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Calendar className="h-5 w-5 text-blue-500" />
-          Rendez-vous
+          <ClipboardCheck className="h-5 w-5 text-blue-500" />
+          Tâches manuelles
         </CardTitle>
         <CardDescription>
-          Tous les rendez-vous programmés pour ce patient
+          Toutes les tâches assignées pour ce patient
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -70,44 +113,67 @@ export const PatientAppointments = ({ appointments = [], isLoading = false }: Pa
           <div className="flex justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700"></div>
           </div>
-        ) : sortedAppointments.length > 0 ? (
+        ) : sortedTasks.length > 0 ? (
           <div className="space-y-6">
-            {upcomingAppointments.length > 0 && (
+            {/* Pending Tasks */}
+            {pendingTasks.length > 0 && (
               <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-2">Rendez-vous à venir</h3>
+                <h3 className="text-sm font-semibold text-amber-700 bg-amber-50 px-3 py-2 rounded-lg mb-3">
+                  Tâches en attente ({pendingTasks.length})
+                </h3>
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Heure</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Médecin</TableHead>
-                        <TableHead>Notes</TableHead>
+                        <TableHead>Code</TableHead>
+                        <TableHead>Type de tâche</TableHead>
+                        <TableHead>Assignée à</TableHead>
+                        <TableHead>Créée par</TableHead>
+                        <TableHead>Notes admin</TableHead>
+                        <TableHead>Date création</TableHead>
                         <TableHead>Statut</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {upcomingAppointments.map((appointment, index) => {
-                        const appointmentDate = new Date(appointment.appointmentDate);
-                        
+                      {pendingTasks.map((task) => {
+                        const createdDate = new Date(task.createdAt);
+
                         return (
-                          <TableRow key={index}>
-                            <TableCell>{appointmentDate.toLocaleDateString()}</TableCell>
-                            <TableCell className="whitespace-nowrap">
-                              <span className="flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                {formatTime(appointmentDate)}
-                              </span>
+                          <TableRow key={task.id} className="bg-amber-50/30">
+                            <TableCell className="font-mono text-xs">
+                              {task.taskCode || '-'}
                             </TableCell>
-                            <TableCell>{appointment.type || 'Consultation'}</TableCell>
-                            <TableCell>{appointment.doctor?.name || 'Non assigné'}</TableCell>
-                            <TableCell className="max-w-xs truncate">
-                              {appointment.notes || '-'}
+                            <TableCell className="font-medium">
+                              {getTaskTypeLabel(task.taskType)}
                             </TableCell>
                             <TableCell>
-                              <Badge className={getStatusColor(appointment.status)}>
-                                {appointment.status}
+                              <div className="flex items-center gap-1">
+                                <UserCheck className="h-3 w-3 text-blue-500" />
+                                <span>{`${task.assignedTo.firstName} ${task.assignedTo.lastName}`}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                <User className="h-3 w-3 text-gray-500" />
+                                <span className="text-sm text-gray-600">
+                                  {`${task.createdBy.firstName} ${task.createdBy.lastName}`}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="max-w-xs">
+                              <div className="truncate text-sm">
+                                {task.adminNotes || '-'}
+                              </div>
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap">
+                              <div className="flex items-center gap-1 text-sm">
+                                <Clock className="h-3 w-3 text-gray-400" />
+                                {createdDate.toLocaleDateString('fr-FR')}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={getStatusColor(task.status)}>
+                                {getStatusLabel(task.status)}
                               </Badge>
                             </TableCell>
                           </TableRow>
@@ -119,35 +185,64 @@ export const PatientAppointments = ({ appointments = [], isLoading = false }: Pa
               </div>
             )}
 
-            {pastAppointments.length > 0 && (
+            {/* Completed Tasks */}
+            {completedTasks.length > 0 && (
               <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-2">Rendez-vous passés</h3>
+                <h3 className="text-sm font-semibold text-green-700 bg-green-50 px-3 py-2 rounded-lg mb-3">
+                  Tâches terminées ({completedTasks.length})
+                </h3>
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Médecin</TableHead>
-                        <TableHead>Notes</TableHead>
+                        <TableHead>Code</TableHead>
+                        <TableHead>Type de tâche</TableHead>
+                        <TableHead>Assignée à</TableHead>
+                        <TableHead>Notes admin</TableHead>
+                        <TableHead>Notes employé</TableHead>
+                        <TableHead>Date terminée</TableHead>
                         <TableHead>Statut</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {pastAppointments.slice(0, 5).map((appointment, index) => {
-                        const appointmentDate = new Date(appointment.appointmentDate);
-                        
+                      {completedTasks.slice(0, 5).map((task) => {
+                        const completedDate = task.completedAt ? new Date(task.completedAt) : null;
+
                         return (
-                          <TableRow key={index}>
-                            <TableCell>{appointmentDate.toLocaleDateString()}</TableCell>
-                            <TableCell>{appointment.type || 'Consultation'}</TableCell>
-                            <TableCell>{appointment.doctor?.name || 'Non assigné'}</TableCell>
-                            <TableCell className="max-w-xs truncate">
-                              {appointment.notes || '-'}
+                          <TableRow key={task.id} className="bg-green-50/20">
+                            <TableCell className="font-mono text-xs">
+                              {task.taskCode || '-'}
+                            </TableCell>
+                            <TableCell className="font-medium">
+                              {getTaskTypeLabel(task.taskType)}
                             </TableCell>
                             <TableCell>
-                              <Badge className={getStatusColor(appointment.status)}>
-                                {appointment.status}
+                              <div className="flex items-center gap-1">
+                                <UserCheck className="h-3 w-3 text-blue-500" />
+                                <span>{`${task.assignedTo.firstName} ${task.assignedTo.lastName}`}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="max-w-xs">
+                              <div className="truncate text-sm text-gray-600">
+                                {task.adminNotes || '-'}
+                              </div>
+                            </TableCell>
+                            <TableCell className="max-w-xs">
+                              <div className="truncate text-sm">
+                                {task.employeeNotes || '-'}
+                              </div>
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap">
+                              {completedDate ? (
+                                <div className="flex items-center gap-1 text-sm">
+                                  <Clock className="h-3 w-3 text-gray-400" />
+                                  {completedDate.toLocaleDateString('fr-FR')}
+                                </div>
+                              ) : '-'}
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={getStatusColor(task.status)}>
+                                {getStatusLabel(task.status)}
                               </Badge>
                             </TableCell>
                           </TableRow>
@@ -155,13 +250,74 @@ export const PatientAppointments = ({ appointments = [], isLoading = false }: Pa
                       })}
                     </TableBody>
                   </Table>
-                  {pastAppointments.length > 5 && (
+                  {completedTasks.length > 5 && (
                     <div className="text-center mt-2">
                       <span className="text-xs text-gray-500">
-                        + {pastAppointments.length - 5} rendez-vous antérieurs
+                        + {completedTasks.length - 5} tâches terminées supplémentaires
                       </span>
                     </div>
                   )}
+                </div>
+              </div>
+            )}
+
+            {/* Cancelled Tasks */}
+            {cancelledTasks.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-red-700 bg-red-50 px-3 py-2 rounded-lg mb-3">
+                  Tâches annulées ({cancelledTasks.length})
+                </h3>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Code</TableHead>
+                        <TableHead>Type de tâche</TableHead>
+                        <TableHead>Assignée à</TableHead>
+                        <TableHead>Notes admin</TableHead>
+                        <TableHead>Date création</TableHead>
+                        <TableHead>Statut</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {cancelledTasks.map((task) => {
+                        const createdDate = new Date(task.createdAt);
+
+                        return (
+                          <TableRow key={task.id} className="bg-red-50/20">
+                            <TableCell className="font-mono text-xs">
+                              {task.taskCode || '-'}
+                            </TableCell>
+                            <TableCell className="font-medium text-gray-500">
+                              {getTaskTypeLabel(task.taskType)}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                <UserCheck className="h-3 w-3 text-gray-400" />
+                                <span className="text-gray-500">{`${task.assignedTo.firstName} ${task.assignedTo.lastName}`}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="max-w-xs">
+                              <div className="truncate text-sm text-gray-500">
+                                {task.adminNotes || '-'}
+                              </div>
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap">
+                              <div className="flex items-center gap-1 text-sm text-gray-500">
+                                <Clock className="h-3 w-3 text-gray-400" />
+                                {createdDate.toLocaleDateString('fr-FR')}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={getStatusColor(task.status)}>
+                                {getStatusLabel(task.status)}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
                 </div>
               </div>
             )}
@@ -169,7 +325,7 @@ export const PatientAppointments = ({ appointments = [], isLoading = false }: Pa
         ) : (
           <div className="text-center py-8 text-gray-500">
             <AlertCircle className="h-10 w-10 mx-auto mb-2 text-gray-300" />
-            <p>Aucun rendez-vous programmé pour ce patient</p>
+            <p>Aucune tâche assignée pour ce patient</p>
           </div>
         )}
       </CardContent>

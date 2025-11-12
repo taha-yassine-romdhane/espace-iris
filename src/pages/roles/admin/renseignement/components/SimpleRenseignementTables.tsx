@@ -312,10 +312,21 @@ export default function SimpleRenseignementTables({
                     >
                       <td className="px-3 py-2.5 text-xs border-r border-slate-100">
                         {patient.patientCode ? (
-                          <Badge variant="outline" className="text-xs font-medium">{patient.patientCode}</Badge>
+                          <Badge
+                            variant="outline"
+                            className="text-xs font-medium cursor-pointer hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 transition-colors"
+                            onClick={() => onViewDetails(patient)}
+                          >
+                            {patient.patientCode}
+                          </Badge>
                         ) : '-'}
                       </td>
-                      <td className="px-3 py-2.5 text-sm font-medium text-slate-900 border-r border-slate-100">{patient.nom}</td>
+                      <td
+                        className="px-3 py-2.5 text-sm font-medium text-slate-900 border-r border-slate-100 cursor-pointer hover:text-blue-600 hover:underline transition-colors"
+                        onClick={() => onViewDetails(patient)}
+                      >
+                        {patient.nom}
+                      </td>
                       <td className="px-3 py-2.5 text-xs text-slate-600 border-r border-slate-100">{patient.telephone || '-'}</td>
                       <td className="px-3 py-2.5 text-xs text-slate-600 border-r border-slate-100">{patient.telephoneSecondaire || '-'}</td>
                       <td className="px-3 py-2.5 text-xs text-slate-600 border-r border-slate-100">{patient.cin || '-'}</td>
@@ -581,7 +592,6 @@ export default function SimpleRenseignementTables({
                     <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[120px]">Téléphone</th>
                     <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[200px]">Adresse</th>
                     <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[140px]">Technicien</th>
-                    <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[140px]">Superviseur</th>
                     <th className="px-3 py-3 text-center text-xs font-semibold text-slate-700 sticky right-0 bg-slate-50 shadow-[-2px_0_4px_rgba(0,0,0,0.05)] min-w-[120px]">Actions</th>
                   </tr>
                 </thead>
@@ -591,8 +601,18 @@ export default function SimpleRenseignementTables({
                       key={company.id}
                       className={`border-b border-slate-100 hover:bg-blue-50/50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'}`}
                     >
-                      <td className="px-3 py-2.5 text-sm font-medium text-slate-900 border-r border-slate-100">{company.nom}</td>
-                      <td className="px-3 py-2.5 text-xs text-slate-600 border-r border-slate-100">{company.matriculeFiscale || '-'}</td>
+                      <td
+                        className="px-3 py-2.5 text-sm font-medium text-slate-900 border-r border-slate-100 cursor-pointer hover:text-blue-600 hover:underline transition-colors"
+                        onClick={() => onViewDetails(company)}
+                      >
+                        {company.nom}
+                      </td>
+                      <td
+                        className="px-3 py-2.5 text-xs text-slate-600 border-r border-slate-100 cursor-pointer hover:text-blue-600 transition-colors"
+                        onClick={() => onViewDetails(company)}
+                      >
+                        {company.matriculeFiscale || '-'}
+                      </td>
                       <td className="px-3 py-2.5 text-xs text-slate-600 border-r border-slate-100">{company.telephone || '-'}</td>
                       <td className="px-3 py-2.5 text-xs text-slate-600 border-r border-slate-100 max-w-[200px]">
                         <div className="truncate" title={company.adresse}>
@@ -600,7 +620,6 @@ export default function SimpleRenseignementTables({
                         </div>
                       </td>
                       <td className="px-3 py-2.5 text-xs text-slate-600 border-r border-slate-100">{company.technician?.name || '-'}</td>
-                      <td className="px-3 py-2.5 text-xs text-slate-600 border-r border-slate-100">{company.supervisor?.name || '-'}</td>
                       <td className="px-3 py-2.5 sticky right-0 bg-inherit shadow-[-2px_0_4px_rgba(0,0,0,0.05)]">
                         <div className="flex items-center justify-center space-x-1">
                           <Button

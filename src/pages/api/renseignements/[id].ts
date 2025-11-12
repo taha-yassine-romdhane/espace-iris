@@ -21,11 +21,12 @@ export default async function handler(
 
   try {
     if (req.method === 'GET') {
-      // First, try to find a patient with this ID
+      // First, try to find a patient with this ID - fetch ALL related data
       const patient = await prisma.patient.findUnique({
         where: { id },
         select: {
           id: true,
+          patientCode: true,
           firstName: true,
           lastName: true,
           telephone: true,
@@ -64,13 +65,265 @@ export default async function handler(
             }
           },
           files: true,
-          // Include related data
-          diagnostics: true,
-          medicalDevices: true,
-          payments: true,
-          rentals: true,
-          PatientHistory: true, // Correct casing to match schema
-          appointments: true
+          // Include ALL related data for complete patient CV
+          diagnostics: {
+            include: {
+              performedBy: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                }
+              },
+              medicalDevice: {
+                select: {
+                  id: true,
+                  name: true,
+                  serialNumber: true,
+                  brand: true,
+                }
+              },
+              result: {
+                select: {
+                  iah: true,
+                  idValue: true,
+                  status: true,
+                  remarque: true,
+                }
+              }
+            },
+            orderBy: {
+              diagnosticDate: 'desc'
+            }
+          },
+          payments: {
+            include: {
+              sale: {
+                select: {
+                  id: true,
+                  saleCode: true,
+                  totalAmount: true,
+                  saleDate: true,
+                }
+              },
+              rental: {
+                select: {
+                  id: true,
+                  rentalCode: true,
+                }
+              },
+              paymentDetails: {
+                select: {
+                  method: true,
+                  amount: true,
+                }
+              }
+            },
+            orderBy: {
+              paymentDate: 'desc'
+            }
+          },
+          rentals: {
+            select: {
+              id: true,
+              rentalCode: true,
+              startDate: true,
+              endDate: true,
+              status: true,
+              alertDate: true,
+              titrationReminderDate: true,
+              appointmentDate: true,
+              notes: true,
+              medicalDevice: {
+                select: {
+                  id: true,
+                  name: true,
+                  serialNumber: true,
+                  type: true,
+                  deviceCode: true,
+                  brand: true,
+                  model: true,
+                }
+              },
+              cnamBons: {
+                select: {
+                  id: true,
+                  bonNumber: true,
+                  dossierNumber: true,
+                  bonType: true,
+                  bonAmount: true,
+                  devicePrice: true,
+                  complementAmount: true,
+                  status: true,
+                  category: true,
+                  currentStep: true,
+                  coveredMonths: true,
+                  createdAt: true,
+                }
+              },
+              configuration: {
+                select: {
+                  rentalRate: true,
+                  billingCycle: true,
+                  isGlobalOpenEnded: true,
+                  cnamEligible: true,
+                  totalPaymentAmount: true,
+                  deliveryNotes: true,
+                  internalNotes: true,
+                }
+              },
+              accessories: {
+                select: {
+                  id: true,
+                  quantity: true,
+                  unitPrice: true,
+                  product: {
+                    select: {
+                      name: true,
+                      productCode: true,
+                    }
+                  }
+                }
+              },
+              createdBy: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                }
+              },
+              assignedTo: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                }
+              },
+              payments: {
+                select: {
+                  id: true,
+                  paymentCode: true,
+                  amount: true,
+                  paymentDate: true,
+                  status: true,
+                  method: true,
+                  paymentType: true,
+                },
+                orderBy: {
+                  paymentDate: 'desc'
+                },
+                take: 1
+              }
+            }
+          },
+          sales: {
+            include: {
+              items: {
+                select: {
+                  id: true,
+                  unitPrice: true,
+                  quantity: true,
+                  discount: true,
+                  itemTotal: true,
+                  serialNumber: true,
+                  product: {
+                    select: {
+                      id: true,
+                      name: true,
+                      description: true,
+                    }
+                  },
+                  medicalDevice: {
+                    select: {
+                      id: true,
+                      name: true,
+                      serialNumber: true,
+                      type: true,
+                      deviceCode: true,
+                    }
+                  }
+                }
+              },
+              payments: {
+                select: {
+                  id: true,
+                  paymentCode: true,
+                  method: true,
+                  amount: true,
+                  paymentDate: true,
+                  status: true,
+                }
+              },
+              cnamBons: {
+                select: {
+                  id: true,
+                  bonNumber: true,
+                  dossierNumber: true,
+                  bonType: true,
+                  bonAmount: true,
+                  devicePrice: true,
+                  complementAmount: true,
+                  status: true,
+                  category: true,
+                  currentStep: true,
+                  coveredMonths: true,
+                  createdAt: true,
+                }
+              },
+              processedBy: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                }
+              },
+              assignedTo: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                }
+              }
+            },
+            orderBy: {
+              saleDate: 'desc'
+            }
+          },
+          PatientHistory: {
+            include: {
+              performedBy: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                }
+              }
+            },
+            orderBy: {
+              createdAt: 'desc'
+            }
+          },
+          manualTasks: {
+            include: {
+              assignedTo: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                }
+              },
+              createdBy: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                }
+              }
+            },
+            orderBy: {
+              createdAt: 'desc'
+            }
+          }
         },
       });
 
@@ -108,10 +361,11 @@ export default async function handler(
             assignedToName = `${patient.assignedTo.firstName} ${patient.assignedTo.lastName}`;
           }
           
-          // Transform the patient data to match the expected format
+          // Transform the patient data to match the expected format - COMPLETE PATIENT CV
           const formattedPatient = {
             id: patient.id,
             type: 'Patient',
+            patientCode: patient.patientCode,
             nom: `${patient.firstName} ${patient.lastName}`,
             firstName: patient.firstName,
             lastName: patient.lastName,
@@ -152,13 +406,40 @@ export default async function handler(
               name: assignedToName
             },
             files: patient.files || [],
-            // Include related data in the response - using UI-friendly names but with data from correct schema fields
+            // Include ALL related data for complete patient CV
             diagnostics: patient.diagnostics || [],
-            devices: patient.medicalDevices || [], // Map medicalDevices to devices for UI
+            // Get all devices from both sales and rentals
+            devices: [
+              ...(patient.sales?.flatMap(sale =>
+                (sale.items || [])
+                  .filter(item => item.medicalDevice)
+                  .map(item => ({
+                    ...item.medicalDevice,
+                    source: 'sale',
+                    saleCode: sale.saleCode,
+                    saleDate: sale.saleDate
+                  }))
+              ) || []),
+              ...(patient.rentals?.map(rental => ({
+                ...rental.medicalDevice,
+                source: 'rental',
+                rentalCode: rental.rentalCode,
+                startDate: rental.startDate
+              })) || [])
+            ],
             payments: patient.payments || [],
             rentals: patient.rentals || [],
-            history: patient.PatientHistory || [], // Map PatientHistory to history for UI
-            appointments: patient.appointments || [],
+            sales: patient.sales || [],
+            // Flatten sale items for easy access
+            saleItems: patient.sales?.flatMap(sale =>
+              (sale.items || []).map(item => ({
+                ...item,
+                saleCode: sale.saleCode,
+                saleDate: sale.saleDate
+              }))
+            ) || [],
+            history: patient.PatientHistory || [],
+            manualTasks: patient.manualTasks || [],
             createdAt: patient.createdAt,
             updatedAt: patient.updatedAt,
           };

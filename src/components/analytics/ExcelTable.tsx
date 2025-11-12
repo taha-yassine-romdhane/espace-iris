@@ -1,4 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useRouter } from 'next/router';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface Column {
   key: string;
@@ -7,6 +11,7 @@ interface Column {
   align?: 'left' | 'center' | 'right';
   format?: (value: any) => string;
   className?: string;
+  render?: (value: any, row: any) => React.ReactNode;
 }
 
 interface ExcelTableProps {
@@ -17,12 +22,70 @@ interface ExcelTableProps {
 }
 
 export const ExcelTable: React.FC<ExcelTableProps> = ({ columns, data, title, summary }) => {
+  const router = useRouter();
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(50);
+
+  // Pagination logic
+  const totalPages = Math.ceil(data.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedData = data.slice(startIndex, endIndex);
+
+  // Reset to page 1 when items per page changes
+  const handleItemsPerPageChange = (value: string) => {
+    setItemsPerPage(Number(value));
+    setCurrentPage(1);
+  };
+
   return (
     <div className="w-full">
       {title && (
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-          <p className="text-sm text-gray-500">{data.length} entrées</p>
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+            <p className="text-sm text-gray-500">{data.length} entrées</p>
+          </div>
+
+          {/* Pagination Controls - Top */}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">Afficher</span>
+              <Select value={itemsPerPage.toString()} onValueChange={handleItemsPerPageChange}>
+                <SelectTrigger className="w-[100px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                  <SelectItem value="200">200</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                size="sm"
+                variant="outline"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-sm text-gray-600">
+                Page {currentPage} sur {totalPages || 1}
+              </span>
+              <Button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages || totalPages === 0}
+                size="sm"
+                variant="outline"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -52,7 +115,7 @@ export const ExcelTable: React.FC<ExcelTableProps> = ({ columns, data, title, su
 
             {/* Table Body */}
             <tbody>
-              {data.map((row, rowIdx) => (
+              {paginatedData.map((row, rowIdx) => (
                 <tr
                   key={rowIdx}
                   className={`
@@ -62,7 +125,15 @@ export const ExcelTable: React.FC<ExcelTableProps> = ({ columns, data, title, su
                 >
                   {columns.map((col, colIdx) => {
                     const value = row[col.key];
-                    const displayValue = col.format ? col.format(value) : value;
+                    let displayValue;
+
+                    if (col.render) {
+                      displayValue = col.render(value, row);
+                    } else if (col.format) {
+                      displayValue = col.format(value);
+                    } else {
+                      displayValue = value;
+                    }
 
                     return (
                       <td
@@ -112,10 +183,36 @@ export const ExcelTable: React.FC<ExcelTableProps> = ({ columns, data, title, su
         </div>
       </div>
 
-      {/* Table Info */}
-      <div className="mt-2 text-xs text-gray-500 flex items-center justify-between">
-        <span>Faites défiler horizontalement pour voir toutes les colonnes</span>
-        <span>{data.length} ligne{data.length !== 1 ? 's' : ''}</span>
+      {/* Table Info & Bottom Pagination */}
+      <div className="mt-4 flex items-center justify-between">
+        <div className="text-xs text-gray-500">
+          <span>Faites défiler horizontalement pour voir toutes les colonnes</span>
+          <span className="mx-2">•</span>
+          <span>Affichage {startIndex + 1}-{Math.min(endIndex, data.length)} sur {data.length} ligne{data.length !== 1 ? 's' : ''}</span>
+        </div>
+
+        {/* Pagination Controls - Bottom */}
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            size="sm"
+            variant="outline"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="text-sm text-gray-600">
+            Page {currentPage} sur {totalPages || 1}
+          </span>
+          <Button
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages || totalPages === 0}
+            size="sm"
+            variant="outline"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     </div>
   );

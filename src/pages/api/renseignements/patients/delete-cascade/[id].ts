@@ -5,7 +5,7 @@ import prisma from '@/lib/db';
 import fs from 'fs/promises';
 import path from 'path';
 
-const STORAGE_BASE_PATH = '/home/taha/Desktop/projects/espace-iris-files';
+const STORAGE_BASE_PATH = '/home/taha/Desktop/projects/espace-elite-files';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const session = await getServerSession(req, res, authOptions);
@@ -86,7 +86,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       deletedCounts.files = (await tx.file.deleteMany({ where: { patientId: id } })).count;
       deletedCounts.notifications = (await tx.notification.deleteMany({ where: { patientId: id } })).count;
       deletedCounts.deviceParameters = (await tx.medicalDeviceParametre.deleteMany({ where: { patientId: id } })).count;
-      deletedCounts.medicalDevices = (await tx.medicalDevice.deleteMany({ where: { patientId: id } })).count;
+      // Medical devices are no longer directly linked to patients - skip this deletion
+      deletedCounts.medicalDevices = 0;
       deletedCounts.patientHistory = (await tx.patientHistory.deleteMany({ where: { patientId: id } })).count;
 
       // If force delete is enabled, also delete blockers

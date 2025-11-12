@@ -32,6 +32,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               firstName: true,
               lastName: true,
               telephone: true,
+              patientCode: true,
             },
           },
           assignedTo: {
@@ -87,6 +88,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             }),
           },
           include: {
+            patient: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                telephone: true,
+                patientCode: true,
+              },
+            },
             assignedTo: {
               select: {
                 id: true,
@@ -129,6 +139,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 firstName: true,
                 lastName: true,
                 telephone: true,
+                patientCode: true,
               },
             },
             assignedTo: {

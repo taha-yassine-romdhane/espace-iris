@@ -2,7 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import prisma from '@/lib/db';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]';
-import { PaymentMethod, PaymentStatus, CNAMBondType, CNAMStatus } from '@prisma/client';
+import { PaymentMethod, PaymentStatus, CNAMBonType, CNAMStatus } from '@prisma/client';
 import { generateSaleCode, generatePaymentCode, generateCNAMDossierNumber } from '@/utils/idGenerator';
 
 // Helper function to map frontend payment types to Prisma PaymentMethod enum
@@ -56,7 +56,7 @@ function createPaymentReference(payment: {
   dossierNumber?: string;
   fileNumber?: string;
   cnamInfo?: {
-    bondType?: string;
+    bonType?: string;
     currentStep?: number;
   };
   dueDate?: string;
@@ -78,9 +78,9 @@ function createPaymentReference(payment: {
       
     case 'cnam':
       const cnamRef = payment.dossierNumber || payment.fileNumber || '';
-      const bondType = payment.cnamInfo?.bondType || '';
+      const bonType = payment.cnamInfo?.bonType || '';
       const step = payment.cnamInfo?.currentStep || '';
-      return `CNAM ${bondType} Dossier:${cnamRef} Étape:${step}: ${payment.amount} DT`;
+      return `CNAM ${bonType} Dossier:${cnamRef} Étape:${step}: ${payment.amount} DT`;
       
     case 'traite':
       return `Traite Échéance:${payment.dueDate ? new Date(payment.dueDate).toLocaleDateString() : ''}: ${payment.amount} DT`;
@@ -95,85 +95,165 @@ export default async function handler(
   res: NextApiResponse
 ) {
   try {
+    // Check authentication
+    const session = await getServerSession(req, res, authOptions);
+    if (!session) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
     if (req.method === 'GET') {
-      // Get the createdBy filter from query params for employee filtering
-      const { createdBy, processedBy } = req.query;
-      
-      // Build the where clause
+      // Parse query parameters for pagination
+      const usePagination = req.query.paginate !== 'false'; // Pagination enabled by default
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 100; // Default 100 items per page
+      const includeDetails = req.query.details === 'true'; // Option to include full details
+      const skip = usePagination ? (page - 1) * limit : 0;
+
+      // Role-based filtering
       const whereClause: any = {};
-      if (createdBy) {
-        whereClause.processedById = createdBy as string;
+
+      // If user is EMPLOYEE, only show sales assigned to them or processed by them
+      if (session.user.role === 'EMPLOYEE') {
+        whereClause.OR = [
+          { assignedToId: session.user.id },
+          { processedById: session.user.id }
+        ];
       }
-      if (processedBy) {
-        whereClause.processedById = processedBy as string;
-      }
-      
-      const sales = await prisma.sale.findMany({
-        where: whereClause,
-        include: {
-          processedBy: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-            },
+      // ADMIN and DOCTOR can see all sales (no filter)
+
+      // Build include based on details flag
+      const includeClause = includeDetails ? {
+        processedBy: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
           },
-          patient: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              telephone: true,
-              patientCode: true,
-            },
+        },
+        patient: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            telephone: true,
+            patientCode: true,
           },
-          company: {
-            select: {
-              id: true,
-              companyName: true,
-              telephone: true,
-            },
+        },
+        company: {
+          select: {
+            id: true,
+            companyName: true,
+            companyCode: true,
+            telephone: true,
           },
-          payment: {
-            include: {
-              paymentDetails: true, // Include payment details for complex payments
-            },
+        },
+        payments: {
+          include: {
+            paymentDetails: true,
           },
-          items: {
-            include: {
-              product: true,
-              medicalDevice: true,
-              configuration: true, // Include the new configuration
+          orderBy: {
+            createdAt: 'asc' as const,
+          },
+        },
+        items: {
+          include: {
+            product: true,
+            medicalDevice: true,
+            configuration: true,
+          },
+        },
+        cnamDossiers: {
+          include: {
+            patient: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                patientCode: true,
+              },
             },
           },
         },
+        cnamBons: {
+          where: {
+            category: 'ACHAT' as const,
+          },
+          include: {
+            patient: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                patientCode: true,
+              },
+            },
+          },
+        },
+        assignedTo: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            role: true,
+          },
+        },
+      } : {
+        // Minimal data for list view
+        patient: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            patientCode: true,
+          },
+        },
+        company: {
+          select: {
+            id: true,
+            companyName: true,
+            companyCode: true,
+          },
+        },
+        processedBy: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+        assignedTo: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+        _count: {
+          select: {
+            payments: true,
+            items: true,
+          },
+        },
+      };
+
+      // Get total count for pagination
+      const totalCount = await prisma.sale.count({ where: whereClause });
+
+      const sales = await prisma.sale.findMany({
+        where: whereClause,
+        include: includeClause,
         orderBy: {
           saleDate: 'desc',
         },
+        ...(usePagination && {
+          skip,
+          take: limit,
+        }),
       });
 
-      // Get all payments for all sales in a single query
-      const saleIds = sales.map(sale => sale.id);
-      const allPayments = await prisma.payment.findMany({
-        where: {
-          saleId: {
-            in: saleIds
-          }
-        },
-        orderBy: {
-          paymentDate: 'asc'
-        }
-      });
-
-      // Group payments by saleId
-      const paymentsBySale = allPayments.reduce((acc, payment) => {
-        if (!acc[payment.saleId!]) {
-          acc[payment.saleId!] = [];
-        }
-        acc[payment.saleId!].push(payment);
-        return acc;
-      }, {} as Record<string, typeof allPayments>);
+      // Payments are now included via the `payments` relation in the query above
+      // No need for a separate query
 
       // Transform the data to match the expected format in the frontend
       const transformedSales = sales.map(sale => ({
@@ -196,7 +276,16 @@ export default async function handler(
           name: `${sale.processedBy.firstName} ${sale.processedBy.lastName}`,
           email: sale.processedBy.email,
         } : null,
-        
+
+        // Who is assigned to the sale
+        assignedToId: sale.assignedToId,
+        assignedTo: sale.assignedTo ? {
+          id: sale.assignedTo.id,
+          firstName: sale.assignedTo.firstName,
+          lastName: sale.assignedTo.lastName,
+          role: sale.assignedTo.role,
+        } : null,
+
         // Client information (either patient or company)
         patientId: sale.patientId,
         patient: sale.patient ? {
@@ -212,6 +301,7 @@ export default async function handler(
         company: sale.company ? {
           id: sale.company.id,
           companyName: sale.company.companyName,
+          companyCode: sale.company.companyCode,
           telephone: sale.company.telephone,
         } : null,
         
@@ -223,59 +313,60 @@ export default async function handler(
         clientType: sale.patient ? 'PATIENT' : (sale.company ? 'COMPANY' : null),
         
         // Payment information - handle multiple payments
-        paymentId: sale.paymentId,
+        payments: sale.payments,
         payment: (() => {
-          const salePayments = paymentsBySale[sale.id] || [];
-          
-          // If there are multiple payments via saleId, aggregate them
+          const salePayments = sale.payments || [];
+
+          // If there are multiple payments, aggregate them
           if (salePayments.length > 0) {
-            const totalAmount = salePayments.reduce((sum, p) => sum + Number(p.amount), 0);
+            const totalPaidAmount = salePayments.reduce((sum, p) => sum + Number(p.amount), 0);
             const allPaid = salePayments.every(p => p.status === 'PAID');
             const anyPending = salePayments.some(p => p.status === 'PENDING');
             const hasPartial = salePayments.some(p => p.status === 'PARTIAL');
-            
+
             let aggregatedStatus = 'PENDING';
-            if (allPaid) {
+            if (totalPaidAmount >= Number(sale.finalAmount)) {
               aggregatedStatus = 'PAID';
-            } else if (hasPartial || (salePayments.some(p => p.status === 'PAID') && anyPending)) {
+            } else if (totalPaidAmount > 0) {
               aggregatedStatus = 'PARTIAL';
             }
-            
+
             return {
               id: salePayments[0].id,
-              amount: totalAmount,
+              paymentCode: salePayments[0].paymentCode || null,
+              amount: totalPaidAmount,
+              remainingAmount: Number(sale.finalAmount) - totalPaidAmount,
               status: aggregatedStatus,
               method: salePayments.length > 1 ? 'MIXED' : salePayments[0].method,
               paymentDetails: salePayments.map(p => ({
+                id: p.id,
+                paymentCode: p.paymentCode,
                 method: p.method,
                 amount: Number(p.amount),
                 status: p.status,
                 paymentDate: p.paymentDate,
                 referenceNumber: p.referenceNumber,
+                chequeNumber: p.chequeNumber,
+                bankName: p.bankName,
+                notes: p.notes,
                 metadata: {
-                  dossierNumber: p.cnamBondNumber,
-                  cnamInfo: p.cnamBondNumber ? {
-                    dossierNumber: p.cnamBondNumber,
-                    bondType: p.cnamBondType,
+                  dossierNumber: p.cnamBonNumber,
+                  cnamInfo: p.cnamBonNumber ? {
+                    dossierNumber: p.cnamBonNumber,
+                    bonType: p.cnamBonType,
                     status: p.cnamStatus
                   } : null
                 }
               }))
             };
           }
-          
-          // Fallback to single payment
-          return sale.payment ? {
-            id: sale.payment.id,
-            amount: sale.payment.amount,
-            status: sale.payment.status,
-            method: sale.payment.method,
-            paymentDetails: sale.payment.paymentDetails || []
-          } : null;
+
+          // No payments yet
+          return null;
         })(),
         
-        // Items in the sale
-        items: sale.items.map(item => ({
+        // Items in the sale (only when details are included)
+        items: sale.items ? sale.items.map(item => ({
           id: item.id,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
@@ -288,15 +379,17 @@ export default async function handler(
           productId: item.productId,
           product: item.product ? {
             id: item.product.id,
+            productCode: item.product.productCode || null,
             name: item.product.name,
             type: item.product.type,
             brand: item.product.brand || null,
             model: item.product.model || null,
           } : null,
-          
+
           medicalDeviceId: item.medicalDeviceId,
           medicalDevice: item.medicalDevice ? {
             id: item.medicalDevice.id,
+            deviceCode: item.medicalDevice.deviceCode || null,
             name: item.medicalDevice.name,
             type: item.medicalDevice.type,
             brand: item.medicalDevice.brand || null,
@@ -324,16 +417,53 @@ export default async function handler(
           configuration: item.configuration,
           
           // Item name for display
-          name: item.product 
-            ? item.product.name 
+          name: item.product
+            ? item.product.name
             : (item.medicalDevice ? item.medicalDevice.name : 'Article inconnu'),
-        })),
-        
+        })) : [],
+
+        // Use _count for items count when items not included
+        itemsCount: includeDetails ? undefined : (sale as any)._count?.items,
+        paymentsCount: includeDetails ? undefined : (sale as any)._count?.payments,
+
+        // CNAM Bons information (only when details included)
+        cnamBons: sale.cnamBons?.map(bon => ({
+          id: bon.id,
+          bonNumber: bon.bonNumber,
+          bonType: bon.bonType,
+          status: bon.status,
+          bonAmount: bon.bonAmount,
+          devicePrice: bon.devicePrice,
+          complementAmount: bon.complementAmount,
+          currentStep: bon.currentStep,
+          dossierNumber: bon.dossierNumber,
+          submissionDate: bon.submissionDate,
+          approvalDate: bon.approvalDate,
+          patient: bon.patient ? {
+            id: bon.patient.id,
+            patientCode: bon.patient.patientCode,
+            firstName: bon.patient.firstName,
+            lastName: bon.patient.lastName,
+            fullName: `${bon.patient.firstName} ${bon.patient.lastName}`,
+          } : null,
+        })) || [],
+
         createdAt: sale.createdAt,
         updatedAt: sale.updatedAt,
       }));
 
-      return res.status(200).json({ sales: transformedSales });
+      return res.status(200).json({
+        sales: transformedSales,
+        ...(usePagination && {
+          pagination: {
+            page,
+            limit,
+            total: totalCount,
+            totalPages: Math.ceil(totalCount / limit),
+            hasMore: skip + sales.length < totalCount,
+          },
+        }),
+      });
     }
 
     if (req.method === 'POST') {
@@ -344,7 +474,7 @@ export default async function handler(
       }
 
       const saleData = req.body;
-
+      
       // Validate required fields
       if (!saleData) {
         return res.status(400).json({ error: 'No sale data provided' });
@@ -352,18 +482,16 @@ export default async function handler(
       
       if (!saleData.processedById) {
         // Use the current user's ID from the session
-        saleData.processedById = session.user.id;  
+        saleData.processedById = session.user.id;
       }
-      
-      // Client information is now OPTIONAL - can be added later
-      // This allows creating draft sales and assigning clients later
 
-      // Items are now OPTIONAL - allow creating sales without items
-      // Items can be added later through the Articles tab
-      const hasItems = saleData.items && Array.isArray(saleData.items) && saleData.items.length > 0;
+      // Optional client information - can be added later
+      // No validation required for patientId or companyId
 
-      if (hasItems) {
-        // Validate each item has required fields only if items are provided
+      // Optional items - can be added later via separate management
+      // Only validate items if they are provided
+      if (saleData.items && Array.isArray(saleData.items) && saleData.items.length > 0) {
+        // Validate each item has required fields
         for (let i = 0; i < saleData.items.length; i++) {
           const item = saleData.items[i];
           if (!item.quantity || isNaN(parseInt(item.quantity))) {
@@ -380,13 +508,20 @@ export default async function handler(
           }
         }
       }
+
+      // Set default values for financial fields if not provided
+      if (!saleData.totalAmount || isNaN(parseFloat(saleData.totalAmount))) {
+        saleData.totalAmount = 0;
+      }
+
+      if (!saleData.finalAmount || isNaN(parseFloat(saleData.finalAmount))) {
+        saleData.finalAmount = 0;
+      }
       
       try {
         // Start a transaction to ensure all operations succeed or fail together
         const result = await prisma.$transaction(async (tx) => {
-          // 1. Create the payment if provided
-          let paymentId = null;
-          
+          // 1. Parse payment data if provided (we'll create payments after the sale is created)
           // Handle the new payment structure from the stepper
           // The stepper sends payment data in saleData.payment as an array
           let payments: Array<{
@@ -394,8 +529,8 @@ export default async function handler(
             amount?: number;
             classification?: string;
             cnamInfo?: {
-              bondType?: string;
-              bondAmount?: number;
+              bonType?: string;
+              bonAmount?: number;
               devicePrice?: number;
               complementAmount?: number;
               currentStep?: number;
@@ -414,71 +549,13 @@ export default async function handler(
           if (saleData.payment) {
             // The stepper now sends an array of payments directly
             payments = Array.isArray(saleData.payment) ? saleData.payment : [saleData.payment];
-            
-            if (payments.length > 0) {
-              // Calculate total payment amount
-              const totalPaymentAmount = payments.reduce((sum: number, p) => sum + (Number(p.amount) || 0), 0);
-              
-              // Get the primary payment (first one or the one marked as 'principale')
-              const primaryPayment = payments.find(p => p.classification === 'principale') || payments[0];
-              
-              // Create the main payment record
-              const paymentCode = await generatePaymentCode(tx as any);
-              const payment = await tx.payment.create({
-                data: {
-                  paymentCode: paymentCode,
-                  amount: totalPaymentAmount,
-                  method: mapPaymentMethod(primaryPayment.type || 'cash'),
-                  status: totalPaymentAmount >= Number(saleData.finalAmount) ? PaymentStatus.PAID : PaymentStatus.PARTIAL,
-                  source: 'SALE', // IMPORTANT: Set source as SALE for filtering
-                  // Store primary payment details in main fields
-                  chequeNumber: primaryPayment.type === 'cheque' ? primaryPayment.chequeNumber || null : null,
-                  bankName: primaryPayment.type === 'cheque' ? primaryPayment.bank || null : null,
-                  referenceNumber: ['virement', 'mandat'].includes(primaryPayment.type || '') ? primaryPayment.reference || null : null,
-                  cnamCardNumber: primaryPayment.type === 'cnam' ? primaryPayment.dossierNumber || null : null,
-                  notes: primaryPayment.notes || null,
-                  paymentDate: primaryPayment.paymentDate ? new Date(primaryPayment.paymentDate) : new Date(),
-                  dueDate: primaryPayment.dueDate ? new Date(primaryPayment.dueDate) : null,
-                  // Create payment details for each payment method
-                  paymentDetails: {
-                    create: payments.map(p => ({
-                      method: p.type || 'cash',
-                      amount: Number(p.amount),
-                      classification: p.classification || 'principale',
-                      reference: createPaymentReference(p),
-                      metadata: {
-                        ...p,
-                        // Store CNAM info if present
-                        ...(p.cnamInfo && { cnamInfo: p.cnamInfo }),
-                        // Store payment-specific details
-                        ...(p.type === 'cheque' && {
-                          chequeNumber: p.chequeNumber,
-                          bank: p.bank
-                        }),
-                        ...(p.type === 'virement' && {
-                          reference: p.reference,
-                          bank: p.bank
-                        }),
-                        ...(p.type === 'cnam' && {
-                          bondType: p.cnamInfo?.bondType,
-                          dossierNumber: p.dossierNumber,
-                          currentStep: p.cnamInfo?.currentStep,
-                          status: p.cnamInfo?.status
-                        })
-                      }
-                    }))
-                  }
-                }
-              });
-              paymentId = payment.id;
-            }
           }
           
           // Store CNAM payment data for later processing (after sale creation)
           const cnamPaymentsData: Array<{
             dossierNumber: string;
-            bondType: CNAMBondType;
-            bondAmount: number;
+            bonType: CNAMBonType;
+            bonAmount: number;
             devicePrice: number;
             complementAmount: number;
             currentStep: number;
@@ -487,13 +564,13 @@ export default async function handler(
             notes: string | null;
           }> = [];
           
-          if (saleData.patientId && paymentId) {
+          if (saleData.patientId && payments.length > 0) {
             const cnamPayments = payments.filter(p => p.type === 'cnam' && p.cnamInfo);
             
             for (const cnamPayment of cnamPayments) {
               if (cnamPayment.cnamInfo && cnamPayment.dossierNumber) {
                 // Map bond type from string to enum
-                const bondTypeEnum = cnamPayment.cnamInfo.bondType?.toUpperCase() || 'AUTRE';
+                const bondTypeEnum = cnamPayment.cnamInfo.bonType?.toUpperCase() || 'AUTRE';
                 const validBondType = ['MASQUE', 'CPAP', 'AUTRE'].includes(bondTypeEnum) ? bondTypeEnum : 'AUTRE';
                 
                 // Map status from string to enum  
@@ -504,8 +581,8 @@ export default async function handler(
                 // Store data for later processing
                 cnamPaymentsData.push({
                   dossierNumber: cnamPayment.dossierNumber,
-                  bondType: validBondType as CNAMBondType,
-                  bondAmount: Number(cnamPayment.cnamInfo.bondAmount || cnamPayment.amount),
+                  bonType: validBondType as CNAMBonType,
+                  bonAmount: Number(cnamPayment.cnamInfo.bonAmount || cnamPayment.amount),
                   devicePrice: Number(cnamPayment.cnamInfo.devicePrice || 0),
                   complementAmount: Number(cnamPayment.cnamInfo.complementAmount || 0),
                   currentStep: cnamPayment.cnamInfo.currentStep || 1,
@@ -520,46 +597,33 @@ export default async function handler(
           // 2. Generate unique invoice number using current date and time
           const now = new Date();
           const year = now.getFullYear().toString();
-          const month = (now.getMonth() + 1).toString().padStart(2, '0');
-          const day = now.getDate().toString().padStart(2, '0');
-          const hours = now.getHours().toString().padStart(2, '0');
-          const minutes = now.getMinutes().toString().padStart(2, '0');
-          const seconds = now.getSeconds().toString().padStart(2, '0');
-          
-          // Generate a unique invoice number using timestamp + random suffix
-          let newInvoiceNumber = '';
-          let isUnique = false;
-          let attempts = 0;
-          const maxAttempts = 1000; // Increased from 100 to 1000
-          
-          while (!isUnique && attempts < maxAttempts) {
-            // Generate random 4-digit suffix for uniqueness
-            const randomSuffix = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-            newInvoiceNumber = `${year}${month}${day}-${hours}${minutes}${seconds}-${randomSuffix}`;
-            
-            // Check if this invoice number already exists
-            const existingSale = await tx.sale.findUnique({
-              where: { invoiceNumber: newInvoiceNumber }
-            });
-            
-            if (!existingSale) {
-              isUnique = true;
-            } else {
-              attempts++;
-              // Add small delay to ensure different timestamp on next iteration
-              await new Promise(resolve => setTimeout(resolve, 1));
+          // Generate invoice number in format: FACTURE-2025-0001
+          // Find the last invoice number for this year
+          const lastInvoice = await tx.sale.findFirst({
+            where: {
+              invoiceNumber: {
+                startsWith: `FACTURE-${year}-`
+              }
+            },
+            orderBy: {
+              createdAt: 'desc'
+            },
+            select: {
+              invoiceNumber: true
+            }
+          });
+
+          let invoiceCounter = 1;
+          if (lastInvoice?.invoiceNumber) {
+            // Extract the counter from the last invoice (e.g., "FACTURE-2025-0042" -> 42)
+            const match = lastInvoice.invoiceNumber.match(/FACTURE-\d{4}-(\d+)$/);
+            if (match) {
+              invoiceCounter = parseInt(match[1], 10) + 1;
             }
           }
-          
-          if (!isUnique) {
-            // Final fallback: use UUID-based approach
-            const { randomUUID } = await import('crypto');
-            const uuid = randomUUID().replace(/-/g, '').substring(0, 8).toUpperCase();
-            newInvoiceNumber = `${year}${month}${day}-${uuid}`;
-            
-            // Final check - if this still exists (extremely unlikely), let database handle the constraint
-            console.warn(`Invoice generation required fallback to UUID: ${newInvoiceNumber}`);
-          }
+
+          // Format: FACTURE-2025-0001
+          const newInvoiceNumber = `FACTURE-${year}-${invoiceCounter.toString().padStart(4, '0')}`;
 
           // Generate sale code
           const saleCode = await generateSaleCode(tx as any);
@@ -569,33 +633,25 @@ export default async function handler(
               saleCode: saleCode,
               invoiceNumber: newInvoiceNumber,
               saleDate: new Date(saleData.saleDate || new Date()),
-              totalAmount: saleData.totalAmount !== undefined ? parseFloat(saleData.totalAmount) : 0,
+              totalAmount: parseFloat(saleData.totalAmount),
               discount: saleData.discount ? parseFloat(saleData.discount) : 0,
-              finalAmount: saleData.finalAmount !== undefined ? parseFloat(saleData.finalAmount) : 0,
+              finalAmount: parseFloat(saleData.finalAmount),
               status: saleData.status || 'PENDING',
               notes: saleData.notes,
               processedById: saleData.processedById, // Use the user ID from the session
+              assignedToId: saleData.assignedToId || null, // Employee assigned to manage this sale
               patientId: saleData.patientId || null,
               companyId: saleData.companyId || null,
-              paymentId: paymentId,
-              // Items will be created in the next step (if provided)
+              // Items will be created in the next step
             }
           });
-
-          // 2.5. Update the payment with the saleId now that sale is created
-          if (paymentId) {
-            await tx.payment.update({
-              where: { id: paymentId },
-              data: { saleId: sale.id }
-            });
-          }
-
+          
           // 3. Create the sale items (only if items are provided)
           const saleItems = [];
-          if (hasItems) {
+          if (saleData.items && Array.isArray(saleData.items) && saleData.items.length > 0) {
             for (const item of saleData.items) {
-            // Check if item has parameters (device configuration)
-            const hasParameters = item.parameters && Object.keys(item.parameters).length > 0;
+              // Check if item has parameters (device configuration)
+              const hasParameters = item.parameters && Object.keys(item.parameters).length > 0;
             
             const saleItem = await tx.saleItem.create({
               data: {
@@ -698,18 +754,22 @@ export default async function handler(
             }
             
             if (item.medicalDeviceId) {
+              // Find the "Vendu" stock location
+              const venduLocation = await tx.stockLocation.findFirst({
+                where: { name: 'Vendu' }
+              });
+
               await tx.medicalDevice.update({
                 where: { id: item.medicalDeviceId },
                 data: {
                   status: 'SOLD',
-                  // Associate the device with the patient or company
-                  patientId: saleData.patientId || null,
-                  companyId: saleData.companyId || null
+                  stockLocationId: venduLocation?.id || null
+                  // Note: Patient/company association is through the Sale record, not directly on the device
                 }
               });
             }
+            }
           }
-          } // End of if (hasItems)
 
           // 4.5. Create CNAM dossiers now that sale is created
           const cnamDossierIds: string[] = [];
@@ -721,8 +781,8 @@ export default async function handler(
               const cnamDossier = await tx.cNAMDossier.create({
                 data: {
                   dossierNumber: dossierNumber,
-                  bondType: cnamData.bondType,
-                  bondAmount: cnamData.bondAmount,
+                  bonType: cnamData.bonType,
+                  bondAmount: cnamData.bonAmount || 0,
                   devicePrice: cnamData.devicePrice,
                   complementAmount: cnamData.complementAmount,
                   currentStep: cnamData.currentStep,
@@ -749,7 +809,34 @@ export default async function handler(
               });
             }
           }
-          
+
+          // 4.6. Create CNAM Bons if provided
+          if (saleData.cnamBons && Array.isArray(saleData.cnamBons) && saleData.cnamBons.length > 0 && saleData.patientId) {
+            for (const bonData of saleData.cnamBons) {
+              // Generate bon number if not provided
+              const bonNumber = bonData.bonNumber || `BON-${Date.now()}-${Math.random().toString(36).substring(7).toUpperCase()}`;
+
+              // Create CNAM Bon with category ACHAT for sales
+              await tx.cNAMBonRental.create({
+                data: {
+                  bonNumber: bonNumber,
+                  category: 'ACHAT', // Sale type CNAM bon
+                  bonType: bonData.bonType || 'AUTRE',
+                  status: bonData.status || 'EN_ATTENTE_APPROBATION',
+                  bonAmount: Number(bonData.bondAmount || bonData.bonAmount) || 0,
+                  devicePrice: Number(bonData.devicePrice) || 0,
+                  complementAmount: Number(bonData.complementAmount) || 0,
+                  cnamMonthlyRate: 0, // Not applicable for sales (one-time purchase)
+                  deviceMonthlyRate: 0, // Not applicable for sales
+                  coveredMonths: 1, // Set to 1 for one-time purchase
+                  notes: bonData.notes || null,
+                  patientId: saleData.patientId,
+                  saleId: sale.id, // Link to this sale
+                }
+              });
+            }
+          }
+
           // 5. Create patient history record if a patient is associated
           if (sale.patientId) {
             const patient = await tx.patient.findUnique({
@@ -768,20 +855,160 @@ export default async function handler(
                   saleId: sale.id,
                   finalAmount: sale.finalAmount,
                   notes: sale.notes,
-                  itemCount: hasItems ? saleData.items.length : 0,
+                  itemCount: saleData.items?.length || 0,
                   responsibleDoctorId: patient?.doctorId,
                 },
               },
             });
           }
-          
-          // Return the created sale with its items
-          return { sale, saleItems };
+
+          // 6. Create payments linked to the sale via saleId
+          const createdPayments = [];
+          if (payments.length > 0) {
+            for (const paymentData of payments) {
+              const paymentCode = await generatePaymentCode(tx as any);
+              const payment = await tx.payment.create({
+                data: {
+                  paymentCode: paymentCode,
+                  source: 'SALE', // Payment source for sales
+                  saleId: sale.id, // Link payment to sale via saleId
+                  patientId: sale.patientId,
+                  companyId: sale.companyId,
+                  amount: Number(paymentData.amount),
+                  method: mapPaymentMethod(paymentData.type || 'cash'),
+                  status: PaymentStatus.PAID,
+                  // Store payment details in main fields
+                  chequeNumber: paymentData.type === 'cheque' ? paymentData.chequeNumber || null : null,
+                  bankName: paymentData.type === 'cheque' ? paymentData.bank || null : null,
+                  referenceNumber: ['virement', 'mandat'].includes(paymentData.type || '') ? paymentData.reference || null : null,
+                  cnamCardNumber: paymentData.type === 'cnam' ? paymentData.dossierNumber || null : null,
+                  notes: paymentData.notes || null,
+                  paymentDate: paymentData.paymentDate ? new Date(paymentData.paymentDate) : new Date(),
+                  dueDate: paymentData.dueDate ? new Date(paymentData.dueDate) : null,
+                  // Create payment details
+                  paymentDetails: {
+                    create: {
+                      method: paymentData.type || 'cash',
+                      amount: Number(paymentData.amount),
+                      classification: paymentData.classification || 'principale',
+                      reference: createPaymentReference(paymentData),
+                      metadata: {
+                        ...paymentData,
+                        // Store CNAM info if present
+                        ...(paymentData.cnamInfo && { cnamInfo: paymentData.cnamInfo }),
+                        // Store payment-specific details
+                        ...(paymentData.type === 'cheque' && {
+                          chequeNumber: paymentData.chequeNumber,
+                          bank: paymentData.bank
+                        }),
+                        ...(paymentData.type === 'virement' && {
+                          reference: paymentData.reference,
+                          bank: paymentData.bank
+                        }),
+                        ...(paymentData.type === 'cnam' && {
+                          bonType: paymentData.cnamInfo?.bonType,
+                          dossierNumber: paymentData.dossierNumber,
+                          currentStep: paymentData.cnamInfo?.currentStep,
+                          status: paymentData.cnamInfo?.status
+                        })
+                      }
+                    }
+                  }
+                }
+              });
+              createdPayments.push(payment);
+            }
+          }
+
+          // Return the created sale with its items and payments
+          return { sale, saleItems, createdPayments };
         });
-        
+
+        // Fetch the complete sale with all relations
+        const completeSale = await prisma.sale.findUnique({
+          where: { id: result.sale.id },
+          include: {
+            processedBy: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true
+              }
+            },
+            assignedTo: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                role: true,
+              }
+            },
+            patient: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                telephone: true,
+                patientCode: true
+              }
+            },
+            company: {
+              select: {
+                id: true,
+                companyName: true,
+                companyCode: true,
+                telephone: true
+              }
+            },
+            payments: {
+              include: {
+                paymentDetails: true
+              },
+              orderBy: {
+                createdAt: 'asc'
+              }
+            },
+            items: {
+              include: {
+                product: true,
+                medicalDevice: true,
+                configuration: true
+              }
+            },
+            cnamDossiers: {
+              include: {
+                patient: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    patientCode: true
+                  }
+                }
+              }
+            },
+            cnamBons: {
+              where: {
+                category: 'ACHAT'
+              },
+              include: {
+                patient: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    patientCode: true
+                  }
+                }
+              }
+            }
+          }
+        });
+
         return res.status(201).json({
           message: 'Sale created successfully',
-          sale: result.sale,
+          sale: completeSale,
           saleItems: result.saleItems
         });
       } catch (error) {

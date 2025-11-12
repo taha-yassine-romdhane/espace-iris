@@ -77,13 +77,12 @@ export function DiagnosticDevicesTable({
     // Apply search query
     if (searchQuery.trim() !== '') {
       const query = searchQuery.toLowerCase().trim();
-      filtered = filtered.filter(item =>
+      filtered = filtered.filter(item => 
         (item.name && item.name.toLowerCase().includes(query)) ||
         (item.brand && item.brand.toLowerCase().includes(query)) ||
         (item.model && item.model.toLowerCase().includes(query)) ||
         (item.serialNumber && item.serialNumber.toLowerCase().includes(query)) ||
-        ((item as any).deviceCode && (item as any).deviceCode.toLowerCase().includes(query)) ||
-        (item.stockLocation && typeof item.stockLocation === 'object' &&
+        (item.stockLocation && typeof item.stockLocation === 'object' && 
          item.stockLocation.name && item.stockLocation.name.toLowerCase().includes(query))
       );
     }
@@ -194,7 +193,7 @@ export function DiagnosticDevicesTable({
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
             <Input
               type="text"
-              placeholder="Rechercher par code, nom, marque, modèle ou emplacement..."
+              placeholder="Rechercher par nom, marque, modèle ou emplacement..."
               value={searchQuery}
               onChange={handleSearchChange}
               className="pl-8"
@@ -304,7 +303,9 @@ export function DiagnosticDevicesTable({
           <TableBody>
             {paginatedData.map((device) => (
             <TableRow key={device.id}>
-              <TableCell className="font-mono text-sm">{(device as any).deviceCode || '-'}</TableCell>
+              <TableCell className="font-mono text-sm font-semibold text-blue-600">
+                {(device as any).deviceCode || '-'}
+              </TableCell>
               <TableCell className="font-medium">{device.name}</TableCell>
               <TableCell>
                 <div className="text-sm text-gray-600">

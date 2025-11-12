@@ -18,7 +18,7 @@ export default async function handler(
 
     switch (req.method) {
       case 'GET':
-        return handleGetAppointments(req, res);
+        return handleGetAppointments(req, res, session);
       case 'POST':
         return handleCreateAppointment(req, res, session);
       default:
@@ -31,29 +31,19 @@ export default async function handler(
   }
 }
 
-async function handleGetAppointments(req: NextApiRequest, res: NextApiResponse) {
+async function handleGetAppointments(req: NextApiRequest, res: NextApiResponse, session: any) {
   try {
-    // Get session for filtering by assignedToMe
-    const session = await getServerSession(req, res, authOptions);
-    const { assignedToMe, patientId, companyId } = req.query;
-
-    // Build where clause
+    // Role-based filtering
     const whereClause: any = {};
 
-    // Filter by assigned employee if assignedToMe parameter is true
-    if (assignedToMe === 'true' && session?.user?.id) {
-      whereClause.assignedToId = session.user.id;
+    // If user is EMPLOYEE, only show appointments assigned to them or created by them
+    if (session.user.role === 'EMPLOYEE') {
+      whereClause.OR = [
+        { assignedToId: session.user.id },
+        { createdById: session.user.id }
+      ];
     }
-
-    // Filter by specific patient
-    if (patientId && typeof patientId === 'string') {
-      whereClause.patientId = patientId;
-    }
-
-    // Filter by specific company
-    if (companyId && typeof companyId === 'string') {
-      whereClause.companyId = companyId;
-    }
+    // ADMIN and DOCTOR can see all appointments (no filter)
 
     const appointments = await prisma.appointment.findMany({
       where: whereClause,
@@ -64,6 +54,7 @@ async function handleGetAppointments(req: NextApiRequest, res: NextApiResponse) 
             firstName: true,
             lastName: true,
             telephone: true,
+            patientCode: true,
           },
         },
         company: {
@@ -103,21 +94,29 @@ async function handleGetAppointments(req: NextApiRequest, res: NextApiResponse) 
       notes: appointment.notes,
       priority: appointment.priority || 'NORMAL',
       status: appointment.status || 'SCHEDULED',
-      
+
+      // IDs for form editing
+      patientId: appointment.patientId,
+      companyId: appointment.companyId,
+      assignedToId: appointment.assignedToId,
+      createdById: appointment.createdById,
+
       // Client information
       patient: appointment.patient ? {
         id: appointment.patient.id,
         firstName: appointment.patient.firstName,
         lastName: appointment.patient.lastName,
+        name: `${appointment.patient.firstName || ''} ${appointment.patient.lastName || ''}`.trim() || 'Patient sans nom',
         telephone: appointment.patient.telephone,
+        patientCode: appointment.patient.patientCode,
       } : null,
-      
+
       company: appointment.company ? {
         id: appointment.company.id,
         companyName: appointment.company.companyName,
         telephone: appointment.company.telephone,
       } : null,
-      
+
       // Staff information
       assignedTo: appointment.assignedTo ? {
         id: appointment.assignedTo.id,
@@ -125,18 +124,12 @@ async function handleGetAppointments(req: NextApiRequest, res: NextApiResponse) 
         lastName: appointment.assignedTo.lastName,
         fullName: `${appointment.assignedTo.firstName} ${appointment.assignedTo.lastName}`,
       } : null,
-      
+
       createdBy: appointment.createdBy ? {
         id: appointment.createdBy.id,
         firstName: appointment.createdBy.firstName,
         lastName: appointment.createdBy.lastName,
         fullName: `${appointment.createdBy.firstName} ${appointment.createdBy.lastName}`,
-      } : null,
-
-      // Linked records
-      diagnostic: appointment.diagnostic ? {
-        id: appointment.diagnostic.id,
-        diagnosticCode: appointment.diagnostic.diagnosticCode,
       } : null,
 
       createdAt: appointment.createdAt,
@@ -239,6 +232,7 @@ async function handleCreateAppointment(
             firstName: true,
             lastName: true,
             telephone: true,
+            patientCode: true,
           },
         },
         company: {
@@ -281,29 +275,29 @@ async function handleCreateAppointment(
       }
     }
 
-    // Create diagnostic task if this is a diagnostic visit
+    // Create polygraphie installation task if this is a polygraphie appointment
     if (createDiagnosticTask && appointmentType === 'POLYGRAPHIE' && appointment.patientId && appointment.assignedToId) {
       try {
         const patientName = `${appointment.patient!.firstName} ${appointment.patient!.lastName}`;
-        const taskTitle = `Diagnostic polygraphie - ${patientName}`;
-        const taskDescription = `Effectuer un diagnostic polygraphie chez le patient ${patientName} à l'adresse: ${appointment.location}`;
-        
+        const taskTitle = `Installation polygraphie - ${patientName}`;
+        const taskDescription = `Installer un appareil de polygraphie chez le patient ${patientName} à l'adresse: ${appointment.location}. L'appareil servira à mesurer la consommation d'oxygène pendant la nuit.`;
+
         const task = await prisma.task.create({
           data: {
             title: taskTitle,
             description: taskDescription,
             userId: appointment.assignedToId,
             status: 'TODO',
-            priority: appointment.priority === 'URGENT' ? 'HIGH' : 
+            priority: appointment.priority === 'URGENT' ? 'HIGH' :
                      appointment.priority === 'HIGH' ? 'MEDIUM' : 'LOW',
             startDate: appointment.scheduledDate,
             endDate: new Date(appointment.scheduledDate.getTime() + 2 * 60 * 60 * 1000), // 2 hours duration
           },
         });
 
-        console.log('Diagnostic task created:', task.id);
+        console.log('Polygraphie installation task created:', task.id);
       } catch (taskError) {
-        console.error('Failed to create diagnostic task:', taskError);
+        console.error('Failed to create polygraphie task:', taskError);
         // Don't fail the appointment creation if task creation fails
       }
     }

@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useRouter } from 'next/router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -37,11 +38,14 @@ import { fr } from 'date-fns/locale';
 
 interface PatientStatistic {
   id: string;
+  patientId?: string;
   patientName: string;
+  patientCode?: string;
   patientPhone?: string;
   patientPhoneTwo?: string | null;
   doctorName?: string;
   rentalCode?: string;
+  deviceId?: string;
   deviceName?: string;
   deviceCode?: string;
   employeeName?: string;
@@ -65,6 +69,7 @@ interface PatientStatistic {
 
 export default function RentalStatistics() {
   const { toast } = useToast();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState<Partial<PatientStatistic>>({});
@@ -125,15 +130,18 @@ export default function RentalStatistics() {
 
         return {
           id: rental.id,
+          patientId: rental.patient?.id || undefined,
           patientName: rental.patient
             ? `${rental.patient.firstName} ${rental.patient.lastName}`
             : rental.company?.companyName || 'N/A',
+          patientCode: rental.patient?.patientCode || undefined,
           patientPhone: rental.patient?.telephone || '-',
           patientPhoneTwo: rental.patient?.telephoneTwo || null,
           doctorName: rental.patient?.doctor?.user
             ? `Dr. ${rental.patient.doctor.user.firstName} ${rental.patient.doctor.user.lastName}`
             : '-',
           rentalCode: rental.rentalCode || '-',
+          deviceId: rental.medicalDevice?.id || undefined,
           deviceName: rental.medicalDevice?.name || '-',
           deviceCode: rental.medicalDevice?.deviceCode || '-',
           employeeName: rental.assignedTo
@@ -428,7 +436,24 @@ export default function RentalStatistics() {
                       {/* Patient */}
                       <td className="px-4 py-3 whitespace-nowrap">
                         <div className="text-sm">
-                          <div className="font-medium text-slate-900">{stat.patientName}</div>
+                          {stat.patientId ? (
+                            <div
+                              className="font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer transition-colors"
+                              onClick={() => router.push(`/roles/admin/renseignement/patient/${stat.patientId}`)}
+                            >
+                              {stat.patientName}
+                            </div>
+                          ) : (
+                            <div className="font-medium text-slate-900">{stat.patientName}</div>
+                          )}
+                          {stat.patientCode && (
+                            <div
+                              className="text-xs text-slate-500 font-mono cursor-pointer hover:text-blue-600 transition-colors"
+                              onClick={() => router.push(`/roles/admin/renseignement/patient/${stat.patientId}`)}
+                            >
+                              {stat.patientCode}
+                            </div>
+                          )}
                           {stat.patientPhone !== '-' && (
                             <div className="text-xs text-blue-600">Tel: {stat.patientPhone}</div>
                           )}
@@ -453,7 +478,24 @@ export default function RentalStatistics() {
                       {/* Device */}
                       <td className="px-4 py-3 whitespace-nowrap">
                         <div className="text-sm">
-                          <div className="font-medium text-slate-900">{stat.deviceName}</div>
+                          {stat.deviceId ? (
+                            <div
+                              className="font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer transition-colors"
+                              onClick={() => router.push(`/roles/admin/appareils/medical-device/${stat.deviceId}`)}
+                            >
+                              {stat.deviceName}
+                            </div>
+                          ) : (
+                            <div className="font-medium text-slate-900">{stat.deviceName}</div>
+                          )}
+                          {stat.deviceCode && stat.deviceCode !== '-' && (
+                            <div
+                              className="text-xs text-slate-500 font-mono cursor-pointer hover:text-blue-600 transition-colors"
+                              onClick={() => router.push(`/roles/admin/appareils/medical-device/${stat.deviceId}`)}
+                            >
+                              {stat.deviceCode}
+                            </div>
+                          )}
                         </div>
                       </td>
 

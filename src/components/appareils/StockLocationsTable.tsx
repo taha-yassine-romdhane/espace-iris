@@ -173,8 +173,13 @@ export function StockLocationsTable({ initialItemsPerPage = 10 }: { initialItems
 
   if (!locations || locations.length === 0) {
     return (
-      <div className="text-center py-6">
-        Aucun emplacement trouvé
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-semibold">Emplacements</h2>
+        </div>
+        <div className="text-center py-6">
+          Aucun emplacement trouvé
+        </div>
       </div>
     );
   }

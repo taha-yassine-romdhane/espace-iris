@@ -29,23 +29,23 @@ interface CNAMFormProps {
 type CNAMDossierStatus = 'en_attente' | 'en_cours' | 'complement_dossier' | 'accepte' | 'refuse';
 
 // Bond types for sales (achat)
-type CNAMBondTypeAchat = 'masque' | 'cpap' | 'autre';
+type CNAMBonTypeAchat = 'masque' | 'cpap' | 'autre';
 
 // Bond types for rentals (location)
-type CNAMBondTypeLocation = 'vni_3mois' | 'vni_6mois' | 'concentrateur_3mois' | 'concentrateur_1mois' | 'autre_location';
+type CNAMBonTypeLocation = 'vni_3mois' | 'vni_6mois' | 'concentrateur_3mois' | 'concentrateur_1mois' | 'autre_location';
 
 // Combined bond type
-type CNAMBondType = CNAMBondTypeAchat | CNAMBondTypeLocation;
+type CNAMBonType = CNAMBonTypeAchat | CNAMBonTypeLocation;
 
 interface CNAMBondConfig {
-  type: CNAMBondType;
+  type: CNAMBonType;
   defaultAmount: number;
   description: string;
   icon: React.ReactNode;
 }
 
 // Configuration for bond types
-const CNAM_BOND_TYPES_ACHAT: Record<CNAMBondTypeAchat, CNAMBondConfig> = {
+const CNAM_BOND_TYPES_ACHAT: Record<CNAMBonTypeAchat, CNAMBondConfig> = {
   masque: {
     type: 'masque',
     defaultAmount: 200,
@@ -67,29 +67,29 @@ const CNAM_BOND_TYPES_ACHAT: Record<CNAMBondTypeAchat, CNAMBondConfig> = {
 };
 
 // Configuration for rental bond types
-const CNAM_BOND_TYPES_LOCATION: Record<CNAMBondTypeLocation, CNAMBondConfig> = {
+const CNAM_BOND_TYPES_LOCATION: Record<CNAMBonTypeLocation, CNAMBondConfig> = {
   vni_3mois: {
     type: 'vni_3mois',
     defaultAmount: 1290,
-    description: 'Bond de location pour VNI - 3 mois (1290 DT)',
+    description: 'Bon de location pour VNI - 3 mois (1290 DT)',
     icon: <FileCheck className="h-5 w-5 text-green-500" />
   },
   vni_6mois: {
     type: 'vni_6mois',
     defaultAmount: 2580,
-    description: 'Bond de location pour VNI - 6 mois (2580 DT)',
+    description: 'Bon de location pour VNI - 6 mois (2580 DT)',
     icon: <FileCheck className="h-5 w-5 text-blue-500" />
   },
   concentrateur_3mois: {
     type: 'concentrateur_3mois',
     defaultAmount: 570,
-    description: 'Bond de location pour Concentrateur Oxygen - 3 mois (570 DT)',
+    description: 'Bon de location pour Concentrateur Oxygen - 3 mois (570 DT)',
     icon: <FileCheck className="h-5 w-5 text-purple-500" />
   },
   concentrateur_1mois: {
     type: 'concentrateur_1mois',
     defaultAmount: 190,
-    description: 'Bond de location pour Concentrateur Oxygen - 1 mois (190 DT)',
+    description: 'Bon de location pour Concentrateur Oxygen - 1 mois (190 DT)',
     icon: <FileCheck className="h-5 w-5 text-indigo-500" />
   },
   autre_location: {
@@ -101,7 +101,7 @@ const CNAM_BOND_TYPES_LOCATION: Record<CNAMBondTypeLocation, CNAMBondConfig> = {
 };
 
 // Combined bond types
-const CNAM_BOND_TYPES: Record<CNAMBondType, CNAMBondConfig> = {
+const CNAM_BOND_TYPES: Record<CNAMBonType, CNAMBondConfig> = {
   ...CNAM_BOND_TYPES_ACHAT,
   ...CNAM_BOND_TYPES_LOCATION
 };
@@ -120,7 +120,7 @@ export default function CNAMForm({ onSubmit, initialValues, className, onCancel,
   
   // Set default bond type based on whether this is a rental or sale
   const defaultBondType = isRental ? 'autre_location' : 'autre';
-  const [bondType, setBondType] = useState<CNAMBondType>(initialValues?.cnamBondType || defaultBondType);
+  const [bonType, setBondType] = useState<CNAMBonType>(initialValues?.cnamBonType || defaultBondType);
   
   // Detect if we have masks or CPAP devices in the selected products
   const hasMask = selectedProducts.some(item => 
@@ -167,7 +167,7 @@ export default function CNAMForm({ onSubmit, initialValues, className, onCancel,
       dateExpiration: null,
       montantPriseEnCharge: '',
       note: '',
-      cnamBondType: 'autre',
+      cnamBonType: 'autre',
       statusHistory: []
     }
   });
@@ -179,27 +179,27 @@ export default function CNAMForm({ onSubmit, initialValues, className, onCancel,
 
   useEffect(() => {
     // Update form when bond type changes
-    setValue('cnamBondType', bondType);
+    setValue('cnamBonType', bonType);
     
     // Auto-set the amount based on bond type if it's not already set
-    if (bondType !== 'autre' && bondType !== 'autre_location' && (!watch('montantPriseEnCharge') || initialValues?.cnamBondType !== bondType)) {
+    if (bonType !== 'autre' && bonType !== 'autre_location' && (!watch('montantPriseEnCharge') || initialValues?.cnamBonType !== bonType)) {
       // Safely get the default amount based on bond type
       let defaultAmount = 0;
-      const bondTypeKey = bondType as string;
+      const bondTypeKey = bonType as string;
       
       if (bondTypeKey === 'masque' || bondTypeKey === 'cpap' || bondTypeKey === 'autre') {
-        defaultAmount = CNAM_BOND_TYPES_ACHAT[bondTypeKey as CNAMBondTypeAchat]?.defaultAmount || 0;
+        defaultAmount = CNAM_BOND_TYPES_ACHAT[bondTypeKey as CNAMBonTypeAchat]?.defaultAmount || 0;
       } else {
-        defaultAmount = CNAM_BOND_TYPES_LOCATION[bondTypeKey as CNAMBondTypeLocation]?.defaultAmount || 0;
+        defaultAmount = CNAM_BOND_TYPES_LOCATION[bondTypeKey as CNAMBonTypeLocation]?.defaultAmount || 0;
       }
       
       setValue('montantPriseEnCharge', defaultAmount.toString());
     }
-  }, [bondType, setValue, watch, initialValues]);
+  }, [bonType, setValue, watch, initialValues]);
   
   // Suggest appropriate bond type based on products in cart when component mounts
   useEffect(() => {
-    if (!initialValues?.cnamBondType && selectedProducts.length > 0) {
+    if (!initialValues?.cnamBonType && selectedProducts.length > 0) {
       if (hasCPAP) {
         setBondType('cpap');
       } else if (hasMask) {
@@ -266,12 +266,12 @@ export default function CNAMForm({ onSubmit, initialValues, className, onCancel,
       dossierReference,
       isPending,
       requiresFollowUp: isPending,
-      cnamBondType: bondType,
+      cnamBonType: bonType,
       relatedProductIds,
       relatedMedicalDeviceIds,
       statusHistory: updatedHistory,
       metadata: {
-        bondType,
+        bonType,
         originalAmount: amount,
         pendingStatus: isPending,
         lastUpdated: new Date().toISOString(),
@@ -294,28 +294,28 @@ export default function CNAMForm({ onSubmit, initialValues, className, onCancel,
   };
   
   const handleBondTypeChange = (value: string) => {
-    setBondType(value as CNAMBondType);
+    setBondType(value as CNAMBonType);
   };
   
   // Get warning message if selected bond type doesn't match products
   const getBondTypeWarning = () => {
     if (!isRental) {
       // Warnings for sales (achat)
-      if (bondType === 'masque' && !hasMask) {
+      if (bonType === 'masque' && !hasMask) {
         return {
           message: "Attention: Vous avez sélectionné un bond d'achat pour masque, mais aucun masque n'a été détecté dans les produits sélectionnés.",
           severity: "warning"
         };
       }
       
-      if (bondType === 'cpap' && !hasCPAP) {
+      if (bonType === 'cpap' && !hasCPAP) {
         return {
           message: "Attention: Vous avez sélectionné un bond d'achat pour CPAP, mais aucun appareil CPAP n'a été détecté dans les produits sélectionnés.",
           severity: "warning"
         };
       }
       
-      if (bondType === 'autre' && (hasMask || hasCPAP)) {
+      if (bonType === 'autre' && (hasMask || hasCPAP)) {
         return {
           message: "Vous avez sélectionné 'Autre type de prise en charge' alors que des masques ou appareils CPAP ont été détectés. Veuillez vérifier si un bond spécifique serait plus approprié.",
           severity: "info"
@@ -323,21 +323,21 @@ export default function CNAMForm({ onSubmit, initialValues, className, onCancel,
       }
     } else {
       // Warnings for rentals (location)
-      if ((bondType === 'vni_3mois' || bondType === 'vni_6mois') && !hasVNI) {
+      if ((bonType === 'vni_3mois' || bonType === 'vni_6mois') && !hasVNI) {
         return {
           message: "Attention: Vous avez sélectionné un bond de location pour VNI, mais aucun appareil VNI n'a été détecté dans les produits sélectionnés.",
           severity: "warning"
         };
       }
       
-      if ((bondType === 'concentrateur_3mois' || bondType === 'concentrateur_1mois') && !hasConcentrateur) {
+      if ((bonType === 'concentrateur_3mois' || bonType === 'concentrateur_1mois') && !hasConcentrateur) {
         return {
           message: "Attention: Vous avez sélectionné un bond de location pour Concentrateur Oxygen, mais aucun concentrateur n'a été détecté dans les produits sélectionnés.",
           severity: "warning"
         };
       }
       
-      if (bondType === 'autre_location' && (hasVNI || hasConcentrateur)) {
+      if (bonType === 'autre_location' && (hasVNI || hasConcentrateur)) {
         return {
           message: "Vous avez sélectionné 'Autre type de prise en charge location' alors que des appareils VNI ou Concentrateurs ont été détectés. Veuillez vérifier si un bond spécifique serait plus approprié.",
           severity: "info"
@@ -361,9 +361,9 @@ export default function CNAMForm({ onSubmit, initialValues, className, onCancel,
       <div className="space-y-4">
         {/* Bond Type Selection */}
         <div>
-          <Label htmlFor="cnamBondType" className="font-medium">Type de bond</Label>
+          <Label htmlFor="cnamBonType" className="font-medium">Type de bond</Label>
           <Select 
-            value={bondType} 
+            value={bonType} 
             onValueChange={handleBondTypeChange}
           >
             <SelectTrigger>
@@ -398,25 +398,25 @@ export default function CNAMForm({ onSubmit, initialValues, className, onCancel,
                   <SelectItem value="vni_3mois">
                     <div className="flex items-center gap-2">
                       {CNAM_BOND_TYPES_LOCATION.vni_3mois?.icon || <FileCheck className="h-5 w-5 text-green-500" />}
-                      <span>Bond de location VNI - 3 mois (1290 DT)</span>
+                      <span>Bon de location VNI - 3 mois (1290 DT)</span>
                     </div>
                   </SelectItem>
                   <SelectItem value="vni_6mois">
                     <div className="flex items-center gap-2">
                       {CNAM_BOND_TYPES_LOCATION.vni_6mois?.icon || <FileCheck className="h-5 w-5 text-blue-500" />}
-                      <span>Bond de location VNI - 6 mois (2580 DT)</span>
+                      <span>Bon de location VNI - 6 mois (2580 DT)</span>
                     </div>
                   </SelectItem>
                   <SelectItem value="concentrateur_3mois">
                     <div className="flex items-center gap-2">
                       {CNAM_BOND_TYPES_LOCATION.concentrateur_3mois?.icon || <FileCheck className="h-5 w-5 text-purple-500" />}
-                      <span>Bond de location Concentrateur - 3 mois (570 DT)</span>
+                      <span>Bon de location Concentrateur - 3 mois (570 DT)</span>
                     </div>
                   </SelectItem>
                   <SelectItem value="concentrateur_1mois">
                     <div className="flex items-center gap-2">
                       {CNAM_BOND_TYPES_LOCATION.concentrateur_1mois?.icon || <FileCheck className="h-5 w-5 text-indigo-500" />}
-                      <span>Bond de location Concentrateur - 1 mois (190 DT)</span>
+                      <span>Bon de location Concentrateur - 1 mois (190 DT)</span>
                     </div>
                   </SelectItem>
                   <SelectItem value="autre_location">
@@ -447,39 +447,39 @@ export default function CNAMForm({ onSubmit, initialValues, className, onCancel,
           })()}
           
           {/* Bond type info card */}
-          {bondType !== 'autre' && bondType !== 'autre_location' && (
+          {bonType !== 'autre' && bonType !== 'autre_location' && (
             <Card className="mt-2 border-blue-100 bg-blue-50">
               <CardContent className="pt-4 pb-2">
                 <div className="flex items-center gap-2">
                   {(() => {
                     // Safely get the icon based on bond type
-                    const bondTypeKey = bondType as string;
+                    const bondTypeKey = bonType as string;
                     if (bondTypeKey === 'masque' || bondTypeKey === 'cpap' || bondTypeKey === 'autre') {
-                      return CNAM_BOND_TYPES_ACHAT[bondTypeKey as CNAMBondTypeAchat]?.icon || <FileCheck className="h-5 w-5" />;
+                      return CNAM_BOND_TYPES_ACHAT[bondTypeKey as CNAMBonTypeAchat]?.icon || <FileCheck className="h-5 w-5" />;
                     } else {
-                      return CNAM_BOND_TYPES_LOCATION[bondTypeKey as CNAMBondTypeLocation]?.icon || <FileCheck className="h-5 w-5" />;
+                      return CNAM_BOND_TYPES_LOCATION[bondTypeKey as CNAMBonTypeLocation]?.icon || <FileCheck className="h-5 w-5" />;
                     }
                   })()}
                   <div>
                     <h4 className="font-medium">{(() => {
                       // Safely get the description based on bond type
-                      const bondTypeKey = bondType as string;
+                      const bondTypeKey = bonType as string;
                       if (bondTypeKey === 'masque' || bondTypeKey === 'cpap' || bondTypeKey === 'autre') {
-                        return CNAM_BOND_TYPES_ACHAT[bondTypeKey as CNAMBondTypeAchat]?.description || 'Bond d\'achat';
+                        return CNAM_BOND_TYPES_ACHAT[bondTypeKey as CNAMBonTypeAchat]?.description || 'Bond d\'achat';
                       } else {
-                        return CNAM_BOND_TYPES_LOCATION[bondTypeKey as CNAMBondTypeLocation]?.description || 'Bond de location';
+                        return CNAM_BOND_TYPES_LOCATION[bondTypeKey as CNAMBonTypeLocation]?.description || 'Bon de location';
                       }
                     })()}</h4>
                     <p className="text-sm text-gray-600">
-                      {bondType === 'masque' 
+                      {bonType === 'masque' 
                         ? 'Ce bond est applicable pour les masques. Montant fixe de 200 DT.'
-                        : bondType === 'cpap'
+                        : bonType === 'cpap'
                           ? 'Ce bond est applicable pour les appareils CPAP. Montant fixe de 1475 DT.'
-                          : bondType === 'vni_3mois'
+                          : bonType === 'vni_3mois'
                             ? 'Ce bond est applicable pour les appareils VNI. Montant fixe de 1290 DT.'
-                            : bondType === 'vni_6mois'
+                            : bonType === 'vni_6mois'
                               ? 'Ce bond est applicable pour les appareils VNI. Montant fixe de 2580 DT.'
-                              : bondType === 'concentrateur_3mois'
+                              : bonType === 'concentrateur_3mois'
                                 ? 'Ce bond est applicable pour les concentrateurs. Montant fixe de 570 DT.'
                                 : 'Ce bond est applicable pour les concentrateurs. Montant fixe de 190 DT.'}
                     </p>

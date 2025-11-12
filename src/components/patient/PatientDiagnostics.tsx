@@ -34,16 +34,33 @@ export const PatientDiagnostics = ({ diagnostics = [], isLoading = false }: Pati
     }
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Activity className="h-5 w-5 text-blue-500" />
-          Diagnostics
-        </CardTitle>
-        <CardDescription>
-          Historique des diagnostics réalisés pour ce patient
-        </CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5 text-blue-500" />
+              Polygraphie
+            </CardTitle>
+            <CardDescription>
+              Historique des polygraphies réalisées pour ce patient
+            </CardDescription>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handlePrint}
+            className="flex items-center gap-2 print:hidden"
+          >
+            <FileText className="h-4 w-4" />
+            Imprimer
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -55,43 +72,95 @@ export const PatientDiagnostics = ({ diagnostics = [], isLoading = false }: Pati
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Appareil</TableHead>
-                  <TableHead>Résultat</TableHead>
-                  <TableHead>Statut</TableHead>
-                  <TableHead>Médecin</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead className="w-[100px]">Code Diag</TableHead>
+                  <TableHead className="w-[100px]">N° Série</TableHead>
+                  <TableHead className="w-[100px]">Date</TableHead>
+                  <TableHead className="w-[150px]">Appareil</TableHead>
+                  <TableHead className="w-[100px]">IAH / ID</TableHead>
+                  <TableHead className="w-[100px]">Sévérité</TableHead>
+                  <TableHead className="w-[200px]">Remarque</TableHead>
+                  <TableHead className="w-[100px]">Statut</TableHead>
+                  <TableHead className="w-[140px]">Technicien responsable</TableHead>
+                  <TableHead className="w-[100px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {diagnostics.map((diagnostic, index) => (
-                  <TableRow key={index}>
+                  <TableRow key={index} className="hover:bg-gray-50">
                     <TableCell>
-                      {new Date(diagnostic.diagnosticDate).toLocaleDateString()}
+                      <Badge variant="outline" className="font-mono text-xs bg-blue-50 text-blue-700 border-blue-200">
+                        {diagnostic.diagnosticCode || 'N/A'}
+                      </Badge>
                     </TableCell>
-                    <TableCell>{diagnostic.medicalDevice?.name || 'N/A'}</TableCell>
+                    <TableCell className="text-xs font-mono text-gray-600">
+                      {diagnostic.medicalDevice?.serialNumber || '-'}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {new Date(diagnostic.diagnosticDate).toLocaleDateString('fr-FR')}
+                    </TableCell>
                     <TableCell>
-                      <div className="max-w-xs truncate">{diagnostic.result}</div>
-                      {diagnostic.notes && (
-                        <div className="text-xs text-gray-500 truncate mt-1">
-                          Note: {diagnostic.notes}
+                      {diagnostic.medicalDevice ? (
+                        <div className="space-y-1">
+                          <div className="text-xs font-medium text-gray-700">
+                            {diagnostic.medicalDevice.name}
+                          </div>
+                          {diagnostic.medicalDevice.brand && (
+                            <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+                              {diagnostic.medicalDevice.brand}
+                            </Badge>
+                          )}
                         </div>
+                      ) : (
+                        <span className="text-gray-400 text-sm">-</span>
                       )}
                     </TableCell>
                     <TableCell>
-                      <Badge className={getStatusColor(diagnostic.status || 'PENDING')}>
-                        {diagnostic.status || 'En attente'}
+                      <div className="flex flex-col gap-1">
+                        {diagnostic.result?.iah ? (
+                          <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200 w-fit">
+                            IAH: {diagnostic.result.iah}
+                          </Badge>
+                        ) : (
+                          <span className="text-gray-400 text-xs">IAH: -</span>
+                        )}
+                        {diagnostic.result?.idValue ? (
+                          <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200 w-fit">
+                            ID: {diagnostic.result.idValue}
+                          </Badge>
+                        ) : (
+                          <span className="text-gray-400 text-xs">ID: -</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {diagnostic.result?.status ? (
+                        <Badge variant="outline" className="text-xs whitespace-nowrap">
+                          {diagnostic.result.status}
+                        </Badge>
+                      ) : (
+                        <span className="text-gray-400 text-sm">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-xs text-gray-600 max-w-[200px] truncate">
+                      {diagnostic.notes || diagnostic.description || '-'}
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={getStatusColor(diagnostic.status || 'PENDING')} size="sm">
+                        {diagnostic.status === 'COMPLETED' ? 'Terminé' : diagnostic.status === 'PENDING' ? 'En attente' : diagnostic.status === 'IN_PROGRESS' ? 'En cours' : diagnostic.status}
                       </Badge>
                     </TableCell>
-                    <TableCell>{diagnostic.performedBy?.firstName || 'Non assigné'}</TableCell>
+                    <TableCell className="text-sm">
+                      {diagnostic.performedBy ? `${diagnostic.performedBy.firstName} ${diagnostic.performedBy.lastName}` : 'Non assigné'}
+                    </TableCell>
                     <TableCell>
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         size="sm"
                         onClick={() => router.push(`/roles/admin/diagnostics/${diagnostic.id}`)}
+                        className="h-8 px-2"
                       >
-                        <FileText className="h-4 w-4 mr-1" />
-                        Détails
+                        <FileText className="h-3 w-3 mr-1" />
+                        Voir
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -102,7 +171,7 @@ export const PatientDiagnostics = ({ diagnostics = [], isLoading = false }: Pati
         ) : (
           <div className="text-center py-8 text-gray-500">
             <AlertCircle className="h-10 w-10 mx-auto mb-2 text-gray-300" />
-            <p>Aucun diagnostic disponible pour ce patient</p>
+            <p>Aucune polygraphie disponible pour ce patient</p>
           </div>
         )}
       </CardContent>

@@ -18,8 +18,6 @@ import { PatientInformation } from "./components/PatientInformation";
 import { DeviceInformation } from "./components/DeviceInformation";
 import { DiagnosticResultsForm } from "./components/DiagnosticResultsForm";
 import { DiagnosticNotes } from "./components/DiagnosticNotes";
-import { DiagnosticTasks } from "./components/DiagnosticTasks";
-import { DiagnosticDocuments } from "./components/DiagnosticDocuments";
 
 export default function DiagnosticDetailsPage() {
   const router = useRouter();
@@ -183,9 +181,6 @@ export default function DiagnosticDetailsPage() {
           <Tabs defaultValue="overview" className="w-full">
             <TabsList className="border-b border-gray-200 w-full rounded-none px-6 bg-gray-50">
               <TabsTrigger value="overview">Vue d&apos;ensemble</TabsTrigger>
-              <TabsTrigger value="parameters">Paramètres et Résultats</TabsTrigger>
-              <TabsTrigger value="tasks">Tâches</TabsTrigger>
-              <TabsTrigger value="documents">Documents</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="p-6 space-y-6">
@@ -193,34 +188,18 @@ export default function DiagnosticDetailsPage() {
                 <PatientInformation patient={formattedPatient} />
                 <DeviceInformation device={localDiagnostic.medicalDevice} />
               </div>
-              <DiagnosticNotes
-                notes={localDiagnostic?.notes || null}
-                diagnosticId={id as string}
-                onNotesUpdated={handleNotesUpdated}
-              />
-            </TabsContent>
 
-            <TabsContent value="parameters" className="p-6">
               <DiagnosticResultsForm
                 diagnosticResult={localDiagnostic.result || null}
                 status={localDiagnostic.status}
                 diagnosticId={id as string}
                 resultDueDate={localDiagnostic.resultDueDate ? new Date(localDiagnostic.resultDueDate) : null}
               />
-            </TabsContent>
 
-            <TabsContent value="tasks" className="p-6">
-              <DiagnosticTasks
+              <DiagnosticNotes
+                notes={localDiagnostic?.notes || null}
                 diagnosticId={id as string}
-                resultDueDate={localDiagnostic.resultDueDate}
-                patientId={localDiagnostic.patient?.id}
-              />
-            </TabsContent>
-
-            <TabsContent value="documents" className="p-6">
-              <DiagnosticDocuments
-                documents={localDiagnostic.documents || []}
-                diagnosticId={id as string}
+                onNotesUpdated={handleNotesUpdated}
               />
             </TabsContent>
           </Tabs>

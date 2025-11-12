@@ -10,6 +10,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Check, X, Edit2, Plus, Trash2, Search, ChevronLeft, ChevronRight, ClipboardList, User, Phone } from "lucide-react";
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import Link from 'next/link';
 
 interface Employee {
   id: string;
@@ -23,6 +24,7 @@ interface Patient {
   firstName: string;
   lastName: string;
   telephone: string;
+  patientCode?: string;
 }
 
 interface ManualTask {
@@ -185,6 +187,8 @@ export default function AdminManualTasksPage() {
     taskType: 'CONSULTATION',
     status: 'PENDING',
   });
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<ManualTask | null>(null);
 
   // Pagination & Filters
   const [currentPage, setCurrentPage] = useState(1);
@@ -332,10 +336,22 @@ export default function AdminManualTasksPage() {
     await updateMutation.mutateAsync(editedTask);
   };
 
-  const handleDelete = async (task: ManualTask) => {
-    if (confirm("Êtes-vous sûr de vouloir supprimer cette tâche ?")) {
-      await deleteMutation.mutateAsync(task.id);
+  const handleDelete = (task: ManualTask) => {
+    setTaskToDelete(task);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (taskToDelete) {
+      await deleteMutation.mutateAsync(taskToDelete.id);
+      setDeleteDialogOpen(false);
+      setTaskToDelete(null);
     }
+  };
+
+  const cancelDelete = () => {
+    setDeleteDialogOpen(false);
+    setTaskToDelete(null);
   };
 
   const handleAddNew = () => setIsAddingNew(true);
@@ -475,10 +491,14 @@ export default function AdminManualTasksPage() {
         );
 
       case 'patientId':
+        if (!task.patient) return <span className="text-xs">-</span>;
         return (
-          <span className="text-xs">
-            {task.patient ? `${task.patient.firstName} ${task.patient.lastName}` : '-'}
-          </span>
+          <Link
+            href={`/roles/admin/renseignement/patient/${task.patientId}`}
+            className="text-xs text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+          >
+            {`${task.patient.firstName} ${task.patient.lastName}`}
+          </Link>
         );
 
       case 'assignedToId':
@@ -507,79 +527,91 @@ export default function AdminManualTasksPage() {
     }
   };
 
-  const renderNewRow = () => (
-    <tr className="bg-blue-50 border-b">
-      <td className="px-2 py-2">
-        <span className="text-xs text-gray-500 italic">Auto-généré</span>
-      </td>
-      <td className="px-2 py-2">
-        <Select
-          value={newTask.taskType || 'CONSULTATION'}
-          onValueChange={(val) => updateNewField('taskType', val)}
-        >
-          <SelectTrigger className="h-8 text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {TASK_TYPES.map(type => (
-              <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </td>
-      <td className="px-2 py-2" colSpan={2}>
-        <PatientSelectionDialog
-          patients={patients}
-          selectedPatientId={newTask.patientId}
-          onSelect={(patientId) => updateNewField('patientId', patientId)}
-        />
-      </td>
-      <td className="px-2 py-2">
-        <Select
-          value={newTask.assignedToId || ''}
-          onValueChange={(val) => updateNewField('assignedToId', val)}
-        >
-          <SelectTrigger className="h-8 text-xs">
-            <SelectValue placeholder="Sélectionner" />
-          </SelectTrigger>
-          <SelectContent>
-            {employees.map((emp: any) => (
-              <SelectItem key={emp.id} value={emp.id}>
-                {emp.firstName} {emp.lastName}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </td>
-      <td className="px-2 py-2">
-        <Input
-          value={newTask.adminNotes || ''}
-          onChange={(e) => updateNewField('adminNotes', e.target.value)}
-          placeholder="Notes admin"
-          className="h-8 text-xs"
-        />
-      </td>
-      <td className="px-2 py-2">
-        <span className="text-xs text-gray-500">-</span>
-      </td>
-      <td className="px-2 py-2">
-        <Badge className="text-xs bg-yellow-100 text-yellow-800">En attente</Badge>
-      </td>
-      <td className="px-2 py-2">
-        <span className="text-xs text-gray-500">-</span>
-      </td>
-      <td className="px-2 py-2 sticky right-0 bg-blue-50">
-        <div className="flex gap-1 justify-center">
-          <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleSaveNew}>
-            <Check className="h-4 w-4 text-green-600" />
-          </Button>
-          <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleCancelNew}>
-            <X className="h-4 w-4 text-red-600" />
-          </Button>
-        </div>
-      </td>
-    </tr>
-  );
+  const renderNewRow = () => {
+    const selectedPatient = patients.find(p => p.id === newTask.patientId);
+
+    return (
+      <tr className="bg-blue-50 border-b">
+        <td className="px-2 py-2">
+          <span className="text-xs text-gray-500 italic">Auto-généré</span>
+        </td>
+        <td className="px-2 py-2">
+          <Select
+            value={newTask.taskType || 'CONSULTATION'}
+            onValueChange={(val) => updateNewField('taskType', val)}
+          >
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {TASK_TYPES.map(type => (
+                <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </td>
+        <td className="px-2 py-2">
+          <div className="flex flex-col gap-1">
+            <PatientSelectionDialog
+              patients={patients}
+              selectedPatientId={newTask.patientId}
+              onSelect={(patientId) => updateNewField('patientId', patientId)}
+            />
+            {selectedPatient?.patientCode && (
+              <span className="text-xs font-mono text-gray-500">{selectedPatient.patientCode}</span>
+            )}
+          </div>
+        </td>
+        <td className="px-2 py-2">
+          <span className="text-xs text-gray-600">{selectedPatient?.telephone || '-'}</span>
+        </td>
+        <td className="px-2 py-2">
+          <Select
+            value={newTask.assignedToId || ''}
+            onValueChange={(val) => updateNewField('assignedToId', val)}
+          >
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue placeholder="Sélectionner" />
+            </SelectTrigger>
+            <SelectContent>
+              {employees.map((emp: any) => (
+                <SelectItem key={emp.id} value={emp.id}>
+                  {emp.firstName} {emp.lastName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </td>
+        <td className="px-2 py-2">
+          <Input
+            value={newTask.adminNotes || ''}
+            onChange={(e) => updateNewField('adminNotes', e.target.value)}
+            placeholder="Notes admin"
+            className="h-8 text-xs"
+          />
+        </td>
+        <td className="px-2 py-2">
+          <span className="text-xs text-gray-500">-</span>
+        </td>
+        <td className="px-2 py-2">
+          <Badge className="text-xs bg-yellow-100 text-yellow-800">En attente</Badge>
+        </td>
+        <td className="px-2 py-2">
+          <span className="text-xs text-gray-500">-</span>
+        </td>
+        <td className="px-2 py-2 sticky right-0 bg-blue-50">
+          <div className="flex gap-1 justify-center">
+            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleSaveNew}>
+              <Check className="h-4 w-4 text-green-600" />
+            </Button>
+            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleCancelNew}>
+              <X className="h-4 w-4 text-red-600" />
+            </Button>
+          </div>
+        </td>
+      </tr>
+    );
+  };
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -687,7 +719,14 @@ export default function AdminManualTasksPage() {
                   <tr key={task.id} className={`border-b ${isEditing ? 'bg-yellow-50' : 'hover:bg-gray-50'}`}>
                     <td className="px-2 py-2">{renderCell(task, 'taskCode', isEditing)}</td>
                     <td className="px-2 py-2">{renderCell(task, 'taskType', isEditing)}</td>
-                    <td className="px-2 py-2">{renderCell(task, 'patientId', isEditing)}</td>
+                    <td className="px-2 py-2">
+                      <div className="flex flex-col gap-0.5">
+                        {renderCell(task, 'patientId', isEditing)}
+                        {task.patient?.patientCode && (
+                          <span className="text-xs font-mono text-gray-500">{task.patient.patientCode}</span>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-2 py-2">
                       <span className="text-xs">{task.patient?.telephone || '-'}</span>
                     </td>
@@ -765,6 +804,68 @@ export default function AdminManualTasksPage() {
           </Button>
         </div>
       </div>
+
+      {/* Custom Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <Trash2 className="h-5 w-5" />
+              Confirmer la suppression
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-slate-700">
+              Êtes-vous sûr de vouloir supprimer cette tâche manuelle ?
+            </p>
+            {taskToDelete && (
+              <div className="bg-slate-50 p-3 rounded-md border border-slate-200 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-slate-600">Code:</span>
+                  <Badge variant="outline" className="text-xs font-mono bg-blue-50 text-blue-700 border-blue-200">
+                    {taskToDelete.taskCode || 'N/A'}
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-slate-600">Type:</span>
+                  <Badge variant="outline" className={`text-xs ${getTaskTypeColor(taskToDelete.taskType)}`}>
+                    {TASK_TYPES.find(t => t.value === taskToDelete.taskType)?.label || taskToDelete.taskType}
+                  </Badge>
+                </div>
+                {taskToDelete.patient && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-slate-600">Patient:</span>
+                    <span className="text-xs text-slate-700">
+                      {taskToDelete.patient.firstName} {taskToDelete.patient.lastName}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+            <p className="text-xs text-red-600 font-medium">
+              ⚠️ Cette action est irréversible
+            </p>
+          </div>
+          <div className="flex gap-3 justify-end">
+            <Button
+              variant="outline"
+              onClick={cancelDelete}
+              disabled={deleteMutation.isPending}
+            >
+              Annuler
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={deleteMutation.isPending}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Supprimer définitivement
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

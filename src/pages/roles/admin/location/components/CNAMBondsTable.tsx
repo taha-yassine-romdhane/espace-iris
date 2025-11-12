@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useRouter } from 'next/router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -9,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Shield, Plus, Save, X, Edit2, Trash2, CheckCircle, Clock, FileX, Info, ChevronLeft, ChevronRight, Search, Filter } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { PatientSelectorDialog } from '@/components/dialogs/PatientSelectorDialog';
 
 interface CNAMBond {
   id?: string;
@@ -34,10 +36,13 @@ interface CNAMBond {
   rentalId?: string;
   saleId?: string; // For bons linked to sales
   patientId: string;
+  createdAt?: string; // NEW - Added for display
+  updatedAt?: string; // NEW - Added for display
   patient?: {
     id: string;
     firstName: string;
     lastName: string;
+    patientCode?: string;
     cnamId?: string;
   };
   rental?: {
@@ -83,10 +88,12 @@ const STATUS_LABELS: Record<string, { label: string; color: string; icon: any }>
 
 export default function CNAMBondsTable({ rentalId, patientId, patientCnamId, deviceMonthlyRate, showGlobalView = false }: Props) {
   const { toast } = useToast();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [editData, setEditData] = useState<CNAMBond | null>(null);
+  const [selectedPatientName, setSelectedPatientName] = useState<string>('');
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -284,6 +291,7 @@ export default function CNAMBondsTable({ rentalId, patientId, patientCnamId, dev
       bonNumber: nextBondNumber,
       bonType: defaultBondType,
       status: 'EN_ATTENTE_APPROBATION',
+      category: 'LOCATION', // Default category for rental bonds
       cnamMonthlyRate: Number(cnamRate),
       deviceMonthlyRate: Number(deviceRate),
       coveredMonths: 1,
@@ -291,9 +299,13 @@ export default function CNAMBondsTable({ rentalId, patientId, patientCnamId, dev
       devicePrice: Number(deviceRate) * 1,
       complementAmount: (Number(deviceRate) - Number(cnamRate)) * 1,
       renewalReminderDays: 30,
+      currentStep: 1, // Start at step 1
       patientId: patientId || '', // Will be selected in the form if in global view
       rentalId,
     });
+
+    // Reset patient name - will be set when patient is selected via dialog
+    setSelectedPatientName('');
     setIsAddingNew(true);
   };
 
@@ -306,6 +318,7 @@ export default function CNAMBondsTable({ rentalId, patientId, patientCnamId, dev
     setEditingId(null);
     setIsAddingNew(false);
     setEditData(null);
+    setSelectedPatientName('');
   };
 
   const handleSave = () => {
@@ -686,53 +699,91 @@ export default function CNAMBondsTable({ rentalId, patientId, patientCnamId, dev
           </div>
         )}
 
-        <div className="rounded-md border">
-          <Table>
+        <div className="rounded-md border overflow-x-auto">
+          <Table className="min-w-max">
             <TableHeader>
               <TableRow>
-                <TableHead>Numéro BL</TableHead>
-                {showGlobalView && <TableHead>Patient</TableHead>}
-                {showGlobalView && <TableHead>Location</TableHead>}
-                <TableHead>Type</TableHead>
-                <TableHead>Source</TableHead>
+                {/* Basic Info */}
+                <TableHead className="sticky left-0 bg-white z-10 min-w-[120px]">Numéro BL</TableHead>
+                <TableHead className="min-w-[100px]">Numéro Dossier</TableHead>
+                {showGlobalView && <TableHead className="min-w-[150px]">Patient</TableHead>}
+                {showGlobalView && <TableHead className="min-w-[120px]">Location</TableHead>}
+
+                {/* Bond Details */}
+                <TableHead className="min-w-[150px]">Type</TableHead>
+                <TableHead className="min-w-[100px]">Catégorie</TableHead>
+                <TableHead className="min-w-[120px]">Statut</TableHead>
+
+                {/* Dates */}
+                <TableHead className="min-w-[130px]">Date Soumission</TableHead>
+                <TableHead className="min-w-[130px]">Date Approbation</TableHead>
+                <TableHead className="min-w-[130px]">Date Début</TableHead>
+                <TableHead className="min-w-[130px]">Date Fin</TableHead>
+
+                {/* Financial */}
+                <TableHead className="min-w-[100px]">Tarif CNAM/mois</TableHead>
+                <TableHead className="min-w-[100px]">Tarif Appareil/mois</TableHead>
+                <TableHead className="min-w-[80px]">Mois Couverts</TableHead>
+                <TableHead className="min-w-[100px]">Montant Bon Total</TableHead>
+                <TableHead className="min-w-[100px]">Prix Appareil Total</TableHead>
+                <TableHead className="min-w-[100px]">Complément Patient</TableHead>
+
+                {/* Progress */}
                 <TableHead className="min-w-[200px]">Progression</TableHead>
-                <TableHead>Statut</TableHead>
-                <TableHead>Mois</TableHead>
-                <TableHead>CNAM</TableHead>
-                <TableHead>Appareil</TableHead>
-                <TableHead>Actions</TableHead>
+
+                {/* Additional */}
+                <TableHead className="min-w-[100px]">Rappel Renouvellement (jours)</TableHead>
+                <TableHead className="min-w-[200px]">Notes</TableHead>
+                <TableHead className="min-w-[150px]">Créé le</TableHead>
+                <TableHead className="min-w-[150px]">Mis à jour le</TableHead>
+
+                {/* Actions */}
+                <TableHead className="sticky right-0 bg-white z-10 min-w-[120px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isAddingNew && editData && (
                 <TableRow className="bg-green-50">
-                  <TableCell>
+                  {/* Numéro BL - Sticky Left */}
+                  <TableCell className="sticky left-0 bg-green-50 z-10">
                     <Badge variant="outline" className="text-xs font-mono bg-blue-50 text-blue-700 border-blue-200">
                       {editData.bonNumber || 'Auto-généré'}
                     </Badge>
                   </TableCell>
+
+                  {/* Numéro Dossier */}
+                  <TableCell>
+                    <Input
+                      type="text"
+                      placeholder="DOSS-LOC-0001"
+                      value={editData.dossierNumber || ''}
+                      onChange={(e) => setEditData({ ...editData, dossierNumber: e.target.value })}
+                      className="text-xs w-32"
+                    />
+                  </TableCell>
+
+                  {/* Patient (only in global view) */}
                   {showGlobalView && (
                     <TableCell>
-                      <Select
-                        value={editData.patientId}
-                        onValueChange={handlePatientChange}
-                      >
-                        <SelectTrigger className="text-xs">
-                          <SelectValue placeholder="Sélectionner patient" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {patients.map((patient: any) => (
-                            <SelectItem key={patient.id} value={patient.id}>
-                              <div className="text-xs">
-                                <div>{patient.firstName} {patient.lastName}</div>
-                                {patient.cnamId && <div className="text-gray-500">CNAM: {patient.cnamId}</div>}
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <PatientSelectorDialog
+                        selectedId={editData.patientId}
+                        selectedName={selectedPatientName}
+                        onSelect={(type, id, name) => {
+                          if (type === 'patient') {
+                            setEditData({ ...editData, patientId: id, rentalId: undefined });
+                            setSelectedPatientName(name);
+                          }
+                        }}
+                        trigger={
+                          <Button variant="outline" className="h-8 text-xs w-full justify-start">
+                            {selectedPatientName || 'Sélectionner patient'}
+                          </Button>
+                        }
+                      />
                     </TableCell>
                   )}
+
+                  {/* Location (only in global view) */}
                   {showGlobalView && (
                     <TableCell>
                       <Select
@@ -757,6 +808,8 @@ export default function CNAMBondsTable({ rentalId, patientId, patientCnamId, dev
                       </Select>
                     </TableCell>
                   )}
+
+                  {/* Type */}
                   <TableCell>
                     <Select value={editData.bonType} onValueChange={handleBondTypeChange}>
                       <SelectTrigger className="text-xs">
@@ -769,32 +822,15 @@ export default function CNAMBondsTable({ rentalId, patientId, patientCnamId, dev
                       </SelectContent>
                     </Select>
                   </TableCell>
-                  {/* Source Column */}
+
+                  {/* Catégorie */}
                   <TableCell>
                     <Badge variant="outline" className="text-xs bg-indigo-50 text-indigo-700 border-indigo-200">
                       LOCATION
                     </Badge>
                   </TableCell>
-                  {/* Progression Column */}
-                  <TableCell>
-                    <Select
-                      value={editData.currentStep?.toString() || '1'}
-                      onValueChange={(value) => setEditData({ ...editData, currentStep: parseInt(value) })}
-                    >
-                      <SelectTrigger className="text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">Étape 1 - En attente approbation</SelectItem>
-                        <SelectItem value="2">Étape 2 - Accord patient</SelectItem>
-                        <SelectItem value="3">Étape 3 - Documents CNAM</SelectItem>
-                        <SelectItem value="4">Étape 4 - Préparation appareil</SelectItem>
-                        <SelectItem value="5">Étape 5 - Livraison technicien</SelectItem>
-                        <SelectItem value="6">Étape 6 - Signature médecin</SelectItem>
-                        <SelectItem value="7">Étape 7 - Livraison finale</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
+
+                  {/* Statut */}
                   <TableCell>
                     <Select value={editData.status} onValueChange={(v) => setEditData({ ...editData, status: v })}>
                       <SelectTrigger className="text-xs">
@@ -807,22 +843,56 @@ export default function CNAMBondsTable({ rentalId, patientId, patientCnamId, dev
                       </SelectContent>
                     </Select>
                   </TableCell>
+
+                  {/* Date Soumission */}
                   <TableCell>
                     <Input
-                      type="number"
-                      min="1"
-                      max="12"
-                      value={editData.coveredMonths}
-                      onChange={(e) => handleMonthsChange(parseInt(e.target.value) || 1)}
-                      className="text-xs w-16"
+                      type="date"
+                      value={editData.submissionDate ? new Date(editData.submissionDate).toISOString().split('T')[0] : ''}
+                      onChange={(e) => setEditData({ ...editData, submissionDate: e.target.value ? new Date(e.target.value).toISOString() : null })}
+                      className="text-xs w-32"
                     />
                   </TableCell>
+
+                  {/* Date Approbation */}
                   <TableCell>
-                    <div className="text-xs">
-                      <div className="font-medium">{Number(editData.bonAmount || 0).toFixed(2)} TND</div>
-                      <div className="text-gray-500">{Number(editData.cnamMonthlyRate || 0).toFixed(2)}/m</div>
-                    </div>
+                    <Input
+                      type="date"
+                      value={editData.approvalDate ? new Date(editData.approvalDate).toISOString().split('T')[0] : ''}
+                      onChange={(e) => setEditData({ ...editData, approvalDate: e.target.value ? new Date(e.target.value).toISOString() : null })}
+                      className="text-xs w-32"
+                    />
                   </TableCell>
+
+                  {/* Date Début */}
+                  <TableCell>
+                    <Input
+                      type="date"
+                      value={editData.startDate ? new Date(editData.startDate).toISOString().split('T')[0] : ''}
+                      onChange={(e) => setEditData({ ...editData, startDate: e.target.value ? new Date(e.target.value).toISOString() : null })}
+                      className="text-xs w-32"
+                    />
+                  </TableCell>
+
+                  {/* Date Fin */}
+                  <TableCell>
+                    <Input
+                      type="date"
+                      value={editData.endDate ? new Date(editData.endDate).toISOString().split('T')[0] : ''}
+                      onChange={(e) => setEditData({ ...editData, endDate: e.target.value ? new Date(e.target.value).toISOString() : null })}
+                      className="text-xs w-32"
+                    />
+                  </TableCell>
+
+                  {/* Tarif CNAM/mois (auto from bond type) */}
+                  <TableCell>
+                    <div className="text-xs font-medium text-green-700">
+                      {Number(editData.cnamMonthlyRate || 0).toFixed(2)} TND
+                    </div>
+                    <div className="text-[10px] text-gray-500">Auto (Type)</div>
+                  </TableCell>
+
+                  {/* Tarif Appareil/mois */}
                   <TableCell>
                     <Input
                       type="number"
@@ -841,18 +911,107 @@ export default function CNAMBondsTable({ rentalId, patientId, patientCnamId, dev
                           complementAmount: devicePrice - bonAmount,
                         });
                       }}
-                      className="text-xs w-20"
+                      className="text-xs w-24"
                     />
-                    <div className="text-[10px] text-gray-500 mt-0.5">
-                      Total: {Number(editData.devicePrice || 0).toFixed(2)} TND
-                    </div>
                   </TableCell>
+
+                  {/* Mois Couverts */}
                   <TableCell>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="12"
+                      value={editData.coveredMonths}
+                      onChange={(e) => handleMonthsChange(parseInt(e.target.value) || 1)}
+                      className="text-xs w-16"
+                    />
+                  </TableCell>
+
+                  {/* Montant Bon Total (calculated) */}
+                  <TableCell>
+                    <div className="text-xs font-semibold text-green-700">
+                      {Number(editData.bonAmount || 0).toFixed(2)} TND
+                    </div>
+                    <div className="text-[10px] text-gray-500">Auto calculé</div>
+                  </TableCell>
+
+                  {/* Prix Appareil Total (calculated) */}
+                  <TableCell>
+                    <div className="text-xs font-semibold text-blue-700">
+                      {Number(editData.devicePrice || 0).toFixed(2)} TND
+                    </div>
+                    <div className="text-[10px] text-gray-500">Auto calculé</div>
+                  </TableCell>
+
+                  {/* Complément Patient (calculated) */}
+                  <TableCell>
+                    <div className="text-xs font-semibold text-orange-700">
+                      {Number(editData.complementAmount || 0).toFixed(2)} TND
+                    </div>
+                    <div className="text-[10px] text-gray-500">Auto calculé</div>
+                  </TableCell>
+
+                  {/* Progression */}
+                  <TableCell>
+                    <Select
+                      value={editData.currentStep?.toString() || '1'}
+                      onValueChange={(value) => setEditData({ ...editData, currentStep: parseInt(value) })}
+                    >
+                      <SelectTrigger className="text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">Étape 1 - En attente</SelectItem>
+                        <SelectItem value="2">Étape 2 - Accord patient</SelectItem>
+                        <SelectItem value="3">Étape 3 - Documents CNAM</SelectItem>
+                        <SelectItem value="4">Étape 4 - Préparation</SelectItem>
+                        <SelectItem value="5">Étape 5 - Livraison tech</SelectItem>
+                        <SelectItem value="6">Étape 6 - Signature médecin</SelectItem>
+                        <SelectItem value="7">Étape 7 - Livraison finale</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+
+                  {/* Rappel Renouvellement */}
+                  <TableCell>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="90"
+                      value={editData.renewalReminderDays || 30}
+                      onChange={(e) => setEditData({ ...editData, renewalReminderDays: parseInt(e.target.value) || 30 })}
+                      className="text-xs w-16"
+                    />
+                  </TableCell>
+
+                  {/* Notes */}
+                  <TableCell>
+                    <Input
+                      type="text"
+                      placeholder="Notes..."
+                      value={editData.notes || ''}
+                      onChange={(e) => setEditData({ ...editData, notes: e.target.value })}
+                      className="text-xs w-40"
+                    />
+                  </TableCell>
+
+                  {/* Créé le (not editable for new) */}
+                  <TableCell>
+                    <div className="text-xs text-gray-400">-</div>
+                  </TableCell>
+
+                  {/* Mis à jour le (not editable for new) */}
+                  <TableCell>
+                    <div className="text-xs text-gray-400">-</div>
+                  </TableCell>
+
+                  {/* Actions - Sticky Right */}
+                  <TableCell className="sticky right-0 bg-green-50 z-10">
                     <div className="flex gap-1">
-                      <Button size="sm" variant="outline" onClick={handleSave} className="h-7 px-2">
+                      <Button size="sm" variant="outline" onClick={handleSave} className="h-7 px-2 bg-white">
                         <Save className="h-3 w-3" />
                       </Button>
-                      <Button size="sm" variant="outline" onClick={handleCancel} className="h-7 px-2">
+                      <Button size="sm" variant="outline" onClick={handleCancel} className="h-7 px-2 bg-white">
                         <X className="h-3 w-3" />
                       </Button>
                     </div>
@@ -874,33 +1033,82 @@ export default function CNAMBondsTable({ rentalId, patientId, patientCnamId, dev
 
                 return (
                   <TableRow key={bond.id} className={isEditing ? 'bg-blue-50' : ''}>
-                    <TableCell>
+                    {/* Numéro BL - Sticky Left (Read-only, auto-generated) */}
+                    <TableCell className={`sticky left-0 z-10 ${isEditing ? 'bg-blue-50' : 'bg-white'}`}>
                       <Badge variant="outline" className="text-xs font-mono bg-blue-50 text-blue-700 border-blue-200">
-                        {bond.bonNumber || bond.dossierNumber || 'N/A'}
+                        {bond.bonNumber || 'N/A'}
                       </Badge>
+                      {isEditing && <div className="text-[10px] text-gray-500 mt-0.5">Auto-généré</div>}
                     </TableCell>
+
+                    {/* Numéro Dossier */}
+                    <TableCell>
+                      {isEditing ? (
+                        <Input
+                          type="text"
+                          placeholder="DOSS-LOC-0001"
+                          value={data.dossierNumber || ''}
+                          onChange={(e) => setEditData({ ...editData!, dossierNumber: e.target.value })}
+                          className="text-xs w-32 font-mono"
+                        />
+                      ) : (
+                        <div className="text-xs font-mono">{bond.dossierNumber || 'N/A'}</div>
+                      )}
+                    </TableCell>
+
+                    {/* Patient (Read-only - use dialog for selection) */}
                     {showGlobalView && (
                       <TableCell>
                         <div className="text-xs">
-                          <div className="font-medium">
+                          <div
+                            className="font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer transition-colors"
+                            onClick={() => router.push(`/roles/admin/renseignement/patient/${bond.patient?.id}`)}
+                          >
                             {bond.patient?.firstName} {bond.patient?.lastName}
                           </div>
-                          {bond.patient?.cnamId && (
-                            <div className="text-gray-500">CNAM: {bond.patient.cnamId}</div>
+                          {bond.patient?.patientCode && (
+                            <div className="text-slate-500 font-mono">{bond.patient.patientCode}</div>
                           )}
                         </div>
                       </TableCell>
                     )}
+
+                    {/* Location */}
                     {showGlobalView && (
                       <TableCell>
-                        <div className="text-xs">
-                          <div className="font-medium">{bond.rental?.rentalCode || '-'}</div>
-                          {bond.rental?.medicalDevice && (
-                            <div className="text-gray-500">{bond.rental.medicalDevice.name}</div>
-                          )}
-                        </div>
+                        {isEditing ? (
+                          <Select
+                            value={data.rentalId || 'none'}
+                            onValueChange={handleRentalChange}
+                            disabled={!data.patientId}
+                          >
+                            <SelectTrigger className="text-xs">
+                              <SelectValue placeholder={!data.patientId ? "Sélectionner patient d'abord" : "Optionnel"} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Aucune location</SelectItem>
+                              {filteredRentals.map((rental: any) => (
+                                <SelectItem key={rental.id} value={rental.id}>
+                                  <div className="text-xs">
+                                    <div>{rental.rentalCode}</div>
+                                    {rental.medicalDevice && <div className="text-gray-500">{rental.medicalDevice.name}</div>}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <div className="text-xs">
+                            <div className="font-medium">{bond.rental?.rentalCode || '-'}</div>
+                            {bond.rental?.medicalDevice && (
+                              <div className="text-gray-500">{bond.rental.medicalDevice.name}</div>
+                            )}
+                          </div>
+                        )}
                       </TableCell>
                     )}
+
+                    {/* Type */}
                     <TableCell>
                       {isEditing ? (
                         <Select value={data.bonType} onValueChange={handleBondTypeChange}>
@@ -917,37 +1125,131 @@ export default function CNAMBondsTable({ rentalId, patientId, patientCnamId, dev
                         <div className="text-xs font-medium">{BOND_TYPE_LABELS[bond.bonType]}</div>
                       )}
                     </TableCell>
-                    {/* Source Column */}
+
+                    {/* Catégorie */}
                     <TableCell>
-                      <Badge variant="outline" className="text-xs bg-indigo-50 text-indigo-700 border-indigo-200">
-                        {bond.rentalId ? 'LOCATION' : bond.saleId ? 'ACHAT' : 'LOCATION'}
+                      <Badge variant="outline" className="text-xs">
+                        {bond.category || (bond.rentalId ? 'LOCATION' : 'ACHAT')}
                       </Badge>
                     </TableCell>
-                    {/* Progression Column */}
+
+                    {/* Statut */}
                     <TableCell>
                       {isEditing ? (
-                        <Select
-                          value={data.currentStep?.toString() || '3'}
-                          onValueChange={(value) => setEditData({ ...data, currentStep: parseInt(value) })}
-                        >
+                        <Select value={data.status} onValueChange={(v) => setEditData({ ...editData!, status: v })}>
                           <SelectTrigger className="text-xs">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="1">Étape 1 - En attente approbation</SelectItem>
-                            <SelectItem value="2">Étape 2 - Accord patient</SelectItem>
-                            <SelectItem value="3">Étape 3 - Documents CNAM</SelectItem>
-                            <SelectItem value="4">Étape 4 - Préparation appareil</SelectItem>
-                            <SelectItem value="5">Étape 5 - Livraison technicien</SelectItem>
-                            <SelectItem value="6">Étape 6 - Signature médecin</SelectItem>
-                            <SelectItem value="7">Étape 7 - Livraison finale</SelectItem>
+                            {Object.entries(STATUS_LABELS).map(([value, info]) => (
+                              <SelectItem key={value} value={value}>{info.label}</SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       ) : (
-                        getProgressBar(bond.currentStep || 3, bond.totalSteps || 7)
+                        getStatusBadge(bond.status)
                       )}
                     </TableCell>
-                    <TableCell>{getStatusBadge(bond.status)}</TableCell>
+
+                    {/* Date Soumission */}
+                    <TableCell>
+                      {isEditing ? (
+                        <Input
+                          type="date"
+                          value={data.submissionDate ? new Date(data.submissionDate).toISOString().split('T')[0] : ''}
+                          onChange={(e) => setEditData({ ...editData!, submissionDate: e.target.value ? new Date(e.target.value).toISOString() : null })}
+                          className="text-xs w-32"
+                        />
+                      ) : (
+                        <div className="text-xs">
+                          {bond.submissionDate ? new Date(bond.submissionDate).toLocaleDateString('fr-FR') : '-'}
+                        </div>
+                      )}
+                    </TableCell>
+
+                    {/* Date Approbation */}
+                    <TableCell>
+                      {isEditing ? (
+                        <Input
+                          type="date"
+                          value={data.approvalDate ? new Date(data.approvalDate).toISOString().split('T')[0] : ''}
+                          onChange={(e) => setEditData({ ...editData!, approvalDate: e.target.value ? new Date(e.target.value).toISOString() : null })}
+                          className="text-xs w-32"
+                        />
+                      ) : (
+                        <div className="text-xs">
+                          {bond.approvalDate ? new Date(bond.approvalDate).toLocaleDateString('fr-FR') : '-'}
+                        </div>
+                      )}
+                    </TableCell>
+
+                    {/* Date Début */}
+                    <TableCell>
+                      {isEditing ? (
+                        <Input
+                          type="date"
+                          value={data.startDate ? new Date(data.startDate).toISOString().split('T')[0] : ''}
+                          onChange={(e) => setEditData({ ...editData!, startDate: e.target.value ? new Date(e.target.value).toISOString() : null })}
+                          className="text-xs w-32"
+                        />
+                      ) : (
+                        <div className="text-xs">
+                          {bond.startDate ? new Date(bond.startDate).toLocaleDateString('fr-FR') : '-'}
+                        </div>
+                      )}
+                    </TableCell>
+
+                    {/* Date Fin */}
+                    <TableCell>
+                      {isEditing ? (
+                        <Input
+                          type="date"
+                          value={data.endDate ? new Date(data.endDate).toISOString().split('T')[0] : ''}
+                          onChange={(e) => setEditData({ ...editData!, endDate: e.target.value ? new Date(e.target.value).toISOString() : null })}
+                          className="text-xs w-32"
+                        />
+                      ) : (
+                        <div className="text-xs">
+                          {bond.endDate ? new Date(bond.endDate).toLocaleDateString('fr-FR') : '-'}
+                        </div>
+                      )}
+                    </TableCell>
+
+                    {/* Tarif CNAM/mois */}
+                    <TableCell>
+                      <div className="text-xs font-medium text-green-700">
+                        {Number(data.cnamMonthlyRate).toFixed(2)} TND
+                      </div>
+                      {isEditing && <div className="text-[10px] text-gray-500">Auto (Type)</div>}
+                    </TableCell>
+
+                    {/* Tarif Appareil/mois */}
+                    <TableCell>
+                      {isEditing ? (
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={data.deviceMonthlyRate || ''}
+                          onChange={(e) => {
+                            const rate = parseFloat(e.target.value) || 0;
+                            const devicePrice = rate * data.coveredMonths;
+                            const bonAmount = data.cnamMonthlyRate * data.coveredMonths;
+                            setEditData({
+                              ...editData!,
+                              deviceMonthlyRate: rate,
+                              devicePrice,
+                              complementAmount: devicePrice - bonAmount,
+                            });
+                          }}
+                          className="text-xs w-24"
+                        />
+                      ) : (
+                        <div className="text-xs font-medium">{Number(bond.deviceMonthlyRate).toFixed(2)} TND</div>
+                      )}
+                    </TableCell>
+
+                    {/* Mois Couverts */}
                     <TableCell>
                       {isEditing ? (
                         <Input
@@ -959,28 +1261,104 @@ export default function CNAMBondsTable({ rentalId, patientId, patientCnamId, dev
                           className="text-xs w-16"
                         />
                       ) : (
-                        <div className="text-xs">{bond.coveredMonths}</div>
+                        <div className="text-xs text-center">{bond.coveredMonths}</div>
                       )}
                     </TableCell>
+
+                    {/* Montant Bon Total */}
                     <TableCell>
-                      <div className="text-xs">
-                        <div className="font-medium">{Number(bond.bonAmount).toFixed(2)} TND</div>
-                        <div className="text-gray-500">{Number(bond.cnamMonthlyRate).toFixed(2)}/m</div>
+                      <div className="text-xs font-semibold text-green-700">
+                        {Number(data.bonAmount).toFixed(2)} TND
                       </div>
+                      {isEditing && <div className="text-[10px] text-gray-500">Auto calculé</div>}
                     </TableCell>
+
+                    {/* Prix Appareil Total */}
                     <TableCell>
-                      <div className="text-xs">
-                        <div className="font-medium">{Number(bond.devicePrice).toFixed(2)} TND</div>
-                        <div className="text-gray-500">{Number(bond.deviceMonthlyRate).toFixed(2)}/m</div>
+                      <div className="text-xs font-semibold text-blue-700">
+                        {Number(data.devicePrice).toFixed(2)} TND
                       </div>
+                      {isEditing && <div className="text-[10px] text-gray-500">Auto calculé</div>}
                     </TableCell>
+
+                    {/* Complément Patient */}
+                    <TableCell>
+                      <div className="text-xs font-semibold text-orange-700">
+                        {Number(data.complementAmount).toFixed(2)} TND
+                      </div>
+                      {isEditing && <div className="text-[10px] text-gray-500">Auto calculé</div>}
+                    </TableCell>
+
+                    {/* Progression */}
                     <TableCell>
                       {isEditing ? (
+                        <Select
+                          value={data.currentStep?.toString() || '1'}
+                          onValueChange={(value) => setEditData({ ...editData!, currentStep: parseInt(value) })}
+                        >
+                          <SelectTrigger className="text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1">Étape 1 - En attente</SelectItem>
+                            <SelectItem value="2">Étape 2 - Accord patient</SelectItem>
+                            <SelectItem value="3">Étape 3 - Documents CNAM</SelectItem>
+                            <SelectItem value="4">Étape 4 - Préparation</SelectItem>
+                            <SelectItem value="5">Étape 5 - Livraison tech</SelectItem>
+                            <SelectItem value="6">Étape 6 - Signature médecin</SelectItem>
+                            <SelectItem value="7">Étape 7 - Livraison finale</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        getProgressBar(bond.currentStep || 1, bond.totalSteps || 7)
+                      )}
+                    </TableCell>
+
+                    {/* Rappel Renouvellement */}
+                    <TableCell>
+                      {isEditing ? (
+                        <Input
+                          type="number"
+                          min="1"
+                          max="90"
+                          value={data.renewalReminderDays || 30}
+                          onChange={(e) => setEditData({ ...editData!, renewalReminderDays: parseInt(e.target.value) || 30 })}
+                          className="text-xs w-16"
+                        />
+                      ) : (
+                        <div className="text-xs text-center">{bond.renewalReminderDays || 30}</div>
+                      )}
+                    </TableCell>
+
+                    {/* Notes */}
+                    <TableCell>
+                      {isEditing ? (
+                        <Input
+                          type="text"
+                          placeholder="Notes..."
+                          value={data.notes || ''}
+                          onChange={(e) => setEditData({ ...editData!, notes: e.target.value })}
+                          className="text-xs w-40"
+                        />
+                      ) : (
+                        <div className="text-xs max-w-[200px] truncate">{bond.notes || '-'}</div>
+                      )}
+                    </TableCell>
+
+                    {/* Créé le */}
+                    <TableCell className="text-xs">{(bond as any).createdAt ? new Date((bond as any).createdAt).toLocaleString('fr-FR') : '-'}</TableCell>
+
+                    {/* Mis à jour le */}
+                    <TableCell className="text-xs">{(bond as any).updatedAt ? new Date((bond as any).updatedAt).toLocaleString('fr-FR') : '-'}</TableCell>
+
+                    {/* Actions - Sticky Right */}
+                    <TableCell className={`sticky right-0 z-10 ${isEditing ? 'bg-blue-50' : 'bg-white'}`}>
+                      {isEditing ? (
                         <div className="flex gap-1">
-                          <Button size="sm" variant="outline" onClick={handleSave} className="h-7 px-2">
+                          <Button size="sm" variant="outline" onClick={handleSave} className="h-7 px-2 bg-white">
                             <Save className="h-3 w-3" />
                           </Button>
-                          <Button size="sm" variant="outline" onClick={handleCancel} className="h-7 px-2">
+                          <Button size="sm" variant="outline" onClick={handleCancel} className="h-7 px-2 bg-white">
                             <X className="h-3 w-3" />
                           </Button>
                         </div>

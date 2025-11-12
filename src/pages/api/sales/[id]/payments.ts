@@ -3,6 +3,7 @@ import prisma from '@/lib/db';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]';
 import { PaymentMethod, PaymentStatus } from '@prisma/client';
+import { generatePaymentCode } from '@/utils/idGenerator';
 
 // Define types based on the Prisma schema
 interface PaymentDetail {
@@ -59,11 +60,109 @@ export default async function handler(
   switch (req.method) {
     case 'GET':
       return handleGetPayments(req, res, saleId);
+    case 'POST':
+      return handleAddPayment(req, res, saleId);
     case 'PUT':
       return handleUpdatePayments(req, res, saleId);
     default:
-      res.setHeader('Allow', ['GET', 'PUT']);
+      res.setHeader('Allow', ['GET', 'POST', 'PUT']);
       return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+  }
+}
+
+// Handler to add a new payment to an existing sale
+async function handleAddPayment(req: NextApiRequest, res: NextApiResponse, saleId: string) {
+  try {
+    const paymentData = req.body;
+
+    if (!paymentData.amount || isNaN(parseFloat(paymentData.amount))) {
+      return res.status(400).json({ error: 'Valid payment amount is required' });
+    }
+
+    // Verify sale exists
+    const sale = await prisma.sale.findUnique({
+      where: { id: saleId },
+      include: {
+        payments: true
+      }
+    });
+
+    if (!sale) {
+      return res.status(404).json({ error: 'Sale not found' });
+    }
+
+    // Create the new payment
+    const paymentCode = await generatePaymentCode(prisma as any);
+    const payment = await prisma.payment.create({
+      data: {
+        paymentCode: paymentCode,
+        source: 'SALE',
+        saleId: saleId,
+        patientId: sale.patientId,
+        companyId: sale.companyId,
+        amount: parseFloat(paymentData.amount),
+        method: mapPaymentMethod(paymentData.type || 'cash'),
+        status: PaymentStatus.PAID,
+        chequeNumber: paymentData.type === 'cheque' ? paymentData.chequeNumber || null : null,
+        bankName: paymentData.type === 'cheque' || paymentData.type === 'virement' || paymentData.type === 'traite' ?
+          (paymentData.bank || null) : null,
+        referenceNumber: paymentData.reference || paymentData.mandatNumber || paymentData.traiteNumber || null,
+        cnamCardNumber: paymentData.type === 'cnam' ? paymentData.dossierNumber || null : null,
+        cnamBonId: paymentData.type === 'cnam' ? paymentData.cnamBonId || null : null,
+        notes: paymentData.notes || null,
+        paymentDate: paymentData.paymentDate ? new Date(paymentData.paymentDate) : new Date(),
+        dueDate: paymentData.dueDate ? new Date(paymentData.dueDate) : null,
+        paymentDetails: {
+          create: {
+            method: paymentData.type || 'cash',
+            amount: parseFloat(paymentData.amount),
+            classification: paymentData.classification || 'principale',
+            reference: createPaymentReference(paymentData),
+            metadata: {
+              ...paymentData,
+              ...(paymentData.cnamInfo && { cnamInfo: paymentData.cnamInfo }),
+              ...(paymentData.type === 'cheque' && {
+                chequeNumber: paymentData.chequeNumber,
+                bank: paymentData.bank
+              }),
+              ...(paymentData.type === 'virement' && {
+                reference: paymentData.reference,
+                bank: paymentData.bank
+              }),
+              ...(paymentData.type === 'cnam' && {
+                bonType: paymentData.cnamInfo?.bonType,
+                dossierNumber: paymentData.dossierNumber,
+                currentStep: paymentData.cnamInfo?.currentStep,
+                status: paymentData.cnamInfo?.status
+              })
+            }
+          }
+        }
+      },
+      include: {
+        paymentDetails: true
+      }
+    });
+
+    // Calculate updated payment totals
+    const allPayments = await prisma.payment.findMany({
+      where: { saleId: saleId }
+    });
+
+    const totalPaid = allPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+    const remaining = Number(sale.finalAmount) - totalPaid;
+
+    return res.status(201).json({
+      payment,
+      totals: {
+        totalPaid,
+        remainingAmount: remaining,
+        saleAmount: Number(sale.finalAmount)
+      }
+    });
+  } catch (error) {
+    console.error('Error adding payment:', error);
+    return res.status(500).json({ error: 'Failed to add payment' });
   }
 }
 
@@ -104,9 +203,9 @@ function createPaymentReference(payment: any): string {
       return `Traite N°${payment.traiteNumber || ''} Échéance:${payment.dueDate ? new Date(payment.dueDate).toLocaleDateString() : ''}: ${payment.amount} DT`;
     case 'cnam':
       const cnamRef = payment.dossierNumber || '';
-      const bondType = payment.metadata?.cnamInfo?.bondType || '';
+      const bonType = payment.metadata?.cnamInfo?.bonType || '';
       const step = payment.metadata?.cnamInfo?.currentStep || '';
-      return `CNAM ${bondType} Dossier:${cnamRef} Étape:${step}: ${payment.amount} DT`;
+      return `CNAM ${bonType} Dossier:${cnamRef} Étape:${step}: ${payment.amount} DT`;
     default:
       return `${payment.type}: ${payment.amount} DT`;
   }
@@ -123,124 +222,109 @@ async function handleUpdatePayments(req: NextApiRequest, res: NextApiResponse, s
 
     // Start a transaction to update payments atomically
     const result = await prisma.$transaction(async (tx) => {
-      // Get the existing sale with payment
+      // Get the existing sale with payments
       const sale = await tx.sale.findUnique({
         where: { id: saleId },
-        include: { payment: { include: { paymentDetails: true } } }
+        include: {
+          payments: {
+            include: { paymentDetails: true }
+          }
+        }
       });
 
       if (!sale) {
         throw new Error('Sale not found');
       }
 
-      // Delete existing payment details if any
-      if (sale.payment?.id) {
+      // Delete ALL existing payments and their details for this sale
+      if (sale.payments && sale.payments.length > 0) {
+        const paymentIds = sale.payments.map(p => p.id);
+
+        // Delete payment details first (foreign key constraint)
         await tx.paymentDetail.deleteMany({
-          where: { paymentId: sale.payment.id }
+          where: { paymentId: { in: paymentIds } }
+        });
+
+        // Delete the payments
+        await tx.payment.deleteMany({
+          where: { id: { in: paymentIds } }
         });
       }
 
-      // Calculate total payment amount
-      const totalPaymentAmount = payments.reduce((sum: number, p: any) => 
-        sum + (Number(p.amount) || 0), 0
-      );
-
-      // Get the primary payment (first one or the one marked as 'principale')
-      const primaryPayment = payments.find((p: any) => 
-        p.classification === 'principale'
-      ) || payments[0];
-
-      // Update or create the payment record
-      let payment;
-      if (sale.paymentId && sale.payment) {
-        // Update existing payment
-        payment = await tx.payment.update({
-          where: { id: sale.paymentId },
+      // Create new payments for all provided payment data
+      const createdPayments = [];
+      for (const paymentData of payments) {
+        const paymentCode = await generatePaymentCode(tx as any);
+        const payment = await tx.payment.create({
           data: {
-            amount: totalPaymentAmount,
-            method: mapPaymentMethod(primaryPayment?.type || 'cash'),
-            status: totalPaymentAmount >= Number(sale.finalAmount) ? PaymentStatus.PAID : PaymentStatus.PARTIAL,
-            source: 'SALE', // IMPORTANT: Ensure source is set as SALE
-            chequeNumber: primaryPayment?.type === 'cheque' ? primaryPayment.chequeNumber || null : null,
-            bankName: primaryPayment?.type === 'cheque' ? primaryPayment.bank || null : null,
-            referenceNumber: ['virement', 'mandat', 'traite'].includes(primaryPayment?.type) ?
-              (primaryPayment.reference || primaryPayment.mandatNumber || primaryPayment.traiteNumber || null) : null,
-            cnamCardNumber: primaryPayment?.type === 'cnam' ? primaryPayment.dossierNumber || null : null,
-            notes: primaryPayment?.notes || null,
-            paymentDate: primaryPayment?.paymentDate ? new Date(primaryPayment.paymentDate) : new Date(),
-            dueDate: primaryPayment?.dueDate ? new Date(primaryPayment.dueDate) : null,
-          }
-        });
-      } else {
-        // Create new payment
-        payment = await tx.payment.create({
-          data: {
-            amount: totalPaymentAmount,
-            method: mapPaymentMethod(primaryPayment?.type || 'cash'),
-            status: totalPaymentAmount >= Number(sale.finalAmount) ? PaymentStatus.PAID : PaymentStatus.PARTIAL,
-            source: 'SALE', // IMPORTANT: Set source as SALE for filtering
-            saleId: saleId, // IMPORTANT: Link payment to sale
-            chequeNumber: primaryPayment?.type === 'cheque' ? primaryPayment.chequeNumber || null : null,
-            bankName: primaryPayment?.type === 'cheque' ? primaryPayment.bank || null : null,
-            referenceNumber: ['virement', 'mandat', 'traite'].includes(primaryPayment?.type) ?
-              (primaryPayment.reference || primaryPayment.mandatNumber || primaryPayment.traiteNumber || null) : null,
-            cnamCardNumber: primaryPayment?.type === 'cnam' ? primaryPayment.dossierNumber || null : null,
-            notes: primaryPayment?.notes || null,
-            paymentDate: primaryPayment?.paymentDate ? new Date(primaryPayment.paymentDate) : new Date(),
-            dueDate: primaryPayment?.dueDate ? new Date(primaryPayment.dueDate) : null,
-          }
-        });
-
-        // Update sale with payment ID
-        await tx.sale.update({
-          where: { id: saleId },
-          data: { paymentId: payment.id }
-        });
-      }
-
-      // Create payment details for each payment method
-      if (payments.length > 0) {
-        await tx.paymentDetail.createMany({
-          data: payments.map((p: any) => ({
-            paymentId: payment.id,
-            method: p.type,
-            amount: Number(p.amount),
-            classification: p.classification || 'principale',
-            reference: createPaymentReference(p),
-            metadata: {
-              ...p,
-              ...(p.metadata || {}),
-              // Store payment-specific details
-              ...(p.type === 'cheque' && {
-                chequeNumber: p.chequeNumber,
-                bank: p.bank
-              }),
-              ...(p.type === 'virement' && {
-                reference: p.reference,
-                bank: p.bank
-              }),
-              ...(p.type === 'traite' && {
-                traiteNumber: p.traiteNumber,
-                bank: p.bank,
-                dueDate: p.dueDate
-              }),
-              ...(p.type === 'mandat' && {
-                mandatNumber: p.mandatNumber
-              }),
-              ...(p.type === 'cnam' && p.metadata?.cnamInfo && {
-                cnamInfo: p.metadata.cnamInfo
-              })
+            paymentCode,
+            source: 'SALE',
+            saleId: saleId,
+            patientId: sale.patientId,
+            companyId: sale.companyId,
+            amount: Number(paymentData.amount),
+            method: mapPaymentMethod(paymentData.type || 'cash'),
+            status: PaymentStatus.PAID,
+            chequeNumber: paymentData.type === 'cheque' ? paymentData.chequeNumber || null : null,
+            bankName: paymentData.type === 'cheque' || paymentData.type === 'virement' || paymentData.type === 'traite' ?
+              (paymentData.bank || null) : null,
+            referenceNumber: paymentData.reference || paymentData.mandatNumber || paymentData.traiteNumber || null,
+            cnamCardNumber: paymentData.type === 'cnam' ? paymentData.dossierNumber || null : null,
+            cnamBonId: paymentData.type === 'cnam' ? paymentData.cnamBonId || null : null,
+            notes: paymentData.notes || null,
+            paymentDate: paymentData.paymentDate ? new Date(paymentData.paymentDate) : new Date(),
+            dueDate: paymentData.dueDate ? new Date(paymentData.dueDate) : null,
+            paymentDetails: {
+              create: {
+                method: paymentData.type || 'cash',
+                amount: Number(paymentData.amount),
+                classification: paymentData.classification || 'principale',
+                reference: createPaymentReference(paymentData),
+                metadata: {
+                  ...paymentData,
+                  ...(paymentData.cnamInfo && { cnamInfo: paymentData.cnamInfo }),
+                  ...(paymentData.type === 'cheque' && {
+                    chequeNumber: paymentData.chequeNumber,
+                    bank: paymentData.bank
+                  }),
+                  ...(paymentData.type === 'virement' && {
+                    reference: paymentData.reference,
+                    bank: paymentData.bank
+                  }),
+                  ...(paymentData.type === 'cnam' && {
+                    bonType: paymentData.cnamInfo?.bonType,
+                    dossierNumber: paymentData.dossierNumber,
+                    currentStep: paymentData.cnamInfo?.currentStep,
+                    status: paymentData.cnamInfo?.status
+                  })
+                }
+              }
             }
-          }))
+          },
+          include: {
+            paymentDetails: true
+          }
         });
+        createdPayments.push(payment);
       }
 
-      return payment;
+      // Calculate totals
+      const totalPaid = createdPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+      const remaining = Number(sale.finalAmount) - totalPaid;
+
+      return {
+        payments: createdPayments,
+        totals: {
+          totalPaid,
+          remainingAmount: remaining,
+          saleAmount: Number(sale.finalAmount)
+        }
+      };
     });
 
-    return res.status(200).json({ 
+    return res.status(200).json({
       message: 'Payments updated successfully',
-      payment: result 
+      ...result
     });
   } catch (error) {
     console.error('API Error:', error);

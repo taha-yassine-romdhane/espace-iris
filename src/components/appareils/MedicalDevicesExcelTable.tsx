@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -23,6 +24,7 @@ interface MedicalDevice {
   technicalSpecs?: string;
   warranty?: string;
   maintenanceInterval?: string;
+  configuration?: string;
   status: string;
   destination: string;
   location?: string;
@@ -62,6 +64,7 @@ export function MedicalDevicesExcelTable({
   importExportComponent
 }: MedicalDevicesExcelTableProps) {
   const { toast } = useToast();
+  const router = useRouter();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editedDevice, setEditedDevice] = useState<MedicalDevice | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
@@ -74,7 +77,7 @@ export function MedicalDevicesExcelTable({
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(20);
+  const [itemsPerPage, setItemsPerPage] = useState(50);
 
   // Filter state
   const [searchTerm, setSearchTerm] = useState('');
@@ -340,9 +343,22 @@ export function MedicalDevicesExcelTable({
     switch (field) {
       case 'deviceCode':
         return (
-          <Badge variant="outline" className="font-mono text-xs">
+          <Badge
+            variant="outline"
+            className="font-mono text-xs cursor-pointer hover:bg-blue-100 transition-colors"
+            onClick={() => router.push(`/roles/admin/appareils/medical-device/${device.id}`)}
+          >
             {(value as string) || 'N/A'}
           </Badge>
+        );
+      case 'name':
+        return (
+          <span
+            className="text-xs font-medium cursor-pointer text-blue-600 hover:text-blue-800 hover:underline transition-colors"
+            onClick={() => router.push(`/roles/admin/appareils/medical-device/${device.id}`)}
+          >
+            {(value as string) || '-'}
+          </span>
         );
       case 'status':
         return <Badge variant={getStatusBadge(value as string)} className="text-xs">{getStatusLabel(value as string)}</Badge>;
@@ -619,101 +635,6 @@ export function MedicalDevicesExcelTable({
         </div>
       </div>
 
-      {/* Pagination Controls - Top */}
-      {filteredDevices.length > 0 && (
-        <div className="flex items-center justify-between bg-white border rounded-lg p-4">
-          <div className="flex items-center gap-4">
-            <p className="text-sm text-gray-600">
-              Affichage de {startIndex + 1} à {Math.min(endIndex, filteredDevices.length)} sur {filteredDevices.length} appareils
-            </p>
-            <Select
-              value={itemsPerPage.toString()}
-              onValueChange={(val) => {
-                setItemsPerPage(parseInt(val));
-                setCurrentPage(1);
-              }}
-            >
-              <SelectTrigger className="h-9 w-32 text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="20">20 par page</SelectItem>
-                <SelectItem value="50">50 par page</SelectItem>
-                <SelectItem value="100">100 par page</SelectItem>
-                <SelectItem value="200">200 par page</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(1)}
-              disabled={currentPage === 1}
-              className="h-9"
-            >
-              Premier
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="h-9"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-
-            <div className="flex items-center gap-1">
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                let pageNum;
-                if (totalPages <= 5) {
-                  pageNum = i + 1;
-                } else if (currentPage <= 3) {
-                  pageNum = i + 1;
-                } else if (currentPage >= totalPages - 2) {
-                  pageNum = totalPages - 4 + i;
-                } else {
-                  pageNum = currentPage - 2 + i;
-                }
-
-                return (
-                  <Button
-                    key={pageNum}
-                    variant={currentPage === pageNum ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setCurrentPage(pageNum)}
-                    className="h-9 w-9"
-                  >
-                    {pageNum}
-                  </Button>
-                );
-              })}
-            </div>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className="h-9"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(totalPages)}
-              disabled={currentPage === totalPages}
-              className="h-9"
-            >
-              Dernier
-            </Button>
-          </div>
-        </div>
-      )}
-
       {/* Excel-like Table */}
       <div className="border rounded-lg overflow-x-auto">
         <table className="w-full border-collapse text-sm">
@@ -789,6 +710,101 @@ export function MedicalDevicesExcelTable({
           </tbody>
         </table>
       </div>
+
+      {/* Pagination Controls */}
+      {filteredDevices.length > 0 && (
+        <div className="flex items-center justify-between border-t pt-4">
+          <div className="flex items-center gap-4">
+            <p className="text-sm text-gray-600">
+              Affichage de {startIndex + 1} à {Math.min(endIndex, filteredDevices.length)} sur {filteredDevices.length} appareils
+            </p>
+            <Select
+              value={itemsPerPage.toString()}
+              onValueChange={(val) => {
+                setItemsPerPage(parseInt(val));
+                setCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="h-9 w-32 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="25">25 par page</SelectItem>
+                <SelectItem value="50">50 par page</SelectItem>
+                <SelectItem value="100">100 par page</SelectItem>
+                <SelectItem value="200">200 par page</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(1)}
+              disabled={currentPage === 1}
+              className="h-9"
+            >
+              Premier
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="h-9"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let pageNum;
+                if (totalPages <= 5) {
+                  pageNum = i + 1;
+                } else if (currentPage <= 3) {
+                  pageNum = i + 1;
+                } else if (currentPage >= totalPages - 2) {
+                  pageNum = totalPages - 4 + i;
+                } else {
+                  pageNum = currentPage - 2 + i;
+                }
+
+                return (
+                  <Button
+                    key={pageNum}
+                    variant={currentPage === pageNum ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(pageNum)}
+                    className="h-9 w-9"
+                  >
+                    {pageNum}
+                  </Button>
+                );
+              })}
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="h-9"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(totalPages)}
+              disabled={currentPage === totalPages}
+              className="h-9"
+            >
+              Dernier
+            </Button>
+          </div>
+        </div>
+      )}
 
       {devices.length === 0 && !isAddingNew && (
         <div className="text-center py-8 text-gray-500">

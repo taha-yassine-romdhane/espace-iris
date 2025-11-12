@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'next/router';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +17,8 @@ import {
   Building2,
   Filter,
   User,
+  ChevronRight,
+  ChevronLeft,
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -54,6 +57,7 @@ interface SaleItem {
       id: string;
       firstName: string;
       lastName: string;
+      patientCode?: string;
     };
     company?: {
       id: string;
@@ -76,6 +80,7 @@ interface SaleItem {
 }
 
 export default function ArticlesExcelTable() {
+  const router = useRouter();
   const [articles, setArticles] = useState<SaleItem[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editedData, setEditedData] = useState<Partial<SaleItem>>({});
@@ -130,11 +135,11 @@ export default function ArticlesExcelTable() {
     },
   });
 
-  // Fetch sales for dropdown
+  // Fetch sales for dropdown (minimal data, no items/payments needed)
   const { data: salesResponse } = useQuery({
     queryKey: ['sales'],
     queryFn: async () => {
-      const response = await fetch('/api/sales');
+      const response = await fetch('/api/sales?paginate=false');
       if (!response.ok) throw new Error('Failed to fetch sales');
       return response.json();
     },
@@ -606,13 +611,22 @@ export default function ArticlesExcelTable() {
     }
   };
 
-  const handleConfigureParameters = () => {
-    if (selectedArticle && (selectedArticle.type === 'medical-device' || selectedArticle.type === 'diagnostic')) {
+  const handleConfigureParameters = (article?: SaleItem) => {
+    // Use provided article or selectedArticle
+    const targetArticle = article || selectedArticle;
+
+    // Check if it's a medical device or diagnostic device
+    if (targetArticle && targetArticle.medicalDeviceId) {
+      const deviceName = targetArticle.medicalDevice?.name || 'Appareil médical';
+      const deviceType = targetArticle.medicalDevice?.type || 'MEDICAL_DEVICE';
+      const deviceSerialNumber = targetArticle.medicalDevice?.serialNumber || targetArticle.serialNumber;
+
       setConfiguringDevice({
-        id: selectedArticle.id,
-        name: selectedArticle.name,
-        serialNumber: selectedArticle.serialNumber,
-        type: selectedArticle.type === 'diagnostic' ? 'DIAGNOSTIC_DEVICE' : 'MEDICAL_DEVICE',
+        id: targetArticle.id, // Use saleItem id
+        name: deviceName,
+        serialNumber: deviceSerialNumber,
+        type: deviceType,
+        configuration: targetArticle.configuration // Pass existing config
       });
       setParameterDialogOpen(true);
     }
@@ -620,18 +634,30 @@ export default function ArticlesExcelTable() {
 
   // Get initial parameters for dialog
   const getInitialParameters = () => {
-    // Parameters functionality disabled - SaleItem doesn't have parameters field
+    console.log('[ArticlesExcelTable] getInitialParameters - configuringDevice:', configuringDevice);
+    if (configuringDevice?.configuration) {
+      console.log('[ArticlesExcelTable] Returning configuration:', configuringDevice.configuration);
+      return configuringDevice.configuration;
+    }
     return null;
   };
 
   const handleSaveParameters = (deviceId: string, parameters: any) => {
-    // Parameters functionality disabled - SaleItem doesn't have parameters field
-    // Configuration should be handled through SaleConfiguration relation
-    console.warn('Parameters saving is disabled - use SaleConfiguration instead');
-  };
+    // Save parameters by updating the sale item with configuration
+    // deviceId here is the saleItemId
+    if (!deviceId) return;
 
-  // Note: Parameter configuration has been disabled as SaleItem doesn't have parameters field
-  // Configuration should be handled through SaleConfiguration relation
+    updateMutation.mutate({
+      id: deviceId, // This is the saleItem id
+      data: {
+        parameters: parameters // Send parameters to API for SaleConfiguration
+      }
+    });
+
+    // Close the dialog
+    setParameterDialogOpen(false);
+    setConfiguringDevice(null);
+  };
 
   // Filter clients for search
   const filteredClients = useMemo(() => {
@@ -693,16 +719,6 @@ export default function ArticlesExcelTable() {
 
   return (
     <div className="space-y-4">
-      {/* Add New Article Button */}
-      {!isAddingNew && (
-        <div className="mb-4">
-          <Button onClick={() => setIsAddingNew(true)} className="gap-2 bg-green-600 hover:bg-green-700">
-            <Plus className="h-4 w-4" />
-            Ajouter Article
-          </Button>
-        </div>
-      )}
-
       {/* Central Filter Panel */}
       <div className="bg-gradient-to-r from-blue-50 to-slate-50 border border-blue-200 rounded-lg p-6">
         <div className="flex items-center justify-between mb-4">
@@ -722,17 +738,25 @@ export default function ArticlesExcelTable() {
               </p>
             </div>
           </div>
-          {activeFiltersCount > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={clearAllFilters}
-              className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-            >
-              <X className="h-4 w-4 mr-2" />
-              Réinitialiser les filtres
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {!isAddingNew && (
+              <Button onClick={() => setIsAddingNew(true)} className="gap-2 bg-green-600 hover:bg-green-700">
+                <Plus className="h-4 w-4" />
+                Ajouter Article
+              </Button>
+            )}
+            {activeFiltersCount > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearAllFilters}
+                className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+              >
+                <X className="h-4 w-4 mr-2" />
+                Réinitialiser les filtres
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Search Bar */}
@@ -798,6 +822,124 @@ export default function ArticlesExcelTable() {
                 </SelectItem>
               </SelectContent>
             </Select>
+          </div>
+        </div>
+      </div>
+
+      {/* Pagination - Top */}
+      <div className="flex items-center justify-between px-4 py-3 bg-white border border-slate-200 rounded-lg mb-3">
+        <div className="flex items-center space-x-4">
+          <div className="text-sm text-slate-600">
+            <span className="font-semibold text-slate-900">{filteredArticles.length}</span> article(s) au total
+          </div>
+          <Select value={itemsPerPage.toString()} onValueChange={(value) => setItemsPerPage(Number(value))}>
+            <SelectTrigger className="w-[140px] h-9 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="25">25 par page</SelectItem>
+              <SelectItem value="50">50 par page</SelectItem>
+              <SelectItem value="100">100 par page</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex items-center space-x-3">
+          {/* First Page Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(1)}
+            disabled={currentPage === 1}
+            className="h-9 px-2"
+            title="Première page"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className="h-4 w-4 -ml-2" />
+          </Button>
+
+          {/* Previous Page Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+            disabled={currentPage === 1}
+            className="h-9 px-3"
+          >
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Précédent
+          </Button>
+
+          {/* Page Numbers */}
+          <div className="flex items-center space-x-1">
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              let pageNum;
+              if (totalPages <= 5) {
+                pageNum = i + 1;
+              } else if (currentPage <= 3) {
+                pageNum = i + 1;
+              } else if (currentPage >= totalPages - 2) {
+                pageNum = totalPages - 4 + i;
+              } else {
+                pageNum = currentPage - 2 + i;
+              }
+
+              return (
+                <Button
+                  key={pageNum}
+                  variant={currentPage === pageNum ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCurrentPage(pageNum)}
+                  className="h-9 w-9 p-0"
+                >
+                  {pageNum}
+                </Button>
+              );
+            })}
+          </div>
+
+          {/* Next Page Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+            disabled={currentPage === totalPages}
+            className="h-9 px-3"
+          >
+            Suivant
+            <ChevronRight className="h-4 w-4 ml-1" />
+          </Button>
+
+          {/* Last Page Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(totalPages)}
+            disabled={currentPage === totalPages}
+            className="h-9 px-2"
+            title="Dernière page"
+          >
+            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className="h-4 w-4 -ml-2" />
+          </Button>
+
+          {/* Page Jump Input */}
+          <div className="flex items-center space-x-2 ml-2 pl-2 border-l border-slate-300">
+            <span className="text-sm text-slate-600">Aller à:</span>
+            <Input
+              type="number"
+              min="1"
+              max={totalPages}
+              value={currentPage}
+              onChange={(e) => {
+                const page = parseInt(e.target.value);
+                if (page >= 1 && page <= totalPages) {
+                  setCurrentPage(page);
+                }
+              }}
+              className="h-9 w-16 text-sm text-center"
+            />
+            <span className="text-sm text-slate-600">/ {totalPages || 1}</span>
           </div>
         </div>
       </div>
@@ -1215,11 +1357,24 @@ export default function ArticlesExcelTable() {
                       ) : (
                         <td className="px-3 py-2.5 text-xs border-r border-slate-100">
                           {article.sale?.patient ? (
-                            <div className="flex items-center gap-1.5 whitespace-nowrap">
-                              <Users className="h-3.5 w-3.5 text-purple-600 shrink-0" />
-                              <span className="text-xs font-medium">
-                                {article.sale.patient.lastName.toUpperCase()} {article.sale.patient.firstName}
-                              </span>
+                            <div className="flex flex-col gap-1">
+                              <div
+                                className="flex items-center gap-1.5 whitespace-nowrap text-blue-600 hover:text-blue-800 hover:underline cursor-pointer transition-colors"
+                                onClick={() => router.push(`/roles/admin/renseignement/patient/${article.sale.patient.id}`)}
+                              >
+                                <Users className="h-3.5 w-3.5 shrink-0" />
+                                <span className="text-xs font-medium">
+                                  {article.sale.patient.lastName.toUpperCase()} {article.sale.patient.firstName}
+                                </span>
+                              </div>
+                              {article.sale.patient.patientCode && (
+                                <div
+                                  className="text-xs text-slate-500 font-mono cursor-pointer hover:text-blue-600 transition-colors ml-5"
+                                  onClick={() => router.push(`/roles/admin/renseignement/patient/${article.sale.patient.id}`)}
+                                >
+                                  {article.sale.patient.patientCode}
+                                </div>
+                              )}
                             </div>
                           ) : article.sale?.company ? (
                             <div className="flex items-center gap-1.5 whitespace-nowrap">
@@ -1327,13 +1482,13 @@ export default function ArticlesExcelTable() {
                       {/* Configuration */}
                       <td className="px-3 py-2.5 text-xs text-slate-600 border-r border-slate-100 min-w-[400px]">
                         {editingId === article.id ? (
-                          selectedArticle && (selectedArticle.type === 'medical-device' || selectedArticle.type === 'diagnostic') ? (
+                          article.medicalDeviceId ? (
                             <div className="flex items-center gap-2">
                               <Button
                                 variant="outline"
                                 size="sm"
                                 className="h-7 text-xs shrink-0"
-                                onClick={handleConfigureParameters}
+                                onClick={() => handleConfigureParameters(article)}
                               >
                                 <Settings className="h-3 w-3 mr-1" />
                                 {article.configuration ? 'Modifier' : 'Config'}
@@ -1466,34 +1621,6 @@ export default function ArticlesExcelTable() {
               )}
             </tbody>
           </table>
-        </div>
-      </div>
-
-      {/* Pagination */}
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-slate-600">
-          {filteredArticles.length} article(s) au total
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-            disabled={currentPage === 1}
-          >
-            Précédent
-          </Button>
-          <span className="text-sm text-slate-600">
-            Page {currentPage} sur {totalPages || 1}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-            disabled={currentPage === totalPages}
-          >
-            Suivant
-          </Button>
         </div>
       </div>
 

@@ -597,6 +597,124 @@ export default function CNAMBonsExcelTable() {
         </Button>
       </div>
 
+      {/* Pagination - Top */}
+      <div className="flex items-center justify-between px-4 py-3 bg-white border border-slate-200 rounded-lg mb-3">
+        <div className="flex items-center space-x-4">
+          <div className="text-sm text-slate-600">
+            <span className="font-semibold text-slate-900">{filteredDossiers.length}</span> dossier(s) CNAM au total
+          </div>
+          <Select value={itemsPerPage.toString()} onValueChange={(value) => setItemsPerPage(Number(value))}>
+            <SelectTrigger className="w-[140px] h-9 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="25">25 par page</SelectItem>
+              <SelectItem value="50">50 par page</SelectItem>
+              <SelectItem value="100">100 par page</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex items-center space-x-3">
+          {/* First Page Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(1)}
+            disabled={currentPage === 1}
+            className="h-9 px-2"
+            title="Première page"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className="h-4 w-4 -ml-2" />
+          </Button>
+
+          {/* Previous Page Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+            disabled={currentPage === 1}
+            className="h-9 px-3"
+          >
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Précédent
+          </Button>
+
+          {/* Page Numbers */}
+          <div className="flex items-center space-x-1">
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              let pageNum;
+              if (totalPages <= 5) {
+                pageNum = i + 1;
+              } else if (currentPage <= 3) {
+                pageNum = i + 1;
+              } else if (currentPage >= totalPages - 2) {
+                pageNum = totalPages - 4 + i;
+              } else {
+                pageNum = currentPage - 2 + i;
+              }
+
+              return (
+                <Button
+                  key={pageNum}
+                  variant={currentPage === pageNum ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCurrentPage(pageNum)}
+                  className="h-9 w-9 p-0"
+                >
+                  {pageNum}
+                </Button>
+              );
+            })}
+          </div>
+
+          {/* Next Page Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+            disabled={currentPage === totalPages || totalPages === 0}
+            className="h-9 px-3"
+          >
+            Suivant
+            <ChevronRight className="h-4 w-4 ml-1" />
+          </Button>
+
+          {/* Last Page Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(totalPages)}
+            disabled={currentPage === totalPages || totalPages === 0}
+            className="h-9 px-2"
+            title="Dernière page"
+          >
+            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className="h-4 w-4 -ml-2" />
+          </Button>
+
+          {/* Page Jump Input */}
+          <div className="flex items-center space-x-2 ml-2 pl-2 border-l border-slate-300">
+            <span className="text-sm text-slate-600">Aller à:</span>
+            <Input
+              type="number"
+              min="1"
+              max={totalPages}
+              value={currentPage}
+              onChange={(e) => {
+                const page = parseInt(e.target.value);
+                if (page >= 1 && page <= totalPages) {
+                  setCurrentPage(page);
+                }
+              }}
+              className="h-9 w-16 text-sm text-center"
+            />
+            <span className="text-sm text-slate-600">/ {totalPages || 1}</span>
+          </div>
+        </div>
+      </div>
+
       {/* Excel-like Table */}
       <div className="border rounded-lg overflow-hidden bg-white">
         <div className="overflow-x-auto">
@@ -827,12 +945,20 @@ export default function CNAMBonsExcelTable() {
                     <td className="px-3 py-2.5 text-sm font-medium text-slate-900 border-r border-slate-100">
                       <div className="flex items-center gap-2">
                         <User className="h-4 w-4 text-blue-600" />
-                        <div>
-                          <div>{patientName}</div>
+                        <div className="flex flex-col gap-1">
+                          <div
+                            className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer transition-colors"
+                            onClick={() => router.push(`/roles/admin/renseignement/patient/${dossier.patient?.id}`)}
+                          >
+                            {patientName}
+                          </div>
                           {dossier.patient?.patientCode && (
-                            <Badge variant="outline" className="text-xs mt-1">
+                            <div
+                              className="text-xs text-slate-500 font-mono cursor-pointer hover:text-blue-600 transition-colors"
+                              onClick={() => router.push(`/roles/admin/renseignement/patient/${dossier.patient?.id}`)}
+                            >
                               {dossier.patient.patientCode}
-                            </Badge>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -988,53 +1114,6 @@ export default function CNAMBonsExcelTable() {
               })}
             </tbody>
           </table>
-        </div>
-      </div>
-
-      {/* Pagination */}
-      <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-slate-200 rounded-b-lg">
-        <div className="flex items-center space-x-4">
-          <div className="text-sm text-slate-600">
-            <span className="font-semibold text-slate-900">{filteredDossiers.length}</span> dossier(s) CNAM au total
-          </div>
-          <Select value={itemsPerPage.toString()} onValueChange={(value) => setItemsPerPage(Number(value))}>
-            <SelectTrigger className="w-[140px] h-9 text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="25">25 par page</SelectItem>
-              <SelectItem value="50">50 par page</SelectItem>
-              <SelectItem value="100">100 par page</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-            disabled={currentPage === 1}
-            className="h-9 px-3"
-          >
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            Précédent
-          </Button>
-
-          <div className="text-sm text-slate-600">
-            Page {currentPage} sur {totalPages || 1}
-          </div>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-            disabled={currentPage === totalPages || totalPages === 0}
-            className="h-9 px-3"
-          >
-            Suivant
-            <ChevronRight className="h-4 w-4 ml-1" />
-          </Button>
         </div>
       </div>
     </div>

@@ -100,8 +100,9 @@ const priorityOptions = [
 ];
 
 const appointmentTypes = [
-  { value: 'POLYGRAPHIE', label: 'Polygraphie', icon: Home, color: 'purple' },
+  { value: 'DIAGNOSTIC_VISIT', label: 'Visite Diagnostique', icon: Home, color: 'purple' },
   { value: 'CONSULTATION', label: 'Consultation', icon: Stethoscope, color: 'blue' },
+  { value: 'DIAGNOSTIC', label: 'Diagnostic', icon: Microscope, color: 'teal' },
   { value: 'LOCATION', label: 'Location', icon: Package, color: 'orange' },
   { value: 'VENTE', label: 'Vente', icon: ShoppingCart, color: 'green' },
   { value: 'MAINTENANCE', label: 'Maintenance', icon: Wrench, color: 'yellow' },

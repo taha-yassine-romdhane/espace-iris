@@ -18,7 +18,7 @@ export interface PaymentData {
   description?: string;
   
   // CNAM specific fields
-  cnamBondType?: 'masque' | 'cpap' | 'autre';
+  cnamBonType?: 'masque' | 'cpap' | 'autre';
   relatedMedicalDeviceIds?: string[];
   relatedProductIds?: string[];
   
@@ -40,7 +40,7 @@ export interface PaymentData {
   requiresFollowUp?: boolean;
   dossierReference?: string;
   metadata?: {
-    bondType?: string;
+    bonType?: string;
     originalAmount?: number;
     pendingStatus?: boolean;
     lastUpdated?: string;

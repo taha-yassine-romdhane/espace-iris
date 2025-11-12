@@ -56,35 +56,76 @@ export default async function handler(
 
       // Handle configuration updates
       if (updateData.parameters !== undefined) {
+        console.log('[API sale-items/[id]] Received parameters:', JSON.stringify(updateData.parameters, null, 2));
+
         if (updatedItem.medicalDeviceId) {
           // Check if configuration exists
           const existingConfig = await prisma.saleConfiguration.findUnique({
             where: { saleItemId: id }
           });
+          console.log('[API sale-items/[id]] Existing config:', existingConfig ? 'Found' : 'Not found');
 
-          // Map parameter keys to match database schema
-          const keyMap: Record<string, string> = {
-            'IPAP': 'ipap',
-            'EPAP': 'epap',
-            'AID': 'aid',
+          // Map incoming keys to schema fields (case-insensitive)
+          const fieldMapping: Record<string, string> = {
             'pression': 'pression',
-            'pressionRampe': 'pressionRampe',
-            'dureeRampe': 'dureeRampe',
+            'pressionrampe': 'pressionRampe',
+            'dureerampe': 'dureeRampe',
             'epr': 'epr',
+            'ipap': 'ipap',
+            'epap': 'epap',
+            'aid': 'aid',
             'mode': 'mode',
-            'frequenceRespiratoire': 'frequenceRespiratoire',
-            'volumeCourant': 'volumeCourant',
+            'frequencerespiratoire': 'frequenceRespiratoire',
+            'volumecourant': 'volumeCourant',
             'debit': 'debit',
+            'auto1': 'auto1',
+            'auto2': 'auto2',
+            'pressiontraitement': 'pressionTraitement'
           };
 
           const normalizedParams: any = {};
+          const additionalParams: any = {};
+
           if (updateData.parameters) {
             Object.keys(updateData.parameters).forEach(key => {
-              const mappedKey = keyMap[key] || key;
-              if (updateData.parameters[key] !== '' && updateData.parameters[key] !== null && updateData.parameters[key] !== undefined) {
-                normalizedParams[mappedKey] = updateData.parameters[key];
+              const value = updateData.parameters[key];
+
+              // Skip empty values (but keep 0 and false!)
+              if (value === '' || value === null || value === undefined) {
+                return;
+              }
+
+              // Normalize key to lowercase for lookup
+              const lookupKey = key.toLowerCase();
+              const mappedField = fieldMapping[lookupKey];
+
+              console.log(`[API sale-items/[id]] Processing param: ${key} = ${value} -> mapped to: ${mappedField || 'unknown'}`);
+
+              // Check if it's a valid schema field
+              if (mappedField) {
+                // Special handling for numeric fields
+                if (mappedField === 'dureeRampe' || mappedField === 'pressionTraitement') {
+                  normalizedParams[mappedField] = parseInt(value) || 0;
+                } else if (mappedField === 'auto1' || mappedField === 'auto2') {
+                  // Boolean fields
+                  normalizedParams[mappedField] = Boolean(value);
+                } else {
+                  // Store as String with correct field name
+                  normalizedParams[mappedField] = String(value);
+                }
+              } else {
+                // Unknown field - store in additionalParams
+                additionalParams[key] = value;
               }
             });
+          }
+
+          console.log('[API sale-items/[id]] Normalized params:', JSON.stringify(normalizedParams, null, 2));
+          console.log('[API sale-items/[id]] Additional params:', JSON.stringify(additionalParams, null, 2));
+
+          // Add additionalParams if any unknown fields exist
+          if (Object.keys(additionalParams).length > 0) {
+            normalizedParams.additionalParams = additionalParams;
           }
 
           if (existingConfig) {

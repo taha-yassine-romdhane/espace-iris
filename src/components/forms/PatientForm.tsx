@@ -5,7 +5,6 @@ import { BeneficiaryType } from '@prisma/client';
 import { z } from 'zod';
 import { Resolver, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useSession } from 'next-auth/react';
 
 // Import custom components
 import PersonalInfoBlock from './patientSections/PersonalInfoBlock';
@@ -83,7 +82,6 @@ const formSchema = z.object({
 
 
 export default function PatientForm({ formData, onInputChange, onFileChange, onBack, onNext, onError }: PatientFormProps) {
-  const { data: session } = useSession();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [technicians, setTechnicians] = useState<Technician[]>([]);
@@ -190,30 +188,6 @@ export default function PatientForm({ formData, onInputChange, onFileChange, onB
     fetchTechnicians();
     fetchDoctors();
   }, []);
-
-  // Auto-select current employee as technician if they are an employee
-  useEffect(() => {
-    if (session?.user?.role === 'EMPLOYEE' && session?.user?.id && technicians.length > 0) {
-      // Only auto-select if technicienResponsable is not already set
-      const currentTechnicianValue = form.getValues('technicienResponsable');
-      if (!currentTechnicianValue) {
-        // Check if current user is in the technicians list
-        const currentUserAsTechnician = technicians.find(t => t.id === session.user.id);
-        if (currentUserAsTechnician) {
-          console.log('Auto-selecting current employee as technician:', currentUserAsTechnician);
-          form.setValue('technicienResponsable', session.user.id);
-
-          // Notify parent component
-          onInputChange({
-            target: {
-              name: 'technicienResponsable',
-              value: session.user.id
-            }
-          } as unknown as React.ChangeEvent<HTMLInputElement>);
-        }
-      }
-    }
-  }, [session, technicians, form]);
 
   const fetchTechnicians = async () => {
     try {

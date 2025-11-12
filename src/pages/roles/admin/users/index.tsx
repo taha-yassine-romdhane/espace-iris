@@ -38,7 +38,7 @@ const UsersPage = () => {
         throw new Error(errorData.error || 'Failed to fetch users');
       }
       const data = await response.json();
-      setUsers(data || []);
+      setUsers(data.users || []);
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({

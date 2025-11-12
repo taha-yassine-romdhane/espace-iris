@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Cpu, AlertCircle } from 'lucide-react';
-import { 
+import {
   Table,
   TableBody,
   TableCell,
@@ -10,7 +10,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 interface PatientDevicesProps {
   devices: any[];
@@ -18,16 +19,25 @@ interface PatientDevicesProps {
 }
 
 export const PatientDevices = ({ devices = [], isLoading = false }: PatientDevicesProps) => {
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'ACTIVE':
-        return 'bg-green-100 text-green-800';
-      case 'INACTIVE':
-        return 'bg-red-100 text-red-800';
-      case 'MAINTENANCE':
-        return 'bg-amber-100 text-amber-800';
+  const getSourceLabel = (source: string) => {
+    switch (source) {
+      case 'sale':
+        return 'Achat';
+      case 'rental':
+        return 'Location';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return source;
+    }
+  };
+
+  const getSourceColor = (source: string) => {
+    switch (source) {
+      case 'sale':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'rental':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
@@ -52,37 +62,67 @@ export const PatientDevices = ({ devices = [], isLoading = false }: PatientDevic
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Modèle</TableHead>
-                  <TableHead>N° de série</TableHead>
-                  <TableHead>Statut</TableHead>
-                  <TableHead>Type d'acquisition</TableHead>
-                  <TableHead>Date</TableHead>
+                  <TableHead className="w-[140px]">Type</TableHead>
+                  <TableHead className="w-[200px]">Nom / Modèle</TableHead>
+                  <TableHead className="w-[120px]">N° de série</TableHead>
+                  <TableHead className="w-[100px]">Code</TableHead>
+                  <TableHead className="w-[120px]">Acquisition</TableHead>
+                  <TableHead className="w-[120px]">Code Vente/Location</TableHead>
+                  <TableHead className="w-[100px]">Date</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {devices.map((device, index) => (
-                  <TableRow key={index}>
-                    <TableCell>{device.type}</TableCell>
+                  <TableRow key={index} className="hover:bg-gray-50">
                     <TableCell>
-                      <div>{device.brand} {device.model}</div>
-                      <div className="text-xs text-gray-500">ID: {device.id.substring(0, 8)}</div>
-                    </TableCell>
-                    <TableCell>{device.serialNumber || 'N/A'}</TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(device.status)}>
-                        {device.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {device.rentalInfo ? (
-                        <Badge variant="outline">Location</Badge>
+                      {device.type ? (
+                        <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+                          {device.type}
+                        </Badge>
                       ) : (
-                        <Badge variant="outline">Achat</Badge>
+                        <span className="text-gray-400 text-sm">-</span>
                       )}
                     </TableCell>
                     <TableCell>
-                      {new Date(device.createdAt).toLocaleDateString()}
+                      <div className="space-y-1">
+                        <div className="font-medium text-sm">{device.name || 'Appareil médical'}</div>
+                        {device.brand && (
+                          <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                            {device.brand}
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-mono text-xs text-gray-600">
+                      {device.serialNumber || '-'}
+                    </TableCell>
+                    <TableCell>
+                      {device.deviceCode ? (
+                        <Badge variant="outline" className="font-mono text-xs bg-gray-50 text-gray-700">
+                          {device.deviceCode}
+                        </Badge>
+                      ) : (
+                        <span className="text-gray-400 text-sm">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={`text-xs ${getSourceColor(device.source)}`}>
+                        {getSourceLabel(device.source)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {device.saleCode || device.rentalCode ? (
+                        <Badge variant="outline" className="font-mono text-xs bg-blue-50 text-blue-700 border-blue-200">
+                          {device.saleCode || device.rentalCode}
+                        </Badge>
+                      ) : (
+                        <span className="text-gray-400 text-sm">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {device.saleDate || device.startDate
+                        ? format(new Date(device.saleDate || device.startDate), 'dd/MM/yyyy', { locale: fr })
+                        : '-'}
                     </TableCell>
                   </TableRow>
                 ))}

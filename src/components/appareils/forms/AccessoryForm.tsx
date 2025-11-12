@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -21,22 +20,15 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { PlusCircle, X } from "lucide-react";
 
-// Status mapping for better user experience
-const statusOptions = [
-  { value: "FOR_SALE", label: "En Vente" },
-  { value: "FOR_RENT", label: "En Location" },
-  { value: "IN_REPAIR", label: "En Réparation" },
-  { value: "OUT_OF_SERVICE", label: "Hors Service" },
-];
-
-// Stock location entry interface
-interface StockEntry {
-  locationId: string;
-  quantity: number;
-  status: string;
-}
+// Stock location entry schema
+const stockLocationEntrySchema = z.object({
+  locationId: z.string().min(1, "Emplacement requis"),
+  quantity: z.coerce.number().min(1, "La quantité doit être au moins 1"),
+  status: z.enum(['FOR_SALE', 'FOR_RENT', 'IN_REPAIR', 'OUT_OF_SERVICE']).default('FOR_SALE'),
+});
 
 // Form validation schema for accessories
 const accessorySchema = z.object({
@@ -46,21 +38,41 @@ const accessorySchema = z.object({
   model: z.string().optional().nullable(),
   purchasePrice: z.coerce.number().min(0).optional().nullable(),
   sellingPrice: z.coerce.number().min(0).optional().nullable(),
-  status: z.enum(['FOR_SALE', 'FOR_RENT', 'IN_REPAIR', 'OUT_OF_SERVICE']).default('FOR_SALE'),
+  stockLocations: z.array(stockLocationEntrySchema).min(1, "Au moins un emplacement est requis"),
 });
 
 type AccessoryFormValues = z.infer<typeof accessorySchema>;
 
+interface StockLocationEntry {
+  locationId: string;
+  quantity: number;
+  status: 'FOR_SALE' | 'FOR_RENT' | 'IN_REPAIR' | 'OUT_OF_SERVICE';
+}
+
 interface AccessoryFormProps {
   initialData?: any;
-  onSubmit: (data: AccessoryFormValues & { stockEntries: StockEntry[] }) => void;
+  onSubmit: (data: AccessoryFormValues) => void;
   stockLocations: Array<{ id: string; name: string }>;
   isEditMode?: boolean;
 }
 
+// Status options
+const statusOptions = [
+  { value: "FOR_SALE", label: "À Vendre" },
+  { value: "FOR_RENT", label: "À Louer" },
+  { value: "IN_REPAIR", label: "En Réparation" },
+  { value: "OUT_OF_SERVICE", label: "Hors Service" },
+];
+
 export function AccessoryForm({ initialData, onSubmit, stockLocations, isEditMode = false }: AccessoryFormProps) {
-  // Initialize stock entries from initialData or empty array
-  const [stockEntries, setStockEntries] = useState<StockEntry[]>([]);
+  // Transform initialData stocks to match our form structure
+  const initialStockLocations: StockLocationEntry[] = initialData?.stocks?.map((stock: any) => ({
+    locationId: stock.locationId || stock.location?.id,
+    quantity: stock.quantity,
+    status: stock.status || 'FOR_SALE',
+  })) || [{ locationId: '', quantity: 1, status: 'FOR_SALE' as const }];
+
+  const [stockLocationEntries, setStockLocationEntries] = useState<StockLocationEntry[]>(initialStockLocations);
 
   const form = useForm<AccessoryFormValues>({
     resolver: zodResolver(accessorySchema),
@@ -71,95 +83,36 @@ export function AccessoryForm({ initialData, onSubmit, stockLocations, isEditMod
       model: initialData?.model || "",
       purchasePrice: initialData?.purchasePrice || null,
       sellingPrice: initialData?.sellingPrice || null,
-      status: initialData?.status || "FOR_SALE",
+      stockLocations: initialStockLocations,
     },
   });
 
-  // Update stock entries when initialData changes (for edit mode)
-  useEffect(() => {
-    console.log('AccessoryForm useEffect triggered:', {
-      isEditMode,
-      hasInitialData: !!initialData,
-      hasStocks: !!initialData?.stocks,
-      stocksLength: initialData?.stocks?.length,
-      stocks: initialData?.stocks
-    });
-
-    if (isEditMode && initialData?.stocks && initialData.stocks.length > 0) {
-      const entries = initialData.stocks.map((stock: any) => ({
-        locationId: stock.location?.id || stock.locationId,
-        quantity: stock.quantity,
-        status: stock.status || 'FOR_SALE'
-      }));
-      setStockEntries(entries);
-      console.log('✅ Loaded stock entries for edit:', entries);
-    } else if (isEditMode && initialData) {
-      console.log('⚠️ Edit mode but no stocks found in initialData');
-    }
-  }, [isEditMode, initialData]);
-
-  // Update form values when initialData changes
-  useEffect(() => {
-    if (initialData) {
-      form.reset({
-        type: "ACCESSORY",
-        name: initialData.name || "",
-        brand: initialData.brand || "",
-        model: initialData.model || "",
-        purchasePrice: initialData.purchasePrice || null,
-        sellingPrice: initialData.sellingPrice || null,
-        status: initialData.status || "FOR_SALE",
-      });
-    }
-  }, [initialData, form]);
-
-  const addStockEntry = () => {
-    setStockEntries([...stockEntries, { locationId: "", quantity: 1, status: "FOR_SALE" }]);
-  };
-
-  const removeStockEntry = (index: number) => {
-    setStockEntries(stockEntries.filter((_, i) => i !== index));
-  };
-
-  const updateStockEntry = (index: number, field: keyof StockEntry, value: string | number) => {
-    const updated = [...stockEntries];
-    updated[index] = { ...updated[index], [field]: value };
-    setStockEntries(updated);
-  };
-
   const handleSubmit = (data: AccessoryFormValues) => {
-    // Validate that at least one stock entry exists
-    if (stockEntries.length === 0) {
-      alert("Veuillez ajouter au moins un emplacement de stock");
-      return;
-    }
-
-    // Validate that all stock entries have a location selected
-    const hasEmptyLocation = stockEntries.some(entry => !entry.locationId);
-    if (hasEmptyLocation) {
-      alert("Veuillez sélectionner un emplacement pour chaque stock");
-      return;
-    }
-
-    // Validate quantities are positive
-    const hasInvalidQuantity = stockEntries.some(entry => entry.quantity <= 0);
-    if (hasInvalidQuantity) {
-      alert("Les quantités doivent être supérieures à 0");
-      return;
-    }
-
-    onSubmit({ ...data, stockEntries });
+    onSubmit(data);
   };
 
-  // Get available locations (excluding already selected ones)
-  const getAvailableLocations = (currentLocationId?: string) => {
-    const selectedLocationIds = stockEntries
-      .map(entry => entry.locationId)
-      .filter(id => id !== currentLocationId);
+  const addStockLocation = () => {
+    const newEntry: StockLocationEntry = {
+      locationId: '',
+      quantity: 1,
+      status: 'FOR_SALE',
+    };
+    const updatedEntries = [...stockLocationEntries, newEntry];
+    setStockLocationEntries(updatedEntries);
+    form.setValue('stockLocations', updatedEntries);
+  };
 
-    return stockLocations.filter(loc =>
-      !selectedLocationIds.includes(loc.id) || loc.id === currentLocationId
-    );
+  const removeStockLocation = (index: number) => {
+    const updatedEntries = stockLocationEntries.filter((_, i) => i !== index);
+    setStockLocationEntries(updatedEntries);
+    form.setValue('stockLocations', updatedEntries);
+  };
+
+  const updateStockLocation = (index: number, field: keyof StockLocationEntry, value: any) => {
+    const updatedEntries = [...stockLocationEntries];
+    updatedEntries[index] = { ...updatedEntries[index], [field]: value };
+    setStockLocationEntries(updatedEntries);
+    form.setValue('stockLocations', updatedEntries);
   };
 
   return (
@@ -168,7 +121,7 @@ export function AccessoryForm({ initialData, onSubmit, stockLocations, isEditMod
         <Tabs defaultValue="basic" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="basic">Information de Base</TabsTrigger>
-            <TabsTrigger value="stock">Stock</TabsTrigger>
+            <TabsTrigger value="stock">Stock par Emplacement</TabsTrigger>
             <TabsTrigger value="financial">Finance</TabsTrigger>
           </TabsList>
 
@@ -218,7 +171,6 @@ export function AccessoryForm({ initialData, onSubmit, stockLocations, isEditMod
                     )}
                   />
                 </div>
-
               </CardContent>
             </Card>
           </TabsContent>
@@ -227,116 +179,93 @@ export function AccessoryForm({ initialData, onSubmit, stockLocations, isEditMod
             <Card>
               <CardContent className="space-y-4 pt-4">
                 <div className="flex justify-between items-center mb-4">
-                  <div>
-                    <h3 className="text-lg font-semibold">Emplacements de Stock</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Ajoutez ce produit à un ou plusieurs emplacements
-                    </p>
-                  </div>
+                  <h3 className="text-lg font-semibold">Emplacements de Stock</h3>
                   <Button
                     type="button"
-                    onClick={addStockEntry}
                     variant="outline"
                     size="sm"
-                    className="flex items-center gap-2"
+                    onClick={addStockLocation}
                   >
-                    <Plus className="h-4 w-4" />
+                    <PlusCircle className="h-4 w-4 mr-2" />
                     Ajouter un emplacement
                   </Button>
                 </div>
 
-                {stockEntries.length === 0 ? (
-                  <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
-                    <p className="text-gray-500 mb-4">Aucun emplacement de stock ajouté</p>
-                    <Button
-                      type="button"
-                      onClick={addStockEntry}
-                      variant="default"
-                      size="sm"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Ajouter le premier emplacement
-                    </Button>
+                {stockLocationEntries.map((entry, index) => (
+                  <div key={index} className="border rounded-lg p-4 space-y-3 relative">
+                    {stockLocationEntries.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-2 right-2"
+                        onClick={() => removeStockLocation(index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Emplacement</label>
+                        <Select
+                          value={entry.locationId}
+                          onValueChange={(value) => updateStockLocation(index, 'locationId', value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {stockLocations.map((location) => (
+                              <SelectItem key={location.id} value={location.id}>
+                                {location.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Quantité</label>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={entry.quantity}
+                          onChange={(e) => updateStockLocation(index, 'quantity', parseInt(e.target.value) || 1)}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Statut</label>
+                        <Select
+                          value={entry.status}
+                          onValueChange={(value) => updateStockLocation(index, 'status', value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {statusOptions.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
                   </div>
-                ) : (
-                  <div className="space-y-4">
-                    {stockEntries.map((entry, index) => (
-                      <Card key={index} className="border-2">
-                        <CardContent className="pt-4">
-                          <div className="flex gap-4 items-start">
-                            <div className="flex-1 space-y-4">
-                              <div>
-                                <label className="text-sm font-medium mb-2 block">
-                                  Emplacement
-                                </label>
-                                <Select
-                                  value={entry.locationId}
-                                  onValueChange={(value) => updateStockEntry(index, 'locationId', value)}
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Sélectionner un emplacement" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {getAvailableLocations(entry.locationId).map((location) => (
-                                      <SelectItem key={location.id} value={location.id}>
-                                        {location.name}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
+                ))}
 
-                              <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                  <label className="text-sm font-medium mb-2 block">
-                                    Quantité
-                                  </label>
-                                  <Input
-                                    type="number"
-                                    min="1"
-                                    value={entry.quantity}
-                                    onChange={(e) => updateStockEntry(index, 'quantity', parseInt(e.target.value) || 0)}
-                                  />
-                                </div>
-
-                                <div>
-                                  <label className="text-sm font-medium mb-2 block">
-                                    Statut
-                                  </label>
-                                  <Select
-                                    value={entry.status}
-                                    onValueChange={(value) => updateStockEntry(index, 'status', value)}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {statusOptions.map((option) => (
-                                        <SelectItem key={option.value} value={option.value}>
-                                          {option.label}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              </div>
-                            </div>
-
-                            <Button
-                              type="button"
-                              variant="destructive"
-                              size="icon"
-                              onClick={() => removeStockEntry(index)}
-                              className="mt-8"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
+                <FormField
+                  control={form.control}
+                  name="stockLocations"
+                  render={() => (
+                    <FormItem>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </CardContent>
             </Card>
           </TabsContent>

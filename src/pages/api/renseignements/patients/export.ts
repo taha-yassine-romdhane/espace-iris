@@ -66,7 +66,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     // Set column widths
     const columnWidths = [
-      { wch: 12 }, // Code Patient
+      { wch: 15 }, // Code Patient
       { wch: 25 }, // Nom Complet
       { wch: 15 }, // Téléphone Principal
       { wch: 15 }, // Téléphone Secondaire
@@ -85,8 +85,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       { wch: 25 }, // Médecin Responsable
       { wch: 25 }, // Technicien Responsable
       { wch: 25 }, // Assigné à
-      { wch: 25 }, // Description Nom
-      { wch: 25 }, // Description Téléphone
+      { wch: 25 }, // Note Générale
       { wch: 15 }, // Date Création
       { wch: 15 }  // Date Modification
     ];

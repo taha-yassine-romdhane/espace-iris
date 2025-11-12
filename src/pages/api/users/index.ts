@@ -49,13 +49,94 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         select: {
           id: true, firstName: true, lastName: true, email: true, telephone: true,
           address: true, speciality: true, role: true, isActive: true,
+          _count: {
+            select: {
+              supervisorPatients: true,
+              technicianPatients: true,
+              assignedPatients: true,
+              performedDiagnostics: true,
+              tasks: true,
+            }
+          }
         },
       });
-      const transformedUsers = users.map(user => ({
-        ...user,
-        name: `${user.firstName} ${user.lastName}`.trim(),
+
+      // Get additional counts for employees and admins
+      const transformedUsers = await Promise.all(users.map(async (user) => {
+        let stockCount = 0;
+        let devicesCount = 0;
+        let productsCount = 0;
+        let patientCount = 0;
+
+        if (user.role === 'EMPLOYEE') {
+          // Get stock locations for this employee
+          const stockLocations = await prisma.stockLocation.findMany({
+            where: { userId: user.id },
+            select: { id: true }
+          });
+
+          stockCount = stockLocations.length;
+
+          // Count medical devices in this employee's stock locations
+          for (const location of stockLocations) {
+            const deviceCount = await prisma.medicalDevice.count({
+              where: { stockLocationId: location.id }
+            });
+            devicesCount += deviceCount;
+
+            const productCount = await prisma.stock.count({
+              where: { locationId: location.id }
+            });
+            productsCount += productCount;
+          }
+
+          // Count patients for employees
+          patientCount = user._count.supervisorPatients + user._count.technicianPatients + user._count.assignedPatients;
+        } else if (user.role === 'ADMIN') {
+          // Count medical devices in admin's stock location (if they have one)
+          const adminStockLocation = await prisma.stockLocation.findFirst({
+            where: { userId: user.id },
+            select: { id: true }
+          });
+
+          if (adminStockLocation) {
+            devicesCount = await prisma.medicalDevice.count({
+              where: { stockLocationId: adminStockLocation.id }
+            });
+          }
+
+          // Count patients for admins
+          patientCount = user._count.supervisorPatients + user._count.technicianPatients + user._count.assignedPatients;
+        } else if (user.role === 'DOCTOR') {
+          // For doctors, count patients through the Doctor relation
+          const doctor = await prisma.doctor.findUnique({
+            where: { userId: user.id },
+            select: {
+              _count: {
+                select: { patients: true }
+              }
+            }
+          });
+
+          patientCount = doctor?._count.patients || 0;
+        }
+
+        return {
+          ...user,
+          name: `${user.firstName} ${user.lastName}`.trim(),
+          stats: {
+            patients: patientCount,
+            sales: 0, // Not directly tracked
+            diagnostics: user._count.performedDiagnostics,
+            tasks: user._count.tasks,
+            stockLocations: stockCount,
+            devices: devicesCount,
+            products: productsCount,
+          }
+        };
       }));
-      return res.status(200).json(transformedUsers);
+
+      return res.status(200).json({ users: transformedUsers });
     } catch (error) {
       console.error('Error fetching users:', error);
       return res.status(500).json({ error: 'Internal server error while fetching users.' });
@@ -113,17 +194,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         // Step 1: Handle optional relations - Set foreign keys to null
-        
-        // Update patients where user is technician (technicianId is optional)
-        await tx.patient.updateMany({ 
-          where: { technicianId: id }, 
-          data: { technicianId: null } 
+
+        // Update patients where user is doctor (doctorId is optional)
+        await tx.patient.updateMany({
+          where: { doctorId: id },
+          data: { doctorId: null }
         });
-        
+
+        // Update patients where user is technician (technicianId is optional)
+        await tx.patient.updateMany({
+          where: { technicianId: id },
+          data: { technicianId: null }
+        });
+
         // Update companies where user is technician (technicianId is optional)
-        await tx.company.updateMany({ 
-          where: { technicianId: id }, 
-          data: { technicianId: null } 
+        await tx.company.updateMany({
+          where: { technicianId: id },
+          data: { technicianId: null }
         });
         
         // Update tasks where user completed them
@@ -230,10 +317,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           await tx.sale.deleteMany({ where: { patientId: patient.id } });
           await tx.patientHistory.deleteMany({ where: { patientId: patient.id } });
           await tx.medicalDeviceParametre.deleteMany({ where: { patientId: patient.id } });
-          await tx.medicalDevice.updateMany({ 
-            where: { patientId: patient.id }, 
-            data: { patientId: null } 
-          });
         }
         
         // Delete related records for companies created by this user
@@ -242,13 +325,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           await tx.payment.deleteMany({ where: { companyId: company.id } });
           await tx.diagnostic.deleteMany({ where: { companyId: company.id } });
           await tx.appointment.deleteMany({ where: { companyId: company.id } });
-          await tx.rental.deleteMany({ where: { companyId: company.id } });
           await tx.notification.deleteMany({ where: { companyId: company.id } });
           await tx.sale.deleteMany({ where: { companyId: company.id } });
-          await tx.medicalDevice.updateMany({ 
-            where: { companyId: company.id }, 
-            data: { companyId: null } 
-          });
         }
         
         // Now delete the patients and companies (they have mandatory userId)

@@ -147,7 +147,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     // Set column widths
     const columnWidths = [
-      { wch: 12 }, // Code Patient
+      { wch: 15 }, // Code Patient
       { wch: 25 }, // Nom Complet
       { wch: 15 }, // Téléphone Principal
       { wch: 15 }, // Téléphone Secondaire
@@ -166,8 +166,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       { wch: 25 }, // Médecin Responsable
       { wch: 25 }, // Technicien Responsable
       { wch: 25 }, // Assigné à
-      { wch: 25 }, // Description Nom
-      { wch: 25 }, // Description Téléphone
+      { wch: 25 }, // Note Générale
       { wch: 15 }, // Date Création
       { wch: 15 }  // Date Modification
     ];
@@ -180,11 +179,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       { 'Instructions pour l\'import des patients': '• Nom Complet: Nom et prénom du patient' },
       { 'Instructions pour l\'import des patients': '• Téléphone Principal: Format +216XXXXXXXX ou 8 chiffres' },
       { 'Instructions pour l\'import des patients': '' },
-      { 'Instructions pour l\'import des patients': 'CODE PATIENT (OPTIONNEL):' },
-      { 'Instructions pour l\'import des patients': '• Format: PAT-XXXX (ex: PAT-0001, PAT-0002)' },
-      { 'Instructions pour l\'import des patients': '• Si vide, sera généré automatiquement' },
-      { 'Instructions pour l\'import des patients': '• Si le code existe, le patient sera MISE À JOUR avec les nouvelles données' },
-      { 'Instructions pour l\'import des patients': '• ATTENTION: Doublons avec codes différents seront REJETÉS' },
+      { 'Instructions pour l\'import des patients': 'CODE PATIENT:' },
+      { 'Instructions pour l\'import des patients': '• Optionnel mais recommandé pour identifier le patient' },
+      { 'Instructions pour l\'import des patients': '• Doit être unique (exemple: PAT-0001, PAT-0002, etc.)' },
+      { 'Instructions pour l\'import des patients': '• Si vide, sera généré automatiquement par le système' },
       { 'Instructions pour l\'import des patients': '' },
       { 'Instructions pour l\'import des patients': 'FORMATS SPÉCIAUX:' },
       { 'Instructions pour l\'import des patients': '• Date de Naissance: JJ/MM/AAAA ou AAAA-MM-JJ' },

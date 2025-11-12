@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/router';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ interface DetailedAnalytics {
 }
 
 const AnalyticsPage: React.FC = () => {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [analyticsData, setAnalyticsData] = useState<DetailedAnalytics | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -82,7 +84,30 @@ const AnalyticsPage: React.FC = () => {
 
   // Patient columns
   const patientColumns = [
-    { key: 'fullName', label: 'Nom Complet', width: '200px', align: 'left' as const },
+    {
+      key: 'fullName',
+      label: 'Nom Complet',
+      width: '200px',
+      align: 'left' as const,
+      render: (value: any, row: any) => (
+        <div className="flex flex-col gap-1">
+          <div
+            className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer transition-colors font-medium"
+            onClick={() => router.push(`/roles/admin/renseignement/patient/${row.id}`)}
+          >
+            {value}
+          </div>
+          {row.patientCode && (
+            <div
+              className="text-xs text-slate-500 font-mono cursor-pointer hover:text-blue-600 transition-colors"
+              onClick={() => router.push(`/roles/admin/renseignement/patient/${row.id}`)}
+            >
+              {row.patientCode}
+            </div>
+          )}
+        </div>
+      )
+    },
     { key: 'patientCode', label: 'Code Patient', width: '120px', align: 'center' as const },
     { key: 'telephone', label: 'Téléphone', width: '120px', align: 'center' as const },
     { key: 'affiliation', label: 'Affiliation', width: '100px', align: 'center' as const },
@@ -114,7 +139,30 @@ const AnalyticsPage: React.FC = () => {
 
   // Device columns
   const deviceColumns = [
-    { key: 'name', label: 'Nom Appareil', width: '200px', align: 'left' as const },
+    {
+      key: 'name',
+      label: 'Nom Appareil',
+      width: '200px',
+      align: 'left' as const,
+      render: (value: any, row: any) => (
+        <div className="flex flex-col gap-1">
+          <div
+            className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer transition-colors font-medium"
+            onClick={() => router.push(`/roles/admin/appareils/medical-device/${row.id}`)}
+          >
+            {value}
+          </div>
+          {row.deviceCode && (
+            <div
+              className="text-xs text-slate-500 font-mono cursor-pointer hover:text-blue-600 transition-colors"
+              onClick={() => router.push(`/roles/admin/appareils/medical-device/${row.id}`)}
+            >
+              {row.deviceCode}
+            </div>
+          )}
+        </div>
+      )
+    },
     { key: 'deviceCode', label: 'Code', width: '120px', align: 'center' as const },
     { key: 'type', label: 'Type', width: '150px', align: 'left' as const },
     { key: 'brand', label: 'Marque', width: '120px', align: 'left' as const },

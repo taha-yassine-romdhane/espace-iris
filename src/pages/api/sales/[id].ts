@@ -60,10 +60,10 @@ function getAggregatedPaymentData(sale: any, additionalPayments: any[]) {
         referenceNumber: p.referenceNumber,
         classification: p.method, // Use method as classification for simplicity
         metadata: {
-          dossierNumber: p.cnamBondNumber,
-          cnamInfo: p.cnamBondNumber ? {
-            dossierNumber: p.cnamBondNumber,
-            bondType: p.cnamBondType,
+          dossierNumber: p.cnamBonNumber,
+          cnamInfo: p.cnamBonNumber ? {
+            dossierNumber: p.cnamBonNumber,
+            bonType: p.cnamBonType,
             status: p.cnamStatus
           } : null
         }
@@ -367,9 +367,8 @@ export default async function handler(
         // Check if the sale exists and get its details
         const saleToDelete = await prisma.sale.findUnique({
           where: { id },
-          select: { 
+          select: {
             status: true,
-            paymentId: true,
             items: {
               select: {
                 id: true,
@@ -387,40 +386,58 @@ export default async function handler(
 
         // Use transaction to ensure all deletions succeed or all fail
         await prisma.$transaction(async (tx) => {
-          // Delete sale items first (due to foreign key constraints)
+          // 1. Delete all SaleConfiguration records for sale items
+          const saleItemIds = saleToDelete.items.map(item => item.id);
+          await tx.saleConfiguration.deleteMany({
+            where: { saleItemId: { in: saleItemIds } },
+          });
+
+          // 2. Delete sale items
           await tx.saleItem.deleteMany({
             where: { saleId: id },
           });
 
-          // Delete payment details if payment exists
-          if (saleToDelete.paymentId) {
+          // 3. Get all payments related to this sale via saleId
+          const allPayments = await tx.payment.findMany({
+            where: { saleId: id },
+            select: { id: true }
+          });
+
+          // 4. Delete all payment details for these payments
+          if (allPayments.length > 0) {
+            const paymentIds = allPayments.map(p => p.id);
             await tx.paymentDetail.deleteMany({
-              where: { paymentId: saleToDelete.paymentId },
+              where: { paymentId: { in: paymentIds } },
             });
 
-            // Delete the payment record
-            await tx.payment.delete({
-              where: { id: saleToDelete.paymentId },
+            // 5. Delete all payments
+            await tx.payment.deleteMany({
+              where: { id: { in: paymentIds } },
             });
           }
 
-          // Finally delete the sale
+          // 6. Delete all CNAM bons related to this sale
+          await tx.cNAMBonRental.deleteMany({
+            where: { saleId: id },
+          });
+
+          // 7. Finally delete the sale
           await tx.sale.delete({
             where: { id },
           });
 
-          // Optional: Update stock levels back if needed
+          // 8. Update stock levels back if needed
           // This would increment the stock for each item that was sold
           for (const item of saleToDelete.items) {
             if (item.productId) {
               // Find the stock record for this product
               const stockRecord = await tx.stock.findFirst({
-                where: { 
+                where: {
                   productId: item.productId,
                   status: 'FOR_SALE'
                 }
               });
-              
+
               if (stockRecord) {
                 // Update the stock quantity
                 await tx.stock.update({
@@ -431,7 +448,7 @@ export default async function handler(
                 });
               }
             }
-            
+
             if (item.medicalDeviceId) {
               // For medical devices, change status back to ACTIVE
               await tx.medicalDevice.update({
@@ -446,9 +463,9 @@ export default async function handler(
           }
         });
 
-        return res.status(200).json({ 
+        return res.status(200).json({
           message: 'Sale deleted successfully',
-          details: 'Sale and all related records have been removed, stock levels have been updated'
+          details: 'Sale and all related records (items, configurations, payments, CNAM bons) have been removed, stock levels have been updated'
         });
 
       default:

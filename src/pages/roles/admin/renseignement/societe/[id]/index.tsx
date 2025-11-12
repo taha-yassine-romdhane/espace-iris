@@ -118,7 +118,6 @@ export default function SocieteDetailsPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{societe.nomSociete || societe.nom}</h1>
-            <p className="text-gray-500">Société ID: {societe.id}</p>
             <div className="mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
               Société
             </div>

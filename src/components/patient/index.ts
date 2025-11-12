@@ -8,7 +8,10 @@ import { PatientDiagnostics } from './PatientDiagnostics';
 import { PatientDevices } from './PatientDevices';
 import { PatientPayments } from './PatientPayments';
 import { PatientRentals } from './PatientRentals';
+import { PatientSales } from './PatientSales';
 import { PatientAppointments } from './PatientAppointments';
+import { PatientCNAMBonds } from './PatientCNAMBonds';
+import { PatientPrintDialog } from './PatientPrintDialog';
 
 export {
   PatientBasicInfo,
@@ -21,5 +24,8 @@ export {
   PatientDevices,
   PatientPayments,
   PatientRentals,
-  PatientAppointments
+  PatientSales,
+  PatientAppointments,
+  PatientCNAMBonds,
+  PatientPrintDialog
 };
