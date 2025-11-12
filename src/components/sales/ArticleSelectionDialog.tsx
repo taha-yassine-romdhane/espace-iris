@@ -349,9 +349,9 @@ export default function ArticleSelectionDialog({
                         className="flex items-center justify-between p-4 hover:bg-gray-50 cursor-pointer border-b last:border-0"
                         onClick={() => handleAccessorySelect(accessory)}
                       >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 flex-1">
                           <Puzzle className="h-5 w-5 text-green-500" />
-                          <div>
+                          <div className="flex-1">
                             <div className="font-medium">{accessory.name}</div>
                             <div className="text-sm text-gray-500">
                               Code: {accessory.productCode} {accessory.serialNumber ? `• N° Série: ${accessory.serialNumber}` : ''}
@@ -360,6 +360,21 @@ export default function ArticleSelectionDialog({
                               <Badge variant="outline" className="mt-1 text-xs bg-green-50 text-green-700 border-green-200">
                                 {accessory.type}
                               </Badge>
+                            )}
+                            {/* Stock information */}
+                            {accessory.stocks && accessory.stocks.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {accessory.stocks.map((stock: any, idx: number) => (
+                                  <Badge key={idx} variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                                    {stock.location?.name || 'Non assigné'}: {stock.quantity}
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
+                            {accessory.totalQuantity !== undefined && (
+                              <div className="text-xs font-semibold text-gray-700 mt-1">
+                                Total: {accessory.totalQuantity} unités
+                              </div>
                             )}
                           </div>
                         </div>
@@ -391,9 +406,9 @@ export default function ArticleSelectionDialog({
                         className="flex items-center justify-between p-4 hover:bg-gray-50 cursor-pointer border-b last:border-0"
                         onClick={() => handleSparePartSelect(sparePart)}
                       >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 flex-1">
                           <Cog className="h-5 w-5 text-orange-500" />
-                          <div>
+                          <div className="flex-1">
                             <div className="font-medium">{sparePart.name}</div>
                             <div className="text-sm text-gray-500">
                               Code: {sparePart.productCode} {sparePart.serialNumber ? `• N° Série: ${sparePart.serialNumber}` : ''}
@@ -402,6 +417,21 @@ export default function ArticleSelectionDialog({
                               <Badge variant="outline" className="mt-1 text-xs bg-orange-50 text-orange-700 border-orange-200">
                                 {sparePart.type}
                               </Badge>
+                            )}
+                            {/* Stock information */}
+                            {sparePart.stocks && sparePart.stocks.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {sparePart.stocks.map((stock: any, idx: number) => (
+                                  <Badge key={idx} variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                                    {stock.location?.name || 'Non assigné'}: {stock.quantity}
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
+                            {sparePart.totalQuantity !== undefined && (
+                              <div className="text-xs font-semibold text-gray-700 mt-1">
+                                Total: {sparePart.totalQuantity} unités
+                              </div>
                             )}
                           </div>
                         </div>

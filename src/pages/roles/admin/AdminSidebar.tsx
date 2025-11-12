@@ -7,7 +7,6 @@ import {
     LayoutDashboard,
     BriefcaseMedical,
     Settings,
-    HelpCircle,
     Power,
     UserCog,
     ChevronLeft,
@@ -25,7 +24,6 @@ import {
     MapPin,
     BarChart3,
     MessageCircle,
-    FileSpreadsheet,
     KeyRound,
     Shield,
     Calendar,
@@ -86,8 +84,6 @@ const Sidebar: React.FC = () => {
         { id: 'reparateur', icon: <Wrench size={20} />, label: "Gestion des Réparateurs", path: "/roles/admin/reparateur" },
         { id: 'stock', icon: <Database size={20} />, label: "Gestion des Stocks", path: "/roles/admin/stock" },
         { id: 'cnam-management', icon: <Shield size={20} />, label: "Gestion CNAM", path: "/roles/admin/cnam-management" },
-        { id: 'excel-import', icon: <FileSpreadsheet size={20} />, label: "Import/Export Excel", path: "/roles/admin/excel-import" },
-        { id: 'help', icon: <HelpCircle size={20} />, label: "Aide et Support", path: "/roles/admin/help" },
         { id: 'settings', icon: <Settings size={20} />, label: "Paramètres", path: "/roles/admin/settings" },
     ];
 

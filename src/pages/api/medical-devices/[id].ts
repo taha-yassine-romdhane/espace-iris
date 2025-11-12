@@ -74,6 +74,10 @@ export default async function handler(
           brand: product.brand,
           model: product.model,
           serialNumber: product.serialNumber,
+          description: product.description,
+          partNumber: product.partNumber,
+          compatibleWith: product.compatibleWith,
+          minQuantity: product.minQuantity,
           purchasePrice: product.purchasePrice,
           sellingPrice: product.sellingPrice,
           warrantyExpiration: product.warrantyExpiration,
@@ -307,12 +311,74 @@ export default async function handler(
           } else {
             // Update product (accessories/spare parts)
             try {
-              const { warrantyExpiration, purchasePrice, sellingPrice, status, stockLocationId, stockQuantity, stockEntries, ...productData } = data;
+              const { warrantyExpiration, purchasePrice, sellingPrice, status, stockLocationId, stockQuantity, stockEntries, description, minQuantity, ...productData } = data;
+
+              console.log('Updating product with description:', description);
+
+              // First, get the existing product to check if it needs a code
+              const existingProduct = await prisma.product.findUnique({
+                where: { id: id as string }
+              });
+
+              if (!existingProduct) {
+                return res.status(404).json({ error: 'Product not found' });
+              }
+
+              let productCode = existingProduct.productCode;
+              const type = productData.type || existingProduct.type;
+
+              // Check if product needs code generation or pattern correction
+              const needsCodeGeneration = !productCode;
+              let needsPatternCorrection = false;
+
+              if (productCode && type) {
+                const expectedPrefix = type === 'ACCESSORY' ? 'ACC-' : type === 'SPARE_PART' ? 'PIEC-' : 'PRD-';
+                needsPatternCorrection = !productCode.startsWith(expectedPrefix);
+              }
+
+              if (needsCodeGeneration || needsPatternCorrection) {
+                if (needsCodeGeneration) {
+                  console.log('Product has no code, generating new code...');
+                } else {
+                  console.log('Product has incorrect pattern, correcting code from:', productCode);
+                }
+
+                const prefix = type === 'ACCESSORY' ? 'ACC-' : type === 'SPARE_PART' ? 'PIEC-' : 'PRD-';
+
+                const lastProduct = await prisma.product.findFirst({
+                  where: {
+                    type: type,
+                    productCode: {
+                      startsWith: prefix
+                    }
+                  },
+                  orderBy: {
+                    productCode: 'desc'
+                  }
+                });
+
+                productCode = `${prefix}001`;
+                if (lastProduct && lastProduct.productCode) {
+                  const lastNumber = parseInt(lastProduct.productCode.replace(prefix, ''));
+                  if (!isNaN(lastNumber)) {
+                    productCode = `${prefix}${String(lastNumber + 1).padStart(3, '0')}`;
+                  }
+                }
+
+                console.log('Generated/Corrected product code:', productCode);
+              }
 
               const updatePayload: any = {
                 ...productData,
+                productCode: productCode, // Always set the productCode
               };
 
+              if (description !== undefined) {
+                updatePayload.description = description;
+              }
+              if (minQuantity !== undefined) {
+                updatePayload.minQuantity = minQuantity ? parseInt(minQuantity.toString()) : null;
+              }
               if (purchasePrice) {
                 updatePayload.purchasePrice = parseFloat(purchasePrice);
               }
@@ -374,6 +440,10 @@ export default async function handler(
                   brand: updatedProduct.brand,
                   model: updatedProduct.model,
                   serialNumber: updatedProduct.serialNumber,
+                  description: updatedProduct.description,
+                  partNumber: updatedProduct.partNumber,
+                  compatibleWith: updatedProduct.compatibleWith,
+                  minQuantity: updatedProduct.minQuantity,
                   purchasePrice: updatedProduct.purchasePrice,
                   sellingPrice: updatedProduct.sellingPrice,
                   warrantyExpiration: updatedProduct.warrantyExpiration,
@@ -445,6 +515,10 @@ export default async function handler(
                   brand: updatedProduct.brand,
                   model: updatedProduct.model,
                   serialNumber: updatedProduct.serialNumber,
+                  description: updatedProduct.description,
+                  partNumber: updatedProduct.partNumber,
+                  compatibleWith: updatedProduct.compatibleWith,
+                  minQuantity: updatedProduct.minQuantity,
                   purchasePrice: updatedProduct.purchasePrice,
                   sellingPrice: updatedProduct.sellingPrice,
                   warrantyExpiration: updatedProduct.warrantyExpiration,
@@ -454,7 +528,42 @@ export default async function handler(
                   status: mappedStatus
                 });
               } else {
-                throw new Error('No stock entries provided');
+                // No stock update needed, just return updated product info
+                const productWithStocks = await prisma.product.findUnique({
+                  where: { id: id as string },
+                  include: {
+                    stocks: {
+                      include: {
+                        location: true
+                      }
+                    }
+                  }
+                });
+
+                // Map the status back to the frontend format
+                const mappedStatus = updatedProduct.status === 'ACTIVE' ? 'FOR_SALE' :
+                  updatedProduct.status === 'SOLD' ? 'VENDU' :
+                    updatedProduct.status === 'RETIRED' ? 'HORS_SERVICE' : 'FOR_SALE';
+
+                return res.status(200).json({
+                  id: updatedProduct.id,
+                  name: updatedProduct.name,
+                  type: updatedProduct.type,
+                  brand: updatedProduct.brand,
+                  model: updatedProduct.model,
+                  serialNumber: updatedProduct.serialNumber,
+                  description: updatedProduct.description,
+                  partNumber: updatedProduct.partNumber,
+                  compatibleWith: updatedProduct.compatibleWith,
+                  minQuantity: updatedProduct.minQuantity,
+                  purchasePrice: updatedProduct.purchasePrice,
+                  sellingPrice: updatedProduct.sellingPrice,
+                  warrantyExpiration: updatedProduct.warrantyExpiration,
+                  stockLocation: productWithStocks?.stocks[0]?.location?.name || 'Non assigné',
+                  stockLocationId: productWithStocks?.stocks[0]?.location?.id,
+                  stockQuantity: productWithStocks?.stocks[0]?.quantity || 0,
+                  status: mappedStatus
+                });
               }
             } catch (error) {
               console.error("Product update error:", error);

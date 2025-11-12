@@ -44,6 +44,11 @@ const sparePartSchema = z.object({
   type: z.literal("SPARE_PART"),
   brand: z.string().optional().nullable(),
   model: z.string().optional().nullable(),
+  description: z.string().optional().nullable(),
+  partNumber: z.string().optional().nullable(),
+  compatibleWith: z.string().optional().nullable(),
+  serialNumber: z.string().optional().nullable(),
+  minQuantity: z.coerce.number().int().min(0).optional().nullable(),
   purchasePrice: z.coerce.number().min(0).optional().nullable(),
   sellingPrice: z.coerce.number().min(0).optional().nullable(),
   status: z.enum(['FOR_SALE', 'FOR_RENT', 'IN_REPAIR', 'OUT_OF_SERVICE']).default('FOR_SALE'),
@@ -69,6 +74,11 @@ export function SparePartForm({ initialData, onSubmit, stockLocations, isEditMod
       name: initialData?.name || "",
       brand: initialData?.brand || "",
       model: initialData?.model || "",
+      description: initialData?.description || "",
+      partNumber: initialData?.partNumber || "",
+      compatibleWith: initialData?.compatibleWith || "",
+      serialNumber: initialData?.serialNumber || "",
+      minQuantity: initialData?.minQuantity || null,
       purchasePrice: initialData?.purchasePrice || null,
       sellingPrice: initialData?.sellingPrice || null,
       status: initialData?.status || "FOR_SALE",
@@ -106,6 +116,11 @@ export function SparePartForm({ initialData, onSubmit, stockLocations, isEditMod
         name: initialData.name || "",
         brand: initialData.brand || "",
         model: initialData.model || "",
+        description: initialData.description || "",
+        partNumber: initialData.partNumber || "",
+        compatibleWith: initialData.compatibleWith || "",
+        serialNumber: initialData.serialNumber || "",
+        minQuantity: initialData.minQuantity || null,
         purchasePrice: initialData.purchasePrice || null,
         sellingPrice: initialData.sellingPrice || null,
         status: initialData.status || "FOR_SALE",
@@ -218,6 +233,64 @@ export function SparePartForm({ initialData, onSubmit, stockLocations, isEditMod
                     )}
                   />
                 </div>
+
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value ?? ''} placeholder="Description de la pièce détachée" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="partNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Numéro de Pièce</FormLabel>
+                        <FormControl>
+                          <Input {...field} value={field.value ?? ''} placeholder="ex: P-12345" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="serialNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Numéro de Série</FormLabel>
+                        <FormControl>
+                          <Input {...field} value={field.value ?? ''} placeholder="Optionnel" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="compatibleWith"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Compatible Avec</FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value ?? ''} placeholder="ex: CPAP Model X, BiPAP Model Y" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
               </CardContent>
             </Card>
@@ -337,6 +410,31 @@ export function SparePartForm({ initialData, onSubmit, stockLocations, isEditMod
                     ))}
                   </div>
                 )}
+
+                <div className="mt-6 pt-6 border-t">
+                  <FormField
+                    control={form.control}
+                    name="minQuantity"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Quantité Minimale d'Alerte</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min="0"
+                            {...field}
+                            value={field.value ?? ''}
+                            placeholder="Seuil d'alerte pour le stock bas"
+                          />
+                        </FormControl>
+                        <p className="text-sm text-muted-foreground">
+                          Vous serez alerté lorsque le stock total descend en dessous de cette quantité
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
