@@ -947,7 +947,7 @@ export default function SalesExcelTable() {
                         <SelectValue placeholder="Sélectionner..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {users?.filter((u: any) => u.role === 'EMPLOYEE').map((user: any) => (
+                        {users?.filter((u: any) => u.role === 'EMPLOYEE' || u.role === 'ADMIN').map((user: any) => (
                           <SelectItem key={user.id} value={user.id}>
                             {user.firstName} {user.lastName}
                           </SelectItem>
@@ -1181,7 +1181,7 @@ export default function SalesExcelTable() {
                             <SelectValue placeholder="Sélectionner..." />
                           </SelectTrigger>
                           <SelectContent>
-                            {users?.filter((u: any) => u.role === 'EMPLOYEE').map((user: any) => (
+                            {users?.filter((u: any) => u.role === 'EMPLOYEE' || u.role === 'ADMIN').map((user: any) => (
                               <SelectItem key={user.id} value={user.id}>
                                 {user.firstName} {user.lastName}
                               </SelectItem>
