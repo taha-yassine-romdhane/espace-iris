@@ -209,7 +209,7 @@ export default function RentalDevicesTable() {
     setIsUpdatingLocation(true);
     try {
       const response = await fetch(`/api/medical-devices/${selectedDevice.medicalDevice.id}`, {
-        method: 'PATCH',
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           stockLocationId: selectedStockLocation,
