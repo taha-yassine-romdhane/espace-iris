@@ -102,9 +102,9 @@ export default async function handler(
             return res.status(400).json({ error: 'ID is required' });
           }
 
-          // Check if this is a simple update without type (e.g., just updating reservation status)
+          // Check if this is a simple update without type (e.g., just updating reservation status or stock location)
           // If so, update the medical device directly
-          if (!type && (data.patientId || data.location || data.reservedUntil)) {
+          if (!type && (data.patientId || data.location || data.reservedUntil || data.stockLocationId)) {
             try {
               const updatedDevice = await prisma.medicalDevice.update({
                 where: { id: id as string },
@@ -112,7 +112,12 @@ export default async function handler(
                   ...(data.patientId ? { patientId: data.patientId } : {}),
                   ...(data.location ? { location: data.location } : {}),
                   ...(data.status ? { status: data.status } : {}),
-                  ...(data.reservedUntil ? { reservedUntil: new Date(data.reservedUntil) } : {})
+                  ...(data.reservedUntil ? { reservedUntil: new Date(data.reservedUntil) } : {}),
+                  ...(data.stockLocationId ? {
+                    stockLocation: {
+                      connect: { id: data.stockLocationId }
+                    }
+                  } : {})
                 },
                 include: {
                   stockLocation: true,
@@ -127,7 +132,9 @@ export default async function handler(
                 patientId: updatedDevice.patientId,
                 location: updatedDevice.location,
                 reservedUntil: updatedDevice.reservedUntil,
-                status: updatedDevice.status
+                status: updatedDevice.status,
+                stockLocationId: updatedDevice.stockLocationId,
+                stockLocation: updatedDevice.stockLocation
               });
             } catch (error) {
               console.error("Error updating device reservation:", error);
