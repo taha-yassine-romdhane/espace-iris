@@ -6,7 +6,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -30,10 +29,8 @@ import { DiagnosticDevicesExcelTable } from "@/components/appareils/DiagnosticDe
 import { AccessoriesExcelTable } from "@/components/appareils/AccessoriesExcelTable";
 import { SparePartsExcelTable } from "@/components/appareils/SparePartsExcelTable";
 import { StockLocationsExcelTable } from "@/components/appareils/StockLocationsExcelTable";
-import { LocationForm } from "@/components/appareils/LocationForm";
 import { ParametersViewDialog } from "@/components/appareils/ParametersViewDialog";
 import { Product, ProductType } from "@/types";
-import { PlusCircle } from "lucide-react";
 import { Wrench, Trash2, Pencil } from "lucide-react";
 import { RepairForm } from "@/components/appareils/forms/RepairForm";
 import { RepairHistoryDialog } from "@/components/appareils/RepairHistoryDialog";

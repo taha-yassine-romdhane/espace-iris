@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -66,13 +67,13 @@ interface SparePartsExcelTableProps {
   onRefresh?: () => void;
 }
 
-const STATUSES = ["ACTIVE", "OUT_OF_STOCK", "DISCONTINUED"];
+const STATUSES = ["ACTIVE", "RETIRED", "SOLD"];
 
 const getStatusLabel = (status: string): string => {
   const statusLabels: Record<string, string> = {
     ACTIVE: "Actif",
-    OUT_OF_STOCK: "Rupture de stock",
-    DISCONTINUED: "Discontinué"
+    RETIRED: "Retiré",
+    SOLD: "Vendu"
   };
   return statusLabels[status] || status;
 };
@@ -86,6 +87,7 @@ export function SparePartsExcelTable({
   onRefresh
 }: SparePartsExcelTableProps) {
   const { toast } = useToast();
+  const router = useRouter();
   const [editingRowKey, setEditingRowKey] = useState<string | null>(null);
   const [editedRow, setEditedRow] = useState<SparePartRow | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
@@ -493,12 +495,55 @@ export function SparePartsExcelTable({
       case 'status':
         return <Badge variant={getStatusBadge(value as string)} className="text-xs">{getStatusLabel(value as string)}</Badge>;
       case 'locationId':
-        return <span className="text-xs">{row.locationName || '-'}</span>;
+        const isVenduLocation = row.locationName?.toLowerCase() === 'vendu';
+        return (
+          <Badge
+            variant="outline"
+            className={`text-xs whitespace-nowrap ${
+              isVenduLocation
+                ? 'border-red-500 text-red-700 bg-red-50'
+                : 'border-blue-500 text-blue-700 bg-blue-50'
+            }`}
+          >
+            {row.locationName || '-'}
+          </Badge>
+        );
+      case 'quantity':
+        const isVenduQty = row.locationName?.toLowerCase() === 'vendu';
+        return (
+          <Badge
+            variant="outline"
+            className={`text-xs whitespace-nowrap ${
+              isVenduQty
+                ? 'border-red-500 text-red-700 bg-red-50'
+                : 'border-blue-500 text-blue-700 bg-blue-50'
+            }`}
+          >
+            {value ?? 0}
+          </Badge>
+        );
       case 'purchasePrice':
       case 'sellingPrice':
         return <span className="text-xs">{value ? `${value} DT` : '-'}</span>;
       case 'productCode':
-        return <Badge variant="outline" className="font-mono text-xs whitespace-nowrap">{value || 'N/A'}</Badge>;
+        return (
+          <Badge
+            variant="outline"
+            className="font-mono text-xs whitespace-nowrap cursor-pointer hover:bg-blue-100 transition-colors"
+            onClick={() => row.productId && router.push(`/roles/admin/appareils/spare-part/${row.productId}`)}
+          >
+            {value || 'N/A'}
+          </Badge>
+        );
+      case 'name':
+        return (
+          <span
+            className="text-xs font-medium cursor-pointer text-blue-600 hover:text-blue-800 hover:underline transition-colors"
+            onClick={() => row.productId && router.push(`/roles/admin/appareils/spare-part/${row.productId}`)}
+          >
+            {(value as string) || '-'}
+          </span>
+        );
       default:
         return <span className="text-xs">{(value as string) ?? '-'}</span>;
     }

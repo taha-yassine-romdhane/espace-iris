@@ -8,7 +8,7 @@ import { DeviceRelations } from '@/components/medicalDevice/DeviceRelations';
 import { DeviceMaintenanceHistory } from '@/components/medicalDevice/DeviceMaintenanceHistory';
 import { DiagnosticDeviceDetails } from '@/components/medicalDevice/DiagnosticDeviceDetails';
 import { Button } from '@/components/ui/button';
-import { ArrowLeftIcon } from 'lucide-react';
+import { ArrowLeftIcon, Edit } from 'lucide-react';
 
 interface MedicalDeviceDetailProps {
   device: MedicalDevice & {
@@ -39,16 +39,25 @@ export default function DiagnosticDeviceDetail({ device }: MedicalDeviceDetailPr
 
   return (
     <div className="container mx-auto p-4">
-      <div className="flex items-center mb-6">
-        <Button 
-          variant="ghost" 
-          className="mr-4"
-          onClick={() => router.back()}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center">
+          <Button
+            variant="ghost"
+            className="mr-4"
+            onClick={() => router.back()}
+          >
+            <ArrowLeftIcon className="h-4 w-4 mr-2" />
+            Retour
+          </Button>
+          <h1 className="text-3xl font-bold">Détails de l'appareil de diagnostic</h1>
+        </div>
+        <Button
+          variant="default"
+          onClick={() => router.push('/roles/admin/appareils')}
         >
-          <ArrowLeftIcon className="h-4 w-4 mr-2" />
-          Retour
+          <Edit className="h-4 w-4 mr-2" />
+          Modifier
         </Button>
-        <h1 className="text-3xl font-bold">Détails de l'appareil de diagnostic</h1>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

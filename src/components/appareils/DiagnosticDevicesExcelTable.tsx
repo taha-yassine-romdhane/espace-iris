@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -62,11 +63,12 @@ export function DiagnosticDevicesExcelTable({
   importExportComponent
 }: DiagnosticDevicesExcelTableProps) {
   const { toast } = useToast();
+  const router = useRouter();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editedDevice, setEditedDevice] = useState<DiagnosticDevice | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [newDevice, setNewDevice] = useState<Partial<DiagnosticDevice>>({
-    name: "Polysomnographie",
+    name: "",
     type: "DIAGNOSTIC_DEVICE",
     status: "ACTIVE",
     destination: "FOR_SALE"
@@ -82,6 +84,11 @@ export function DiagnosticDevicesExcelTable({
   const [destinationFilter, setDestinationFilter] = useState<string>('ALL');
   const [locationFilter, setLocationFilter] = useState<string>('ALL');
   const [nameFilter, setNameFilter] = useState<string>('ALL');
+  const [brandFilter, setBrandFilter] = useState<string>('ALL');
+  const [priceRangeFilter, setPriceRangeFilter] = useState<string>('ALL');
+
+  // Get unique brands for filter
+  const uniqueBrands = Array.from(new Set(devices.map(d => d.brand).filter(Boolean))).sort();
 
   // Apply filters
   const filteredDevices = devices.filter(device => {
@@ -110,6 +117,28 @@ export function DiagnosticDevicesExcelTable({
     // Name filter
     if (nameFilter !== 'ALL' && device.name !== nameFilter) return false;
 
+    // Brand filter
+    if (brandFilter !== 'ALL' && device.brand !== brandFilter) return false;
+
+    // Price range filter
+    if (priceRangeFilter !== 'ALL') {
+      const price = device.sellingPrice || 0;
+      switch (priceRangeFilter) {
+        case 'UNDER_1000':
+          if (price >= 1000) return false;
+          break;
+        case '1000_5000':
+          if (price < 1000 || price >= 5000) return false;
+          break;
+        case '5000_10000':
+          if (price < 5000 || price >= 10000) return false;
+          break;
+        case 'OVER_10000':
+          if (price < 10000) return false;
+          break;
+      }
+    }
+
     return true;
   });
 
@@ -122,7 +151,7 @@ export function DiagnosticDevicesExcelTable({
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, statusFilter, destinationFilter, locationFilter, nameFilter]);
+  }, [searchTerm, statusFilter, destinationFilter, locationFilter, nameFilter, brandFilter, priceRangeFilter]);
 
   const handleEdit = (device: DiagnosticDevice) => {
     setEditingId(device.id || null);
@@ -161,7 +190,7 @@ export function DiagnosticDevicesExcelTable({
   const handleCancelNew = () => {
     setIsAddingNew(false);
     setNewDevice({
-      name: "Polysomnographie",
+      name: "",
       type: "DIAGNOSTIC_DEVICE",
       status: "ACTIVE",
       destination: "FOR_SALE"
@@ -173,7 +202,7 @@ export function DiagnosticDevicesExcelTable({
       await onDeviceCreate(newDevice);
       setIsAddingNew(false);
       setNewDevice({
-        name: "Polysomnographie",
+        name: "",
         type: "DIAGNOSTIC_DEVICE",
         status: "ACTIVE",
         destination: "FOR_SALE"
@@ -244,16 +273,12 @@ export function DiagnosticDevicesExcelTable({
 
         case 'name':
           return (
-            <Select value={editedDevice.name} onValueChange={(val) => updateEditedField('name', val)}>
-              <SelectTrigger className="h-8 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {DIAGNOSTIC_DEVICE_NAMES.map(name => (
-                  <SelectItem key={name} value={name}>{name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Input
+              value={editedDevice.name || ''}
+              onChange={(e) => updateEditedField('name', e.target.value)}
+              className="h-8 text-xs"
+              placeholder="Nom de l'appareil"
+            />
           );
 
         case 'status':
@@ -327,9 +352,22 @@ export function DiagnosticDevicesExcelTable({
     switch (field) {
       case 'deviceCode':
         return (
-          <Badge variant="outline" className="font-mono text-xs whitespace-nowrap">
+          <Badge
+            variant="outline"
+            className="font-mono text-xs whitespace-nowrap cursor-pointer hover:bg-blue-100 transition-colors"
+            onClick={() => router.push(`/roles/admin/appareils/diagnostic-device/${device.id}`)}
+          >
             {(value as string) || 'N/A'}
           </Badge>
+        );
+      case 'name':
+        return (
+          <span
+            className="text-xs font-medium cursor-pointer text-blue-600 hover:text-blue-800 hover:underline transition-colors"
+            onClick={() => router.push(`/roles/admin/appareils/diagnostic-device/${device.id}`)}
+          >
+            {(value as string) || '-'}
+          </span>
         );
       case 'status':
         return <Badge variant={getStatusBadge(value as string)} className="text-xs">{getStatusLabel(value as string)}</Badge>;
@@ -358,16 +396,12 @@ export function DiagnosticDevicesExcelTable({
           <span className="text-xs text-gray-500">Auto</span>
         </td>
         <td className="px-2 py-2">
-          <Select value={newDevice.name} onValueChange={(val) => updateNewField('name', val)}>
-            <SelectTrigger className="h-8 text-xs w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {DIAGNOSTIC_DEVICE_NAMES.map(name => (
-                <SelectItem key={name} value={name}>{name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Input
+            value={newDevice.name || ''}
+            onChange={(e) => updateNewField('name', e.target.value)}
+            className="h-8 text-xs w-40"
+            placeholder="Nom de l'appareil"
+          />
         </td>
         <td className="px-2 py-2">
           <Input
@@ -509,79 +543,230 @@ export function DiagnosticDevicesExcelTable({
       </div>
 
       {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3 bg-gray-50 p-4 rounded-lg border">
-        {/* Search bar */}
-        <div className="lg:col-span-2">
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Rechercher (code, marque, modèle, série...)"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8 h-9 text-sm"
-            />
+      <div className="bg-gray-50 p-4 rounded-lg border space-y-3">
+        {/* First row - Search and primary filters */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+          {/* Search bar */}
+          <div className="lg:col-span-2">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Rechercher (code, marque, modèle, série...)"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-8 h-9 text-sm"
+              />
+            </div>
+          </div>
+
+          {/* Name filter */}
+          <div>
+            <Select value={nameFilter} onValueChange={setNameFilter}>
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue placeholder="Nom" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">Tous les noms</SelectItem>
+                {DIAGNOSTIC_DEVICE_NAMES.map(name => (
+                  <SelectItem key={name} value={name}>{name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Brand filter */}
+          <div>
+            <Select value={brandFilter} onValueChange={setBrandFilter}>
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue placeholder="Marque" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">Toutes les marques</SelectItem>
+                {uniqueBrands.map(brand => (
+                  <SelectItem key={brand} value={brand!}>{brand}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
-        {/* Name filter */}
-        <div>
-          <Select value={nameFilter} onValueChange={setNameFilter}>
-            <SelectTrigger className="h-9 text-sm">
-              <SelectValue placeholder="Nom" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">Tous les noms</SelectItem>
-              {DIAGNOSTIC_DEVICE_NAMES.map(name => (
-                <SelectItem key={name} value={name}>{name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {/* Second row - Status, Destination, Location, Price */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+          {/* Status filter */}
+          <div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue placeholder="Statut" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">Tous les statuts</SelectItem>
+                {STATUSES.map(status => (
+                  <SelectItem key={status} value={status}>{getStatusLabel(status)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-        {/* Status filter */}
-        <div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="h-9 text-sm">
-              <SelectValue placeholder="Statut" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">Tous les statuts</SelectItem>
-              {STATUSES.map(status => (
-                <SelectItem key={status} value={status}>{getStatusLabel(status)}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+          {/* Destination filter */}
+          <div>
+            <Select value={destinationFilter} onValueChange={setDestinationFilter}>
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue placeholder="Destination" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">Toutes destinations</SelectItem>
+                <SelectItem value="FOR_SALE">Vente</SelectItem>
+                <SelectItem value="FOR_RENT">Location</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-        {/* Destination filter */}
-        <div>
-          <Select value={destinationFilter} onValueChange={setDestinationFilter}>
-            <SelectTrigger className="h-9 text-sm">
-              <SelectValue placeholder="Destination" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">Toutes destinations</SelectItem>
-              <SelectItem value="FOR_SALE">Vente</SelectItem>
-              <SelectItem value="FOR_RENT">Location</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+          {/* Location filter */}
+          <div>
+            <Select value={locationFilter} onValueChange={setLocationFilter}>
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue placeholder="Emplacement" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">Tous emplacements</SelectItem>
+                {stockLocations.map(loc => (
+                  <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-        {/* Location filter */}
-        <div>
-          <Select value={locationFilter} onValueChange={setLocationFilter}>
-            <SelectTrigger className="h-9 text-sm">
-              <SelectValue placeholder="Emplacement" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">Tous emplacements</SelectItem>
-              {stockLocations.map(loc => (
-                <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {/* Price range filter */}
+          <div>
+            <Select value={priceRangeFilter} onValueChange={setPriceRangeFilter}>
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue placeholder="Prix de vente" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">Tous les prix</SelectItem>
+                <SelectItem value="UNDER_1000">&lt; 1000 DT</SelectItem>
+                <SelectItem value="1000_5000">1000 - 5000 DT</SelectItem>
+                <SelectItem value="5000_10000">5000 - 10000 DT</SelectItem>
+                <SelectItem value="OVER_10000">&gt; 10000 DT</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
+
+      {/* Pagination Controls - TOP */}
+      {filteredDevices.length > 0 && (
+        <div className="flex items-center justify-between bg-white border rounded-lg p-3">
+          <div className="flex items-center gap-4">
+            <p className="text-sm text-gray-600">
+              Affichage de {startIndex + 1} à {Math.min(endIndex, filteredDevices.length)} sur {filteredDevices.length} appareils
+            </p>
+            <Select
+              value={itemsPerPage.toString()}
+              onValueChange={(val) => {
+                setItemsPerPage(parseInt(val));
+                setCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="h-9 w-32 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="25">25 par page</SelectItem>
+                <SelectItem value="50">50 par page</SelectItem>
+                <SelectItem value="100">100 par page</SelectItem>
+                <SelectItem value="200">200 par page</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(1)}
+              disabled={currentPage === 1}
+              className="h-9"
+            >
+              Premier
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="h-9"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let pageNum;
+                if (totalPages <= 5) {
+                  pageNum = i + 1;
+                } else if (currentPage <= 3) {
+                  pageNum = i + 1;
+                } else if (currentPage >= totalPages - 2) {
+                  pageNum = totalPages - 4 + i;
+                } else {
+                  pageNum = currentPage - 2 + i;
+                }
+
+                return (
+                  <Button
+                    key={pageNum}
+                    variant={currentPage === pageNum ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(pageNum)}
+                    className="h-9 w-9"
+                  >
+                    {pageNum}
+                  </Button>
+                );
+              })}
+            </div>
+
+            {/* Page Jump Input */}
+            <div className="flex items-center gap-1">
+              <span className="text-sm text-gray-600">Page:</span>
+              <Input
+                type="number"
+                min="1"
+                max={totalPages}
+                value={currentPage}
+                onChange={(e) => {
+                  const page = parseInt(e.target.value);
+                  if (page >= 1 && page <= totalPages) {
+                    setCurrentPage(page);
+                  }
+                }}
+                className="h-9 w-16 text-sm text-center"
+              />
+              <span className="text-sm text-gray-600">/ {totalPages}</span>
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="h-9"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(totalPages)}
+              disabled={currentPage === totalPages}
+              className="h-9"
+            >
+              Dernier
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Excel-like Table */}
       <div className="border rounded-lg overflow-x-auto">
@@ -654,101 +839,6 @@ export function DiagnosticDevicesExcelTable({
           </tbody>
         </table>
       </div>
-
-      {/* Pagination Controls */}
-      {filteredDevices.length > 0 && (
-        <div className="flex items-center justify-between border-t pt-4">
-          <div className="flex items-center gap-4">
-            <p className="text-sm text-gray-600">
-              Affichage de {startIndex + 1} à {Math.min(endIndex, filteredDevices.length)} sur {filteredDevices.length} appareils
-            </p>
-            <Select
-              value={itemsPerPage.toString()}
-              onValueChange={(val) => {
-                setItemsPerPage(parseInt(val));
-                setCurrentPage(1);
-              }}
-            >
-              <SelectTrigger className="h-9 w-32 text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="25">25 par page</SelectItem>
-                <SelectItem value="50">50 par page</SelectItem>
-                <SelectItem value="100">100 par page</SelectItem>
-                <SelectItem value="200">200 par page</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(1)}
-              disabled={currentPage === 1}
-              className="h-9"
-            >
-              Premier
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="h-9"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-
-            <div className="flex items-center gap-1">
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                let pageNum;
-                if (totalPages <= 5) {
-                  pageNum = i + 1;
-                } else if (currentPage <= 3) {
-                  pageNum = i + 1;
-                } else if (currentPage >= totalPages - 2) {
-                  pageNum = totalPages - 4 + i;
-                } else {
-                  pageNum = currentPage - 2 + i;
-                }
-
-                return (
-                  <Button
-                    key={pageNum}
-                    variant={currentPage === pageNum ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setCurrentPage(pageNum)}
-                    className="h-9 w-9"
-                  >
-                    {pageNum}
-                  </Button>
-                );
-              })}
-            </div>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className="h-9"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(totalPages)}
-              disabled={currentPage === totalPages}
-              className="h-9"
-            >
-              Dernier
-            </Button>
-          </div>
-        </div>
-      )}
 
       {devices.length === 0 && !isAddingNew && (
         <div className="text-center py-8 text-gray-500">
