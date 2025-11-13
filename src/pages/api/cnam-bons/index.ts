@@ -109,12 +109,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         saleId,
         patientId,
         category,
+        currentStep,
+        totalSteps,
       } = req.body;
 
-      // Validate required fields
-      if (!bonType || !patientId || !cnamMonthlyRate || !deviceMonthlyRate || !coveredMonths) {
+      // Log request body for debugging
+      console.log('[CNAM-BOND-CREATE] Request body:', req.body);
+
+      // Validate required fields with detailed error messages
+      const missingFields = [];
+      if (!bonType) missingFields.push('bonType');
+      if (!patientId) missingFields.push('patientId');
+      if (cnamMonthlyRate === undefined || cnamMonthlyRate === null || cnamMonthlyRate === '') missingFields.push('cnamMonthlyRate');
+      if (deviceMonthlyRate === undefined || deviceMonthlyRate === null || deviceMonthlyRate === '') missingFields.push('deviceMonthlyRate');
+      if (!coveredMonths) missingFields.push('coveredMonths');
+
+      if (missingFields.length > 0) {
+        console.error('[CNAM-BOND-CREATE] Missing required fields:', missingFields);
         return res.status(400).json({
-          error: 'Missing required fields: bonType, patientId, cnamMonthlyRate, deviceMonthlyRate, coveredMonths',
+          error: `Missing required fields: ${missingFields.join(', ')}`,
+          missingFields,
+          receivedData: req.body,
         });
       }
 
@@ -157,8 +172,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           category: category || 'LOCATION', // Default to LOCATION if not specified
           status: status || 'EN_ATTENTE_APPROBATION',
           dossierNumber: finalDossierNumber,
-          submissionDate: submissionDate ? new Date(submissionDate) : null,
-          approvalDate: approvalDate ? new Date(approvalDate) : null,
           startDate: startDate ? new Date(startDate) : null,
           endDate: endDate ? new Date(endDate) : null,
           cnamMonthlyRate: parseFloat(cnamMonthlyRate),
@@ -167,6 +180,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           bonAmount,
           devicePrice,
           complementAmount,
+          currentStep: currentStep ? parseInt(currentStep) : 1,
           renewalReminderDays: renewalReminderDays || 30,
           notes,
           patient: {

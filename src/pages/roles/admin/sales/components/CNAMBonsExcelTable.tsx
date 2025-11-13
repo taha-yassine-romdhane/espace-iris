@@ -150,6 +150,45 @@ export default function CNAMBonsExcelTable() {
         // Also extract CNAM bons from sales (CNAMBonRental with category ACHAT)
         if (sale.cnamBons && Array.isArray(sale.cnamBons)) {
           sale.cnamBons.forEach((bon: any) => {
+            // Only include ACHAT (sale) bonds, not LOCATION (rental) bonds
+            if (bon.category === 'ACHAT') {
+              combined.push({
+                id: bon.id,
+                dossierNumber: bon.bonNumber || bon.dossierNumber || 'N/A',
+                bonType: bon.bonType,
+                bondAmount: bon.bonAmount,
+                devicePrice: bon.devicePrice,
+                complementAmount: bon.complementAmount,
+                currentStep: bon.currentStep || (bon.status === 'TERMINE' ? 7 : bon.status === 'APPROUVE' ? 5 : 3),
+                totalSteps: 7,
+                status: bon.status,
+                notes: bon.notes,
+                patientId: bon.patientId,
+                patient: bon.patient,
+                saleId: bon.saleId,
+                sale: {
+                  id: sale.id,
+                  saleCode: sale.saleCode,
+                  invoiceNumber: sale.invoiceNumber,
+                },
+                createdAt: bon.createdAt,
+                updatedAt: bon.updatedAt,
+                source: 'cnam-bon-sale',
+              });
+            }
+          });
+        }
+      });
+    }
+
+    // Add standalone sale CNAM bons (category: ACHAT) if not already included
+    if (saleBonsData && Array.isArray(saleBonsData)) {
+      saleBonsData.forEach((bon: any) => {
+        // Only add if category is ACHAT (sale) not LOCATION (rental)
+        if (bon.category === 'ACHAT' || bon.bondCategory === 'ACHAT') {
+          // Check if this bond was already added from sale.cnamBons to avoid duplicates
+          const alreadyExists = combined.some(item => item.id === bon.id);
+          if (!alreadyExists) {
             combined.push({
               id: bon.id,
               dossierNumber: bon.bonNumber || bon.dossierNumber || 'N/A',
@@ -164,44 +203,12 @@ export default function CNAMBonsExcelTable() {
               patientId: bon.patientId,
               patient: bon.patient,
               saleId: bon.saleId,
-              sale: {
-                id: sale.id,
-                saleCode: sale.saleCode,
-                invoiceNumber: sale.invoiceNumber,
-              },
+              sale: bon.sale, // Include sale object from API response
               createdAt: bon.createdAt,
               updatedAt: bon.updatedAt,
               source: 'cnam-bon-sale',
             });
-          });
-        }
-      });
-    }
-
-    // Add standalone sale CNAM bons (category: ACHAT) if not already included
-    if (saleBonsData && Array.isArray(saleBonsData)) {
-      saleBonsData.forEach((bon: any) => {
-        // Only add if category is ACHAT (sale) not LOCATION (rental)
-        if (bon.category === 'ACHAT' || bon.bondCategory === 'ACHAT') {
-          combined.push({
-            id: bon.id,
-            dossierNumber: bon.bonNumber || bon.dossierNumber || 'N/A',
-            bonType: bon.bonType,
-            bondAmount: bon.bonAmount,
-            devicePrice: bon.devicePrice,
-            complementAmount: bon.complementAmount,
-            currentStep: bon.currentStep || (bon.status === 'TERMINE' ? 7 : bon.status === 'APPROUVE' ? 5 : 3),
-            totalSteps: 7,
-            status: bon.status,
-            notes: bon.notes,
-            patientId: bon.patientId,
-            patient: bon.patient,
-            saleId: bon.saleId,
-            sale: bon.sale, // Include sale object from API response
-            createdAt: bon.createdAt,
-            updatedAt: bon.updatedAt,
-            source: 'cnam-bon-sale',
-          });
+          }
         }
       });
     }
