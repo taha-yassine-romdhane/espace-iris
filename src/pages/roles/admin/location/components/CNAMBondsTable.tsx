@@ -19,8 +19,6 @@ interface CNAMBond {
   status: string;
   category?: string; // LOCATION or ACHAT
   dossierNumber?: string;
-  submissionDate?: string | null;
-  approvalDate?: string | null;
   startDate?: string | null;
   endDate?: string | null;
   cnamMonthlyRate: number;
@@ -715,8 +713,6 @@ export default function CNAMBondsTable({ rentalId, patientId, patientCnamId, dev
                 <TableHead className="min-w-[120px]">Statut</TableHead>
 
                 {/* Dates */}
-                <TableHead className="min-w-[130px]">Date Soumission</TableHead>
-                <TableHead className="min-w-[130px]">Date Approbation</TableHead>
                 <TableHead className="min-w-[130px]">Date Début</TableHead>
                 <TableHead className="min-w-[130px]">Date Fin</TableHead>
 
@@ -842,26 +838,6 @@ export default function CNAMBondsTable({ rentalId, patientId, patientCnamId, dev
                         ))}
                       </SelectContent>
                     </Select>
-                  </TableCell>
-
-                  {/* Date Soumission */}
-                  <TableCell>
-                    <Input
-                      type="date"
-                      value={editData.submissionDate ? new Date(editData.submissionDate).toISOString().split('T')[0] : ''}
-                      onChange={(e) => setEditData({ ...editData, submissionDate: e.target.value ? new Date(e.target.value).toISOString() : null })}
-                      className="text-xs w-32"
-                    />
-                  </TableCell>
-
-                  {/* Date Approbation */}
-                  <TableCell>
-                    <Input
-                      type="date"
-                      value={editData.approvalDate ? new Date(editData.approvalDate).toISOString().split('T')[0] : ''}
-                      onChange={(e) => setEditData({ ...editData, approvalDate: e.target.value ? new Date(e.target.value).toISOString() : null })}
-                      className="text-xs w-32"
-                    />
                   </TableCell>
 
                   {/* Date Début */}
@@ -1148,38 +1124,6 @@ export default function CNAMBondsTable({ rentalId, patientId, patientCnamId, dev
                         </Select>
                       ) : (
                         getStatusBadge(bond.status)
-                      )}
-                    </TableCell>
-
-                    {/* Date Soumission */}
-                    <TableCell>
-                      {isEditing ? (
-                        <Input
-                          type="date"
-                          value={data.submissionDate ? new Date(data.submissionDate).toISOString().split('T')[0] : ''}
-                          onChange={(e) => setEditData({ ...editData!, submissionDate: e.target.value ? new Date(e.target.value).toISOString() : null })}
-                          className="text-xs w-32"
-                        />
-                      ) : (
-                        <div className="text-xs">
-                          {bond.submissionDate ? new Date(bond.submissionDate).toLocaleDateString('fr-FR') : '-'}
-                        </div>
-                      )}
-                    </TableCell>
-
-                    {/* Date Approbation */}
-                    <TableCell>
-                      {isEditing ? (
-                        <Input
-                          type="date"
-                          value={data.approvalDate ? new Date(data.approvalDate).toISOString().split('T')[0] : ''}
-                          onChange={(e) => setEditData({ ...editData!, approvalDate: e.target.value ? new Date(e.target.value).toISOString() : null })}
-                          className="text-xs w-32"
-                        />
-                      ) : (
-                        <div className="text-xs">
-                          {bond.approvalDate ? new Date(bond.approvalDate).toLocaleDateString('fr-FR') : '-'}
-                        </div>
                       )}
                     </TableCell>
 

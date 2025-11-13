@@ -29,6 +29,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const patients = await prisma.patient.findMany({
       where: {
         OR: [
+          { patientCode: { contains: searchQuery, mode: 'insensitive' } },
           { firstName: { contains: searchQuery, mode: 'insensitive' } },
           { lastName: { contains: searchQuery, mode: 'insensitive' } },
           { telephone: { contains: searchQuery, mode: 'insensitive' } },
@@ -46,7 +47,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       results.push({
         id: patient.id,
         title: `${patient.firstName} ${patient.lastName}`,
-        subtitle: patient.telephone || patient.telephoneTwo || 'Patient',
+        subtitle: `${patient.patientCode || ''} • ${patient.telephone || patient.telephoneTwo || 'Patient'}`.trim(),
         type: 'patient',
         url: `/roles/admin/renseignement/patient/${patient.id}`
       });
@@ -56,6 +57,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
      const companies = await prisma.company.findMany({
       where: {
         OR: [
+          { companyCode: { contains: searchQuery, mode: 'insensitive' } },
           { companyName: { contains: searchQuery, mode: 'insensitive' } },
           { governorate: { contains: searchQuery, mode: 'insensitive' } },
           { delegation: { contains: searchQuery, mode: 'insensitive' } },
@@ -70,16 +72,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       results.push({
         id: company.id,
         title: company.companyName,
-        subtitle: `${company.governorate || ''} ${company.delegation || ''} ${company.detailedAddress || ''}`.trim() || 'Company',
+        subtitle: `${company.companyCode || ''} • ${company.telephone || ''}`.trim() || 'Entreprise',
         type: 'company' as SearchResultType,
         url: `/roles/admin/renseignement/company/${company.id}`
       });
     });
 
-    // Search products
+    // Search products (Accessories & Spare Parts)
     const products = await prisma.product.findMany({
       where: {
         OR: [
+          { productCode: { contains: searchQuery, mode: 'insensitive' } },
           { name: { contains: searchQuery, mode: 'insensitive' } },
           { model: { contains: searchQuery, mode: 'insensitive' } },
           { brand: { contains: searchQuery, mode: 'insensitive' } },
@@ -90,10 +93,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     products.forEach((product: Product) => {
+      const typeLabel = product.type === 'ACCESSORY' ? 'Accessoire' : product.type === 'SPARE_PART' ? 'Pièce Détachée' : 'Produit';
       results.push({
         id: product.id,
         title: product.name,
-        subtitle: product.brand || 'Produit',
+        subtitle: `${product.productCode || ''} • ${typeLabel} • ${product.brand || ''}`.trim(),
         type: 'product' as SearchResultType,
         url: `/roles/admin/appareils/${product.id}`
       });
@@ -132,24 +136,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const sales = await prisma.sale.findMany({
       where: {
         OR: [
+          { saleCode: { contains: searchQuery, mode: 'insensitive' } },
+          { invoiceNumber: { contains: searchQuery, mode: 'insensitive' } },
           { notes: { contains: searchQuery, mode: 'insensitive' } },
           { patient: { firstName: { contains: searchQuery, mode: 'insensitive' } } },
           { patient: { lastName: { contains: searchQuery, mode: 'insensitive' } } },
+          { patient: { patientCode: { contains: searchQuery, mode: 'insensitive' } } },
+          { company: { companyName: { contains: searchQuery, mode: 'insensitive' } } },
+          { company: { companyCode: { contains: searchQuery, mode: 'insensitive' } } },
         ]
       },
       include: {
         patient: true,
+        company: true,
       },
       take: 5,
     });
 
     sales.forEach((sale) => {
+      const clientName = sale.patient
+        ? `${sale.patient.firstName} ${sale.patient.lastName}`
+        : sale.company?.companyName || 'Client';
+
       results.push({
         id: sale.id,
-        title: `Vente: ${sale.notes || sale.id}`,
-        subtitle: sale.patient 
-        ? `${sale.patient.firstName || ''} ${sale.patient.lastName || ''}`.trim() || 'Patient sans nom'
-        : 'Vente',
+        title: `${sale.saleCode || 'Vente'}${sale.invoiceNumber ? ` • Facture: ${sale.invoiceNumber}` : ''}`,
+        subtitle: `${clientName} • ${new Date(sale.saleDate).toLocaleDateString('fr-FR')}`,
         type: 'sale',
         url: `/roles/admin/sales/${sale.id}`
       });
@@ -158,6 +170,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const medicalDevices = await prisma.medicalDevice.findMany({
       where: {
         OR: [
+          { deviceCode: { contains: searchQuery, mode: 'insensitive' } },
           { name: { contains: searchQuery, mode: 'insensitive' } },
           { model: { contains: searchQuery, mode: 'insensitive' } },
           { brand: { contains: searchQuery, mode: 'insensitive' } },
@@ -168,14 +181,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     medicalDevices.forEach((medicalDevice: MedicalDevice) => {
+      const typeLabel = medicalDevice.type === 'DIAGNOSTIC_DEVICE' ? 'Appareil Diagnostic' : 'Appareil Médical';
       results.push({
         id: medicalDevice.id,
         title: medicalDevice.name,
-        subtitle: medicalDevice.brand && medicalDevice.model 
-          ? `${medicalDevice.brand} / ${medicalDevice.model}` 
-          : medicalDevice.brand || medicalDevice.model || 'Appareil',
+        subtitle: `${medicalDevice.deviceCode || ''} • ${typeLabel} • ${medicalDevice.brand || ''} ${medicalDevice.model || ''}`.trim(),
         type: 'medicalDevice' as SearchResultType,
-        url: `/roles/admin/appareils/${medicalDevice.id}`
+        url: `/roles/admin/appareils/medical-device/${medicalDevice.id}`
       });
     });
 
@@ -183,10 +195,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const rentals = await prisma.rental.findMany({
       where: {
         OR: [
+          { rentalCode: { contains: searchQuery, mode: 'insensitive' } },
           { notes: { contains: searchQuery, mode: 'insensitive' } },
           { patient: { firstName: { contains: searchQuery, mode: 'insensitive' } } },
           { patient: { lastName: { contains: searchQuery, mode: 'insensitive' } } },
+          { patient: { patientCode: { contains: searchQuery, mode: 'insensitive' } } },
           { medicalDevice: { name: { contains: searchQuery, mode: 'insensitive' } } },
+          { medicalDevice: { deviceCode: { contains: searchQuery, mode: 'insensitive' } } },
           { medicalDevice: { model: { contains: searchQuery, mode: 'insensitive' } } },
           { medicalDevice: { brand: { contains: searchQuery, mode: 'insensitive' } } },
           { medicalDevice: { serialNumber: { contains: searchQuery, mode: 'insensitive' } } },
@@ -201,14 +216,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     rentals.forEach(
       (rental: Rental & { patient?: Patient; medicalDevice: MedicalDevice }) => {
+        const patientName = rental.patient
+          ? `${rental.patient.firstName} ${rental.patient.lastName}`
+          : 'Patient';
+
         results.push({
           id: rental.id,
-          title: `Location: ${rental.medicalDevice.name}`,
-          subtitle: rental.patient
-            ? `${rental.patient.firstName} ${rental.patient.lastName}`
-            : 'Location',
+          title: `${rental.rentalCode || 'Location'} • ${rental.medicalDevice.name}`,
+          subtitle: `${patientName} • ${rental.medicalDevice.deviceCode || ''}`.trim(),
           type: 'rental' as SearchResultType,
-          url: `/roles/admin/rentals/${rental.id}`,
+          url: `/roles/admin/location/${rental.id}`,
         });
       }
     );

@@ -23,7 +23,7 @@ interface GlobalSearchProps {
 
 export const GlobalSearch: React.FC<GlobalSearchProps> = ({
   className,
-  placeholder = "Rechercher des patients, produits, diagnostics..."
+  placeholder = "Rechercher par code, nom, numéro..."
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');

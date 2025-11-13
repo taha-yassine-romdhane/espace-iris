@@ -127,6 +127,14 @@ export default async function handler(
                 email: true,
               },
             },
+            assignedTo: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
+            },
             patient: {
               select: {
                 id: true,
@@ -148,11 +156,13 @@ export default async function handler(
                 telephone: true,
               },
             },
-            payment: {
+            payments: {
               include: {
                 paymentDetails: true // Include payment details
               }
             },
+            cnamBons: true,
+            cnamDossiers: true,
             items: {
               include: {
                 product: true,
