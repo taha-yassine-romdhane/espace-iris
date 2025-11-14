@@ -24,7 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
 import { formatCurrency } from '@/utils/priceUtils';
-import ArticleSelectionDialog from '@/components/sales/ArticleSelectionDialog';
+import EmployeeArticleSelectionDialog from '@/components/employee/EmployeeArticleSelectionDialog';
 import ProductParameterDialog from '@/pages/roles/admin/dashboard/components/steps/product/ProductParameterDialog';
 
 interface SaleItem {
@@ -70,6 +70,8 @@ interface SaleItem {
     name: string;
     productCode: string;
     type?: string;
+    brand?: string;
+    model?: string;
   };
   medicalDevice?: {
     id: string;
@@ -104,6 +106,8 @@ export default function ArticlesExcelTable() {
     name: string;
     code?: string;
     serialNumber?: string;
+    brand?: string;
+    model?: string;
     unitPrice: number;
   } | null>(null);
   const [newArticle, setNewArticle] = useState({
@@ -203,7 +207,11 @@ export default function ArticlesExcelTable() {
     queryFn: async () => {
       const response = await fetch('/api/auth/session');
       if (!response.ok) throw new Error('Failed to fetch user session');
-      return response.json();
+      const data = await response.json();
+      console.log('👤 Current User Data:', data);
+      console.log('📍 Stock Location:', data?.user?.stockLocation);
+      console.log('🆔 Stock Location ID:', data?.user?.stockLocation?.id);
+      return data;
     },
   });
 
@@ -610,6 +618,9 @@ export default function ArticlesExcelTable() {
   }) => {
     setSelectedArticle(article);
 
+    // Get employee's stock location ID
+    const employeeStockLocationId = currentUser?.user?.stockLocation?.id;
+
     if (editingId) {
       // In edit mode, update edited data
       setEditedData({
@@ -618,6 +629,10 @@ export default function ArticlesExcelTable() {
         medicalDeviceId: article.type === 'medical-device' || article.type === 'diagnostic' ? article.id : '',
         serialNumber: article.serialNumber || '',
         unitPrice: article.unitPrice,
+        // Auto-set stock location for employees (for products/accessories/spare-parts)
+        stockLocationId: (article.type === 'product' || article.type === 'accessory' || article.type === 'spare-part') && employeeStockLocationId
+          ? employeeStockLocationId
+          : editedData.stockLocationId,
       });
     } else {
       // In add mode, update new article
@@ -627,6 +642,10 @@ export default function ArticlesExcelTable() {
         medicalDeviceId: article.type === 'medical-device' || article.type === 'diagnostic' ? article.id : '',
         serialNumber: article.serialNumber || '',
         unitPrice: article.unitPrice,
+        // Auto-set stock location for employees (for products/accessories/spare-parts)
+        stockLocationId: (article.type === 'product' || article.type === 'accessory' || article.type === 'spare-part') && employeeStockLocationId
+          ? employeeStockLocationId
+          : newArticle.stockLocationId,
       });
     }
   };
@@ -975,6 +994,7 @@ export default function ArticlesExcelTable() {
                 <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[180px]">Client</th>
                 <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[100px]">Type</th>
                 <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[200px]">Article</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[150px]">Marque/Modèle</th>
                 <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[120px]">N° Série</th>
                 <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[300px]">Description</th>
                 <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[200px]">Stock</th>
@@ -1082,6 +1102,13 @@ export default function ArticlesExcelTable() {
                         'Sélectionner Article'
                       )}
                     </Button>
+                  </td>
+
+                  {/* Brand/Model */}
+                  <td className="px-3 py-2.5 border-r border-slate-100">
+                    <span className="text-xs text-slate-600">
+                      {selectedArticle?.brand || '-'} {selectedArticle?.model && `/ ${selectedArticle.model}`}
+                    </span>
                   </td>
 
                   {/* Serial Number */}
@@ -1248,7 +1275,7 @@ export default function ArticlesExcelTable() {
 
               {paginatedArticles.length === 0 && !isAddingNew ? (
                 <tr>
-                  <td colSpan={11} className="px-3 py-8 text-center text-slate-500">
+                  <td colSpan={15} className="px-3 py-8 text-center text-slate-500">
                     Aucun article trouvé
                   </td>
                 </tr>
@@ -1463,6 +1490,19 @@ export default function ArticlesExcelTable() {
                         </>
                       )}
 
+                      {/* Brand/Model */}
+                      {editingId === article.id ? (
+                        <td className="px-3 py-2.5 border-r border-slate-100">
+                          <span className="text-xs text-slate-600">
+                            {selectedArticle?.brand || article.product?.brand || '-'} {(selectedArticle?.model || article.product?.model) && `/ ${selectedArticle?.model || article.product?.model}`}
+                          </span>
+                        </td>
+                      ) : (
+                        <td className="px-3 py-2.5 text-xs text-slate-600 border-r border-slate-100">
+                          {article.product?.brand || '-'} {article.product?.model && `/ ${article.product.model}`}
+                        </td>
+                      )}
+
                       {/* Serial Number */}
                       <td className="px-3 py-2.5 text-xs font-mono text-slate-600 border-r border-slate-100">
                         {article.medicalDevice?.serialNumber || article.serialNumber || '-'}
@@ -1661,10 +1701,11 @@ export default function ArticlesExcelTable() {
       </div>
 
       {/* Article Selection Dialog */}
-      <ArticleSelectionDialog
+      <EmployeeArticleSelectionDialog
         open={articleDialogOpen}
         onClose={() => setArticleDialogOpen(false)}
         onSelect={handleArticleSelect}
+        employeeStockLocationId={currentUser?.user?.stockLocation?.id}
       />
 
       {/* Parameter Configuration Dialog */}

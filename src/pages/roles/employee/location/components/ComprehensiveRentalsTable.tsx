@@ -42,7 +42,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { PatientSelectorDialog } from "@/components/dialogs/PatientSelectorDialog";
-import { MedicalDeviceSelectorDialog } from "@/components/dialogs/MedicalDeviceSelectorDialog";
+import { EmployeeMedicalDeviceSelectorDialog } from "@/components/employee/EmployeeMedicalDeviceSelectorDialog";
 import { EmployeeSelectorDialog } from "@/components/dialogs/EmployeeSelectorDialog";
 
 interface Rental {
@@ -960,7 +960,7 @@ function NewRowComponent({ data, onChange, onSave, onCancel, patients, devices, 
         />
       </td>
       <td className="px-4 py-3">
-        <MedicalDeviceSelectorDialog
+        <EmployeeMedicalDeviceSelectorDialog
           onSelect={(id, name) => {
             onChange({ ...data, medicalDeviceId: id });
             setSelectedDeviceName(name);
@@ -1125,7 +1125,7 @@ function EditRowComponent({ data, onChange, onSave, onCancel, patients, devices,
         />
       </td>
       <td className="px-4 py-3">
-        <MedicalDeviceSelectorDialog
+        <EmployeeMedicalDeviceSelectorDialog
           onSelect={(id, name) => {
             onChange({ ...data, medicalDeviceId: id });
             setSelectedDeviceName(name);

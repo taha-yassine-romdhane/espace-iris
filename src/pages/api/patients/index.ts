@@ -10,7 +10,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'GET') {
     try {
+      // @ts-ignore - session.user exists
+      const userId = session?.user?.id;
+      // @ts-ignore - session.user.role exists
+      const userRole = session?.user?.role;
+
+      // Build query filter based on user role
+      const whereClause: any = {};
+
+      // If user is EMPLOYEE, only show patients assigned to them as technician
+      if (userRole === 'EMPLOYEE' && userId) {
+        whereClause.technicianId = userId;
+      }
+      // ADMIN and DOCTOR see all patients (no filter)
+
       const patients = await prisma.patient.findMany({
+        where: whereClause,
         orderBy: {
           lastName: 'asc',
         },

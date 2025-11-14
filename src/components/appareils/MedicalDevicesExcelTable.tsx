@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -40,6 +40,7 @@ interface MedicalDevicesExcelTableProps {
 }
 
 const DEVICE_NAMES = ["CPAP", "VNI", "Concentrateur O²", "Vi", "Bouteil O²", "Autre"];
+const DEVICES_WITH_CONFIG = ["CPAP", "VNI", "Concentrateur O²", "Vi", "Bouteil O²"];
 const STATUSES = ["ACTIVE", "MAINTENANCE", "RETIRED", "RESERVED", "SOLD"];
 const DESTINATIONS = ["FOR_SALE", "FOR_RENT"];
 
@@ -74,6 +75,16 @@ export function MedicalDevicesExcelTable({
     status: "ACTIVE",
     destination: "FOR_SALE"
   });
+
+  // Track if "Autre" is selected for custom name input
+  const [isEditingCustomName, setIsEditingCustomName] = useState(false);
+  const [isAddingCustomName, setIsAddingCustomName] = useState(false);
+  const [customName, setCustomName] = useState("");
+
+  // Refs for synchronized scrolling
+  const topScrollRef = useRef<HTMLDivElement>(null);
+  const tableScrollRef = useRef<HTMLDivElement>(null);
+  const topScrollContentRef = useRef<HTMLDivElement>(null);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -154,14 +165,51 @@ export function MedicalDevicesExcelTable({
     setCurrentPage(1);
   }, [searchTerm, statusFilter, destinationFilter, locationFilter, nameFilter, brandFilter, priceRangeFilter]);
 
+  // Synchronized scrolling between top scrollbar and table
+  const handleTopScroll = () => {
+    if (topScrollRef.current && tableScrollRef.current) {
+      tableScrollRef.current.scrollLeft = topScrollRef.current.scrollLeft;
+    }
+  };
+
+  const handleTableScroll = () => {
+    if (topScrollRef.current && tableScrollRef.current) {
+      topScrollRef.current.scrollLeft = tableScrollRef.current.scrollLeft;
+    }
+  };
+
+  // Sync the top scrollbar width with the table width
+  useEffect(() => {
+    const syncScrollWidth = () => {
+      if (tableScrollRef.current && topScrollContentRef.current) {
+        const tableScrollWidth = tableScrollRef.current.scrollWidth;
+        topScrollContentRef.current.style.width = `${tableScrollWidth}px`;
+      }
+    };
+
+    syncScrollWidth();
+    // Re-sync when window resizes or data changes
+    window.addEventListener('resize', syncScrollWidth);
+    return () => window.removeEventListener('resize', syncScrollWidth);
+  }, [paginatedDevices, isAddingNew, editingId]);
+
   const handleEdit = (device: MedicalDevice) => {
     setEditingId(device.id || null);
     setEditedDevice({ ...device });
+
+    // Check if it's a custom name (not in standard list)
+    const isCustom = device.name && !DEVICES_WITH_CONFIG.includes(device.name);
+    setIsEditingCustomName(isCustom);
+    if (isCustom) {
+      setCustomName(device.name);
+    }
   };
 
   const handleCancel = () => {
     setEditingId(null);
     setEditedDevice(null);
+    setIsEditingCustomName(false);
+    setCustomName("");
   };
 
   const handleSave = async () => {
@@ -196,6 +244,8 @@ export function MedicalDevicesExcelTable({
       status: "ACTIVE",
       destination: "FOR_SALE"
     });
+    setIsAddingCustomName(false);
+    setCustomName("");
   };
 
   const handleSaveNew = async () => {
@@ -273,13 +323,48 @@ export function MedicalDevicesExcelTable({
           );
 
         case 'name':
+          const isCustomDevice = !DEVICES_WITH_CONFIG.includes(editedDevice.name || '');
+          const selectValue = isCustomDevice ? 'Autre' : editedDevice.name || '';
+
           return (
-            <Input
-              value={editedDevice.name || ''}
-              onChange={(e) => updateEditedField('name', e.target.value)}
-              className="h-8 text-xs"
-              placeholder="Nom de l'appareil"
-            />
+            <div className="flex flex-col gap-1">
+              <Select
+                value={selectValue}
+                onValueChange={(val) => {
+                  if (val === 'Autre') {
+                    setIsEditingCustomName(true);
+                    setCustomName(editedDevice.name || '');
+                  } else {
+                    setIsEditingCustomName(false);
+                    setCustomName("");
+                    updateEditedField('name', val);
+                  }
+                }}
+              >
+                <SelectTrigger className="h-8 text-xs w-40">
+                  <SelectValue placeholder="Sélectionner" />
+                </SelectTrigger>
+                <SelectContent>
+                  {DEVICE_NAMES.map(name => (
+                    <SelectItem key={name} value={name}>{name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {(isEditingCustomName || isCustomDevice) && (
+                <>
+                  <Input
+                    value={customName}
+                    onChange={(e) => {
+                      setCustomName(e.target.value);
+                      updateEditedField('name', e.target.value);
+                    }}
+                    className="h-8 text-xs w-40"
+                    placeholder="Nom personnalisé"
+                  />
+                  <span className="text-xs text-amber-600">⚠ Pas de configuration</span>
+                </>
+              )}
+            </div>
           );
 
         case 'status':
@@ -413,12 +498,45 @@ export function MedicalDevicesExcelTable({
           <span className="text-xs text-gray-500">Auto</span>
         </td>
         <td className="px-2 py-2">
-          <Input
-            value={newDevice.name || ''}
-            onChange={(e) => updateNewField('name', e.target.value)}
-            className="h-8 text-xs w-32"
-            placeholder="Nom de l'appareil"
-          />
+          <div className="flex flex-col gap-1">
+            <Select
+              value={isAddingCustomName ? 'Autre' : (newDevice.name || '')}
+              onValueChange={(val) => {
+                if (val === 'Autre') {
+                  setIsAddingCustomName(true);
+                  setCustomName('');
+                  updateNewField('name', '');
+                } else {
+                  setIsAddingCustomName(false);
+                  setCustomName("");
+                  updateNewField('name', val);
+                }
+              }}
+            >
+              <SelectTrigger className="h-8 text-xs w-40">
+                <SelectValue placeholder="Nom" />
+              </SelectTrigger>
+              <SelectContent>
+                {DEVICE_NAMES.map(name => (
+                  <SelectItem key={name} value={name}>{name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {isAddingCustomName && (
+              <>
+                <Input
+                  value={customName}
+                  onChange={(e) => {
+                    setCustomName(e.target.value);
+                    updateNewField('name', e.target.value);
+                  }}
+                  className="h-8 text-xs w-40"
+                  placeholder="Nom personnalisé"
+                />
+                <span className="text-xs text-amber-600">⚠ Pas de configuration</span>
+              </>
+            )}
+          </div>
         </td>
         <td className="px-2 py-2">
           <Input
@@ -805,8 +923,25 @@ export function MedicalDevicesExcelTable({
         </div>
       )}
 
+      {/* Top Scrollbar */}
+      <div
+        ref={topScrollRef}
+        onScroll={handleTopScroll}
+        className="border rounded-t-lg overflow-x-auto bg-gray-50"
+        style={{ overflowY: 'hidden', height: '17px' }}
+      >
+        <div
+          ref={topScrollContentRef}
+          style={{ height: '1px', width: '2400px' }}
+        />
+      </div>
+
       {/* Excel-like Table */}
-      <div className="border rounded-lg overflow-x-auto">
+      <div
+        ref={tableScrollRef}
+        onScroll={handleTableScroll}
+        className="border border-t-0 rounded-b-lg overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+      >
         <table className="w-full border-collapse text-sm">
           <thead className="bg-gray-100 sticky top-0 z-20">
             <tr className="border-b">
@@ -825,7 +960,7 @@ export function MedicalDevicesExcelTable({
               <th className="px-2 py-3 text-left text-xs font-semibold min-w-[140px]">Compteur (h)</th>
               <th className="px-2 py-3 text-left text-xs font-semibold min-w-[120px]">Garantie</th>
               <th className="px-2 py-3 text-left text-xs font-semibold min-w-[140px]">Maintenance</th>
-              <th className="px-3 py-3 text-right text-xs font-semibold sticky right-0 bg-gray-100/95 backdrop-blur-sm z-30 min-w-[120px]">Actions</th>
+              <th className="px-3 py-3 text-right text-xs font-semibold sticky right-0 bg-gray-100/95 backdrop-blur-sm z-30 min-w-[90px]">Actions</th>
             </tr>
           </thead>
           <tbody>

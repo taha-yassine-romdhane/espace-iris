@@ -12,6 +12,10 @@ declare module 'next-auth' {
       email: string;
       name: string;
       role: string;
+      stockLocation?: {
+        id: string;
+        name: string;
+      };
     }
   }
 }
@@ -88,6 +92,28 @@ export const authOptions: NextAuthOptions = {
         // Pass values from the JWT to the session
         session.user.id = token.userId;
         session.user.role = token.userRole;
+
+        // Fetch user's stock location
+        try {
+          const user = await prisma.user.findUnique({
+            where: { id: token.userId },
+            include: {
+              stockLocation: {
+                select: {
+                  id: true,
+                  name: true,
+                }
+              }
+            }
+          });
+
+          if (user?.stockLocation) {
+            session.user.stockLocation = user.stockLocation;
+          }
+        } catch (error) {
+          console.error('Error fetching stock location in session:', error);
+        }
+
         console.log('Session callback - User role:', session.user.role);
       }
       return session;

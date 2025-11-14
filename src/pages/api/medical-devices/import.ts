@@ -56,6 +56,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             brand: device.brand,
             model: device.model,
             serialNumber: device.serialNumber,
+            description: device.description,
             stockLocation: device.stockLocationId ? {
               connect: { id: device.stockLocationId }
             } : undefined,
@@ -63,8 +64,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             sellingPrice: device.sellingPrice,
             rentalPrice: device.rentalPrice,
             technicalSpecs: device.technicalSpecs,
+            warranty: device.warranty,
+            maintenanceInterval: device.maintenanceInterval,
             destination: device.destination || 'FOR_SALE',
-            requiresMaintenance: device.requiresMaintenance || false,
             status: device.status || 'ACTIVE',
             stockQuantity: device.stockQuantity || 1,
             configuration: device.configuration,

@@ -40,14 +40,16 @@ interface MedicalDeviceRow {
   brand?: string;
   model?: string;
   serialNumber?: string;
+  description?: string;
   stockLocationName?: string;
   purchasePrice?: number;
   sellingPrice?: number;
   rentalPrice?: number;
-  technicalSpecs?: string;
-  availableForRent?: boolean;
-  requiresMaintenance?: boolean;
   status?: string;
+  destination?: string;
+  technicalSpecs?: string;
+  warranty?: string;
+  maintenanceInterval?: string;
 }
 
 export function MedicalDeviceImportExport({ onImportSuccess, stockLocations }: MedicalDeviceImportExportProps) {
@@ -71,14 +73,16 @@ export function MedicalDeviceImportExport({ onImportSuccess, stockLocations }: M
         brand: 'Philips',
         model: 'DreamStation 2',
         serialNumber: 'DS2-2024-001',
+        description: 'Appareil de PPC pour traitement apnée du sommeil',
         stockLocationName: firstLocationName,
         purchasePrice: 1500.0,
         sellingPrice: 2200.0,
         rentalPrice: 45.0,
-        technicalSpecs: 'Auto-CPAP avec humidificateur intégré',
-        availableForRent: true,
-        requiresMaintenance: false,
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        destination: 'FOR_RENT',
+        technicalSpecs: '120',
+        warranty: '2 ans',
+        maintenanceInterval: '6 mois'
       },
       {
         deviceCode: 'APP0002',
@@ -87,14 +91,16 @@ export function MedicalDeviceImportExport({ onImportSuccess, stockLocations }: M
         brand: 'ResMed',
         model: 'Stellar 150',
         serialNumber: 'ST150-2024-002',
+        description: 'Ventilateur non invasif pour assistance respiratoire',
         stockLocationName: firstLocationName,
         purchasePrice: 2800.0,
         sellingPrice: 3500.0,
         rentalPrice: 65.0,
-        technicalSpecs: 'Ventilateur non invasif bi-level',
-        availableForRent: true,
-        requiresMaintenance: false,
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        destination: 'FOR_RENT',
+        technicalSpecs: '80',
+        warranty: '3 ans',
+        maintenanceInterval: '3 mois'
       }
     ];
   };
@@ -109,19 +115,21 @@ export function MedicalDeviceImportExport({ onImportSuccess, stockLocations }: M
     const locationNames = stockLocations.map(loc => loc.name).join(', ');
     const headers = [
       'Code Appareil (APP0001, APP0002, etc.)',
-      'Nom (CPAP, VNI, Concentrateur O², Vi, Bouteil O², Autre)',
+      'Nom (CPAP, VNI, Concentrateur O², Vi, Bouteil O², ou nom personnalisé)',
       'Type (MEDICAL_DEVICE)',
       'Marque',
       'Modèle',
       'Numéro de Série (obligatoire)',
+      'Description',
       `Lieu de Stockage (${locationNames})`,
       'Prix d\'Achat',
       'Prix de Vente',
       'Prix de Location par jour',
-      'Spécifications Techniques',
-      'Disponible Location (true/false)',
-      'Nécessite Maintenance (true/false)',
-      'Statut (ACTIVE, MAINTENANCE, RETIRED, RESERVED)'
+      'Statut (ACTIVE, MAINTENANCE, RETIRED, RESERVED, SOLD)',
+      'Destination (FOR_SALE, FOR_RENT)',
+      'Compteur (heures)',
+      'Garantie',
+      'Intervalle Maintenance'
     ];
     
     XLSX.utils.sheet_add_aoa(wb.Sheets['Appareils_Medicaux'], [headers], { origin: 'A1' });
@@ -204,7 +212,7 @@ export function MedicalDeviceImportExport({ onImportSuccess, stockLocations }: M
     }
 
     // Status validation
-    const validStatuses = ['ACTIVE', 'MAINTENANCE', 'RETIRED', 'RESERVED'];
+    const validStatuses = ['ACTIVE', 'MAINTENANCE', 'RETIRED', 'RESERVED', 'SOLD'];
     if (row.status && !validStatuses.includes(row.status)) {
       errors.push({
         row: index + 2,
@@ -213,15 +221,22 @@ export function MedicalDeviceImportExport({ onImportSuccess, stockLocations }: M
       });
     }
 
-    // Device name validation
-    const validNames = ['CPAP', 'VNI', 'Concentrateur O²', 'Vi', 'Bouteil O²', 'Autre'];
-    if (row.name && !validNames.includes(row.name)) {
+    // Destination validation
+    const validDestinations = ['FOR_SALE', 'FOR_RENT'];
+    if (row.destination && !validDestinations.includes(row.destination)) {
       errors.push({
         row: index + 2,
-        field: 'name',
-        message: `Nom d'appareil invalide. Valeurs autorisées: ${validNames.join(', ')}`
+        field: 'destination',
+        message: `Destination invalide. Valeurs autorisées: ${validDestinations.join(', ')}`
       });
     }
+
+    // Device name validation - allow standard names or any custom name
+    // Standard names with configuration support
+    const standardNames = ['CPAP', 'VNI', 'Concentrateur O²', 'Vi', 'Bouteil O²'];
+
+    // Note: We allow any custom name, but we can optionally warn about configuration
+    // No validation error for custom names - they're allowed
 
     return errors;
   };
@@ -265,14 +280,16 @@ export function MedicalDeviceImportExport({ onImportSuccess, stockLocations }: M
             brand: row[3]?.toString().trim() || '',
             model: row[4]?.toString().trim() || '',
             serialNumber: row[5]?.toString().trim() || '',
-            stockLocationName: row[6]?.toString().trim() || '',
-            purchasePrice: row[7] ? Number(row[7]) : undefined,
-            sellingPrice: row[8] ? Number(row[8]) : undefined,
-            rentalPrice: row[9] ? Number(row[9]) : undefined,
-            technicalSpecs: row[10]?.toString().trim() || '',
-            availableForRent: row[11] ? (row[11].toString().toLowerCase() === 'true') : false,
-            requiresMaintenance: row[12] ? (row[12].toString().toLowerCase() === 'true') : false,
-            status: row[13]?.toString().trim() || 'ACTIVE',
+            description: row[6]?.toString().trim() || '',
+            stockLocationName: row[7]?.toString().trim() || '',
+            purchasePrice: row[8] ? Number(row[8]) : undefined,
+            sellingPrice: row[9] ? Number(row[9]) : undefined,
+            rentalPrice: row[10] ? Number(row[10]) : undefined,
+            status: row[11]?.toString().trim() || 'ACTIVE',
+            destination: row[12]?.toString().trim() || 'FOR_SALE',
+            technicalSpecs: row[13]?.toString().trim() || '',
+            warranty: row[14]?.toString().trim() || '',
+            maintenanceInterval: row[15]?.toString().trim() || '',
           })) as MedicalDeviceRow[];
 
         // Validate all rows
@@ -336,14 +353,16 @@ export function MedicalDeviceImportExport({ onImportSuccess, stockLocations }: M
           brand: row.brand || null,
           model: row.model || null,
           serialNumber: row.serialNumber,
+          description: row.description || null,
           stockLocationId: stockLocation?.id || null,
           purchasePrice: row.purchasePrice || null,
           sellingPrice: row.sellingPrice || null,
           rentalPrice: row.rentalPrice || null,
-          technicalSpecs: row.technicalSpecs || null,
-          availableForRent: row.availableForRent || false,
-          requiresMaintenance: row.requiresMaintenance || false,
           status: row.status || 'ACTIVE',
+          destination: row.destination || 'FOR_SALE',
+          technicalSpecs: row.technicalSpecs || null,
+          warranty: row.warranty || null,
+          maintenanceInterval: row.maintenanceInterval || null,
         };
       });
 
@@ -403,23 +422,22 @@ export function MedicalDeviceImportExport({ onImportSuccess, stockLocations }: M
       );
       
       const exportData = medicalDevices.map((device: any) => ({
+        'Code Appareil': device.deviceCode || '',
         'Nom': device.name,
         'Type': device.type,
         'Marque': device.brand || '',
         'Modèle': device.model || '',
         'Numéro de Série': device.serialNumber || '',
+        'Description': device.description || '',
         'Lieu de Stockage': device.stockLocation?.name || '',
         'Prix d\'Achat': device.purchasePrice || '',
         'Prix de Vente': device.sellingPrice || '',
         'Prix de Location': device.rentalPrice || '',
-        'Spécifications Techniques': device.technicalSpecs || '',
-        'Disponible Location': device.availableForRent ? 'true' : 'false',
-        'Nécessite Maintenance': device.requiresMaintenance ? 'true' : 'false',
         'Statut': device.status || '',
-        'Patient Assigné': device.patient?.firstName ? `${device.patient.firstName} ${device.patient.lastName}` : '',
-        'Réservé Jusqu\'au': device.reservedUntil ? new Date(device.reservedUntil).toLocaleDateString('fr-FR') : '',
-        'Date d\'Installation': device.installationDate ? new Date(device.installationDate).toLocaleDateString('fr-FR') : '',
-        'Localisation Physique': device.location || '',
+        'Destination': device.destination || '',
+        'Compteur (heures)': device.technicalSpecs || '',
+        'Garantie': device.warranty || '',
+        'Intervalle Maintenance': device.maintenanceInterval || '',
       }));
 
       const ws = XLSX.utils.json_to_sheet(exportData);
@@ -546,10 +564,10 @@ export function MedicalDeviceImportExport({ onImportSuccess, stockLocations }: M
                     <th className="border border-gray-300 p-2 text-left">Code</th>
                     <th className="border border-gray-300 p-2 text-left">Nom</th>
                     <th className="border border-gray-300 p-2 text-left">Marque</th>
-                    <th className="border border-gray-300 p-2 text-left">Modèle</th>
                     <th className="border border-gray-300 p-2 text-left">N° Série</th>
-                    <th className="border border-gray-300 p-2 text-left">Lieu</th>
-                    <th className="border border-gray-300 p-2 text-left">Prix Location</th>
+                    <th className="border border-gray-300 p-2 text-left">Description</th>
+                    <th className="border border-gray-300 p-2 text-left">Statut</th>
+                    <th className="border border-gray-300 p-2 text-left">Destination</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -558,10 +576,10 @@ export function MedicalDeviceImportExport({ onImportSuccess, stockLocations }: M
                       <td className="border border-gray-300 p-2">{row.deviceCode || '-'}</td>
                       <td className="border border-gray-300 p-2">{row.name}</td>
                       <td className="border border-gray-300 p-2">{row.brand}</td>
-                      <td className="border border-gray-300 p-2">{row.model}</td>
                       <td className="border border-gray-300 p-2">{row.serialNumber}</td>
-                      <td className="border border-gray-300 p-2">{row.stockLocationName}</td>
-                      <td className="border border-gray-300 p-2">{row.rentalPrice}</td>
+                      <td className="border border-gray-300 p-2">{row.description || '-'}</td>
+                      <td className="border border-gray-300 p-2">{row.status}</td>
+                      <td className="border border-gray-300 p-2">{row.destination}</td>
                     </tr>
                   ))}
                 </tbody>
