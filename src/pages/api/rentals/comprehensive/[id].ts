@@ -54,6 +54,7 @@ export default async function handler(
         configuration,
         createdById,
         assignedToId,
+        replacementReason, // Optional reason for device replacement
       } = req.body;
 
       // Validate required fields
@@ -61,9 +62,189 @@ export default async function handler(
         return res.status(400).json({ error: 'Missing required fields: patientId, medicalDeviceId' });
       }
 
-      // Use transaction to handle rental update and placeholder period
+      // Use transaction to handle rental update, device replacement, and stock management
       await prisma.$transaction(async (tx) => {
-        // Build update data
+        // Fetch current user's role and stock location
+        const currentUser = await tx.user.findUnique({
+          where: { id: session.user.id },
+          select: {
+            id: true,
+            role: true,
+            stockLocationId: true,
+            stockLocation: {
+              select: {
+                id: true,
+                name: true,
+              }
+            }
+          }
+        });
+
+        if (!currentUser) {
+          throw new Error('Current user not found');
+        }
+
+        // STEP 1: Fetch current rental with all details BEFORE update
+        const currentRental = await tx.rental.findUnique({
+          where: { id },
+          include: {
+            medicalDevice: {
+              include: {
+                stockLocation: true,
+              }
+            },
+            patient: true,
+            configuration: true,
+            assignedTo: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                stockLocation: true,
+              }
+            }
+          },
+        });
+
+        if (!currentRental) {
+          throw new Error('Rental not found');
+        }
+
+        const oldDeviceId = currentRental.medicalDeviceId;
+        const isDeviceReplacement = oldDeviceId !== medicalDeviceId;
+
+        // STEP 2: Handle device replacement if device is changing
+        if (isDeviceReplacement) {
+          console.log(`[DEVICE REPLACEMENT] Old: ${oldDeviceId}, New: ${medicalDeviceId}`);
+
+          // Fetch new device details
+          const newDevice = await tx.medicalDevice.findUnique({
+            where: { id: medicalDeviceId },
+            include: {
+              stockLocation: true,
+            }
+          });
+
+          if (!newDevice) {
+            throw new Error('New medical device not found');
+          }
+
+          // Calculate rental period with old device
+          const now = new Date();
+          const rentalStartDate = currentRental.startDate;
+          const daysWithOldDevice = Math.ceil((now.getTime() - rentalStartDate.getTime()) / (1000 * 60 * 60 * 24));
+
+          // Determine where to return the old device based on user role (calculate before history)
+          let returnToLocationId: string | undefined;
+          let returnToLocationName: string | undefined;
+
+          if (currentUser.role === 'EMPLOYEE') {
+            returnToLocationId = currentUser.stockLocationId || undefined;
+            returnToLocationName = currentUser.stockLocation?.name || undefined;
+          } else {
+            // For ADMIN: priority logic
+            if (currentRental.assignedTo?.stockLocation?.id) {
+              returnToLocationId = currentRental.assignedTo.stockLocation.id;
+              returnToLocationName = currentRental.assignedTo.stockLocation.name;
+            } else if (currentRental.medicalDevice.stockLocationId) {
+              returnToLocationId = currentRental.medicalDevice.stockLocationId;
+              returnToLocationName = currentRental.medicalDevice.stockLocation?.name;
+            } else {
+              returnToLocationId = currentUser.stockLocationId || undefined;
+              returnToLocationName = currentUser.stockLocation?.name || undefined;
+            }
+          }
+
+          // ISSUE #1 FIX: Create PatientHistory entry documenting the device replacement
+          await tx.patientHistory.create({
+            data: {
+              patientId: currentRental.patientId,
+              actionType: 'RENTAL',
+              performedById: session.user.id,
+              relatedItemId: currentRental.id,
+              relatedItemType: 'Rental',
+              details: {
+                action: 'DEVICE_REPLACEMENT',
+                rentalId: currentRental.id,
+                rentalCode: currentRental.rentalCode,
+                oldDevice: {
+                  id: currentRental.medicalDevice.id,
+                  name: currentRental.medicalDevice.name,
+                  deviceCode: currentRental.medicalDevice.deviceCode,
+                  serialNumber: currentRental.medicalDevice.serialNumber,
+                  brand: currentRental.medicalDevice.brand,
+                  model: currentRental.medicalDevice.model,
+                  type: currentRental.medicalDevice.type,
+                  stockLocationId: currentRental.medicalDevice.stockLocationId,
+                  stockLocationName: currentRental.medicalDevice.stockLocation?.name,
+                  returnedToLocationId: returnToLocationId,
+                  returnedToLocationName: returnToLocationName,
+                },
+                newDevice: {
+                  id: newDevice.id,
+                  name: newDevice.name,
+                  deviceCode: newDevice.deviceCode,
+                  serialNumber: newDevice.serialNumber,
+                  brand: newDevice.brand,
+                  model: newDevice.model,
+                  type: newDevice.type,
+                  stockLocationId: newDevice.stockLocationId,
+                  stockLocationName: newDevice.stockLocation?.name,
+                },
+                oldConfiguration: currentRental.configuration ? {
+                  rentalRate: currentRental.configuration.rentalRate,
+                  billingCycle: currentRental.configuration.billingCycle,
+                  isGlobalOpenEnded: currentRental.configuration.isGlobalOpenEnded,
+                  cnamEligible: currentRental.configuration.cnamEligible,
+                  deliveryNotes: currentRental.configuration.deliveryNotes,
+                  internalNotes: currentRental.configuration.internalNotes,
+                } : null,
+                rentalPeriodWithOldDevice: {
+                  startDate: rentalStartDate,
+                  replacementDate: now,
+                  daysUsed: daysWithOldDevice,
+                },
+                replacementReason: replacementReason || 'Non spécifié',
+                replacedAt: now,
+                replacedBy: {
+                  id: session.user.id,
+                  name: session.user.name,
+                  email: session.user.email,
+                  role: currentUser.role,
+                },
+              },
+            },
+          });
+
+          // ISSUE #2 & #5 FIX: Update old device - return to stock and mark as available
+          // returnToLocationId was already calculated above based on user role
+          console.log(`[DEVICE REPLACEMENT] Role: ${currentUser.role}, Returning device to location: ${returnToLocationId} (${returnToLocationName})`);
+
+          if (returnToLocationId) {
+            await tx.medicalDevice.update({
+              where: { id: oldDeviceId },
+              data: {
+                stockLocationId: returnToLocationId,
+                destination: 'FOR_RENT', // Mark as available for rent again
+                status: 'ACTIVE', // Mark as active and available
+              },
+            });
+
+            console.log(`[DEVICE REPLACEMENT] Old device ${oldDeviceId} returned to location ${returnToLocationId}`);
+          }
+
+          // ISSUE #5 FIX: Mark new device as RESERVED (unavailable for other rentals)
+          await tx.medicalDevice.update({
+            where: { id: medicalDeviceId },
+            data: {
+              status: 'RESERVED', // Mark as reserved/rented
+            },
+          });
+
+          console.log(`[DEVICE REPLACEMENT] New device ${medicalDeviceId} marked as RESERVED`);
+        }
+
+        // STEP 3: Build update data
         const updateData: any = {
           patient: {
             connect: { id: patientId },
@@ -88,13 +269,13 @@ export default async function handler(
           updateData.assignedTo = { disconnect: true };
         }
 
-        // Update rental using connect pattern
+        // STEP 4: Update rental using connect pattern
         const rental = await tx.rental.update({
           where: { id },
           data: updateData,
         });
 
-        // Update or create configuration
+        // STEP 5: Update or create configuration (ISSUE #3 FIX: Preserve configuration)
         if (configuration) {
           await tx.rentalConfiguration.upsert({
             where: { rentalId: id },

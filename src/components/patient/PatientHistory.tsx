@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { History, AlertCircle } from 'lucide-react';
-import { 
+import { History, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import {
   Table,
   TableBody,
   TableCell,
@@ -10,6 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 interface PatientHistoryProps {
   history: any[];
@@ -17,6 +18,18 @@ interface PatientHistoryProps {
 }
 
 export const PatientHistory = ({ history = [], isLoading = false }: PatientHistoryProps) => {
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+
+  const toggleRow = (index: number) => {
+    const newExpanded = new Set(expandedRows);
+    if (newExpanded.has(index)) {
+      newExpanded.delete(index);
+    } else {
+      newExpanded.add(index);
+    }
+    setExpandedRows(newExpanded);
+  };
+
   const getActionTypeColor = (actionType: string) => {
     switch (actionType) {
       case 'CREATE':
@@ -51,6 +64,134 @@ export const PatientHistory = ({ history = [], isLoading = false }: PatientHisto
     return actionLabels[actionType] || actionType;
   };
 
+  const renderDeviceReplacementDetails = (details: any) => {
+    if (!details || details.action !== 'DEVICE_REPLACEMENT') return null;
+
+    return (
+      <div className="bg-gray-50 p-4 rounded-lg space-y-4 text-sm">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Old Device */}
+          <div className="bg-white p-3 rounded border border-red-200">
+            <h4 className="font-semibold text-red-700 mb-2">Ancien Appareil</h4>
+            <div className="space-y-1 text-gray-700">
+              <p><span className="font-medium">Nom:</span> {details.oldDevice?.name}</p>
+              {details.oldDevice?.deviceCode && (
+                <p><span className="font-medium">Code:</span> {details.oldDevice.deviceCode}</p>
+              )}
+              {details.oldDevice?.serialNumber && (
+                <p><span className="font-medium">Numéro de série:</span> {details.oldDevice.serialNumber}</p>
+              )}
+              {details.oldDevice?.brand && (
+                <p><span className="font-medium">Marque:</span> {details.oldDevice.brand}</p>
+              )}
+              {details.oldDevice?.model && (
+                <p><span className="font-medium">Modèle:</span> {details.oldDevice.model}</p>
+              )}
+              {details.oldDevice?.stockLocationName && (
+                <p><span className="font-medium">Emplacement d'origine:</span> {details.oldDevice.stockLocationName}</p>
+              )}
+              {details.oldDevice?.returnedToLocationName && (
+                <p className="text-green-700 font-medium">
+                  <span className="font-semibold">→ Retourné à:</span> {details.oldDevice.returnedToLocationName}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* New Device */}
+          <div className="bg-white p-3 rounded border border-green-200">
+            <h4 className="font-semibold text-green-700 mb-2">Nouveau Appareil</h4>
+            <div className="space-y-1 text-gray-700">
+              <p><span className="font-medium">Nom:</span> {details.newDevice?.name}</p>
+              {details.newDevice?.deviceCode && (
+                <p><span className="font-medium">Code:</span> {details.newDevice.deviceCode}</p>
+              )}
+              {details.newDevice?.serialNumber && (
+                <p><span className="font-medium">Numéro de série:</span> {details.newDevice.serialNumber}</p>
+              )}
+              {details.newDevice?.brand && (
+                <p><span className="font-medium">Marque:</span> {details.newDevice.brand}</p>
+              )}
+              {details.newDevice?.model && (
+                <p><span className="font-medium">Modèle:</span> {details.newDevice.model}</p>
+              )}
+              {details.newDevice?.stockLocationName && (
+                <p><span className="font-medium">Emplacement:</span> {details.newDevice.stockLocationName}</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Rental Period with Old Device */}
+        {details.rentalPeriodWithOldDevice && (
+          <div className="bg-blue-50 p-3 rounded">
+            <h4 className="font-semibold text-blue-700 mb-2">Période avec l'ancien appareil</h4>
+            <div className="space-y-1 text-gray-700">
+              <p><span className="font-medium">Début:</span> {new Date(details.rentalPeriodWithOldDevice.startDate).toLocaleDateString('fr-FR')}</p>
+              <p><span className="font-medium">Remplacement:</span> {new Date(details.rentalPeriodWithOldDevice.replacementDate).toLocaleDateString('fr-FR')}</p>
+              <p><span className="font-medium">Durée:</span> {details.rentalPeriodWithOldDevice.daysUsed} jours</p>
+            </div>
+          </div>
+        )}
+
+        {/* Replacement Reason */}
+        {details.replacementReason && (
+          <div className="bg-yellow-50 p-3 rounded">
+            <h4 className="font-semibold text-yellow-700 mb-2">Raison du remplacement</h4>
+            <p className="text-gray-700">{details.replacementReason}</p>
+          </div>
+        )}
+
+        {/* Old Configuration */}
+        {details.oldConfiguration && (
+          <div className="bg-purple-50 p-3 rounded">
+            <h4 className="font-semibold text-purple-700 mb-2">Configuration précédente</h4>
+            <div className="space-y-1 text-gray-700">
+              {details.oldConfiguration.rentalRate && (
+                <p><span className="font-medium">Tarif:</span> {details.oldConfiguration.rentalRate} DT / {details.oldConfiguration.billingCycle}</p>
+              )}
+              {details.oldConfiguration.cnamEligible !== undefined && (
+                <p><span className="font-medium">Éligible CNAM:</span> {details.oldConfiguration.cnamEligible ? 'Oui' : 'Non'}</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Rental Code and User Info */}
+        <div className="text-xs text-gray-500 space-y-1">
+          {details.rentalCode && (
+            <p><span className="font-medium">Code de location:</span> {details.rentalCode}</p>
+          )}
+          {details.replacedBy?.role && (
+            <p><span className="font-medium">Rôle de l'utilisateur:</span> {details.replacedBy.role === 'EMPLOYEE' ? 'Employé' : 'Administrateur'}</p>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const getDescription = (item: any) => {
+    // Check if this is a device replacement
+    if (item.details?.action === 'DEVICE_REPLACEMENT') {
+      return 'Remplacement d\'appareil médical';
+    }
+
+    // Default descriptions
+    return item.details?.description || item.description || (
+      item.actionType === 'SALE' ? 'Vente créée' :
+      item.actionType === 'RENTAL' ? 'Location créée' :
+      item.actionType === 'DIAGNOSTIC' ? 'Diagnostic effectué' :
+      item.actionType === 'PAYMENT' ? 'Paiement reçu' :
+      item.actionType === 'UPDATE' ? 'Mise à jour des informations' :
+      item.actionType === 'CREATE' ? 'Patient créé' :
+      'Action effectuée'
+    );
+  };
+
+  const hasExpandableDetails = (item: any) => {
+    return item.details?.action === 'DEVICE_REPLACEMENT';
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -80,32 +221,49 @@ export const PatientHistory = ({ history = [], isLoading = false }: PatientHisto
               </TableHeader>
               <TableBody>
                 {history.map((item, index) => (
-                  <TableRow key={index}>
-                    <TableCell>
-                      {new Date(item.createdAt).toLocaleDateString('fr-FR', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getActionTypeColor(item.actionType)}>{getActionTypeLabel(item.actionType)}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      {item.details?.description || item.description || (
-                        item.actionType === 'SALE' ? 'Vente créée' :
-                        item.actionType === 'RENTAL' ? 'Location créée' :
-                        item.actionType === 'DIAGNOSTIC' ? 'Diagnostic effectué' :
-                        item.actionType === 'PAYMENT' ? 'Paiement reçu' :
-                        item.actionType === 'UPDATE' ? 'Mise à jour des informations' :
-                        item.actionType === 'CREATE' ? 'Patient créé' :
-                        'Action effectuée'
-                      )}
-                    </TableCell>
-                    <TableCell>{item.performedBy?.name || 'Système'}</TableCell>
-                  </TableRow>
+                  <React.Fragment key={index}>
+                    <TableRow className={hasExpandableDetails(item) ? 'cursor-pointer hover:bg-gray-50' : ''}>
+                      <TableCell>
+                        {new Date(item.createdAt).toLocaleDateString('fr-FR', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={getActionTypeColor(item.actionType)}>{getActionTypeLabel(item.actionType)}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center justify-between">
+                          <span>{getDescription(item)}</span>
+                          {hasExpandableDetails(item) && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => toggleRow(index)}
+                              className="ml-2"
+                            >
+                              {expandedRows.has(index) ? (
+                                <ChevronUp className="h-4 w-4" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4" />
+                              )}
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>{item.performedBy?.name || 'Système'}</TableCell>
+                    </TableRow>
+                    {expandedRows.has(index) && hasExpandableDetails(item) && (
+                      <TableRow>
+                        <TableCell colSpan={4} className="bg-gray-50">
+                          {renderDeviceReplacementDetails(item.details)}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </React.Fragment>
                 ))}
               </TableBody>
             </Table>

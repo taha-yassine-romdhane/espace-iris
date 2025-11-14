@@ -70,7 +70,7 @@ export default function CNAMBonsExcelTable() {
   const [clientSales, setClientSales] = useState<any[]>([]);
   const [newBon, setNewBon] = useState({
     saleId: '',
-    bonType: 'CPAP',
+    bonType: '',
     status: 'EN_ATTENTE_APPROBATION',
     cnamMonthlyRate: 0,
     deviceMonthlyRate: 0,
@@ -275,7 +275,7 @@ export default function CNAMBonsExcelTable() {
       setClientSales([]);
       setNewBon({
         saleId: '',
-        bonType: 'CPAP',
+        bonType: '',
         status: 'EN_ATTENTE_APPROBATION',
         cnamMonthlyRate: 0,
         deviceMonthlyRate: 0,
@@ -381,7 +381,7 @@ export default function CNAMBonsExcelTable() {
     setClientSales([]);
     setNewBon({
       saleId: '',
-      bonType: 'CPAP',
+      bonType: '',
       status: 'EN_ATTENTE_APPROBATION',
       cnamMonthlyRate: 0,
       deviceMonthlyRate: 0,
@@ -584,9 +584,9 @@ export default function CNAMBonsExcelTable() {
             <SelectItem value="REFUSE">Refusé</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={bonTypeFilter} onValueChange={setBonTypeFilter}>
+        <Select value={bonTypeFilter} onValueChange={setBonTypeFilter} defaultValue="all">
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filtrer par type" />
+            <SelectValue placeholder="Type de bon" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tous les types</SelectItem>
