@@ -452,7 +452,29 @@ export default function RenseignementPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to delete');
+        // Parse error response for more specific messages
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+
+        if (response.status === 404) {
+          toast({
+            title: "Patient introuvable",
+            description: "Ce patient n'existe pas ou a déjà été supprimé.",
+            variant: "destructive",
+          });
+          // Remove the stale entry from the UI
+          setRenseignements(prev => prev.filter(item => !ids.includes(item.id)));
+          return;
+        } else if (response.status === 400) {
+          // Patient has related records
+          toast({
+            title: "Suppression impossible",
+            description: errorData.error || "Ce patient a des enregistrements associés.",
+            variant: "destructive",
+          });
+          return;
+        } else {
+          throw new Error(errorData.error || 'Failed to delete');
+        }
       }
 
       // Remove the deleted item from the state
@@ -466,7 +488,7 @@ export default function RenseignementPage() {
       console.error('Error deleting:', error);
       toast({
         title: "Erreur",
-        description: "Une erreur s'est produite lors de la suppression.",
+        description: error instanceof Error ? error.message : "Une erreur s'est produite lors de la suppression.",
         variant: "destructive",
       });
     }

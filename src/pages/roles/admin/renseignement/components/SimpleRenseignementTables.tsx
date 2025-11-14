@@ -89,11 +89,14 @@ export default function SimpleRenseignementTables({
     setShowPatientDeletionDialog(true);
   };
 
-  const handleConfirmDelete = async () => {
+  const handleConfirmDelete = () => {
+    // PatientDeletionDialog already handles the deletion internally
+    // This callback is just for cleaning up UI state after deletion
     if (patientToDelete) {
-      await onDelete([patientToDelete.id]);
       setShowPatientDeletionDialog(false);
       setPatientToDelete(null);
+      // Reload the page to refresh the data
+      window.location.reload();
     }
   };
 

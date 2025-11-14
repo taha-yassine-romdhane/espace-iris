@@ -536,29 +536,35 @@ export default async function handler(
         if (error.code === 'P2002') {
           // Get the field(s) that caused the unique constraint violation
           const target = error.meta?.target as string[] || [];
-          
+
           if (target.includes('telephone')) {
-            return res.status(409).json({ 
-              error: 'Duplicate patient', 
+            return res.status(409).json({
+              error: 'Duplicate patient',
               field: 'telephonePrincipale',
-              message: 'Un patient avec ce numéro de téléphone existe déjà' 
+              message: 'Un patient avec ce numéro de téléphone existe déjà'
             });
           } else if (target.includes('cin') && data.cin) {
-            return res.status(409).json({ 
-              error: 'Duplicate patient', 
+            return res.status(409).json({
+              error: 'Duplicate patient',
               field: 'cin',
-              message: 'Un patient avec ce numéro de CIN existe déjà' 
+              message: 'Un patient avec ce numéro de CIN existe déjà'
             });
           } else {
-            return res.status(409).json({ 
-              error: 'Duplicate patient', 
+            return res.status(409).json({
+              error: 'Duplicate patient',
               field: target.join(', '),
-              message: 'Une valeur unique est déjà utilisée par un autre patient' 
+              message: 'Une valeur unique est déjà utilisée par un autre patient'
             });
           }
+        } else if (error.code === 'P2025') {
+          // Record not found
+          return res.status(404).json({
+            error: 'Patient not found',
+            message: 'Le patient que vous essayez de modifier n\'existe pas ou a été supprimé'
+          });
         }
       }
-      
+
       res.status(500).json({ error: 'Failed to update patient' });
     }
 
