@@ -371,7 +371,7 @@ export default function EmployeeSimpleRenseignementTables({
                             {patient.rentals.map((rental: any) => (
                               <a
                                 key={rental.id}
-                                href={`/roles/employee/rentals?rental=${rental.id}`}
+                                href={`/roles/employee/location?rental=${rental.id}`}
                                 className="inline-block"
                               >
                                 <Badge

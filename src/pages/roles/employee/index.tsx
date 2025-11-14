@@ -176,7 +176,7 @@ export default function EmployeeDashboard() {
             </button>
 
             <button
-              onClick={() => router.push('/roles/employee/rentals')}
+              onClick={() => router.push('/roles/employee/location')}
               className="flex flex-col items-center p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors group"
             >
               <div className="p-3 bg-green-700 text-white rounded-lg group-hover:scale-110 transition-transform">

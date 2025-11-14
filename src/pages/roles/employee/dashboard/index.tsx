@@ -5,7 +5,7 @@ import { useRouter } from "next/router";
 import EmployeeLayout from '../EmployeeLayout';
 import { TabSwitcher } from "./components/TabSwitcher";
 import { Card, CardContent } from "@/components/ui/card";
-import RentalStatistics from '../rentals/components/RentalStatistics';
+import RentalStatistics from '../location/components/RentalStatistics';
 
 // Import new Excel table components
 import AppointmentsExcelTable from "./components/tables/AppointmentsExcelTable";
@@ -58,7 +58,7 @@ function DashboardPage() {
 
           <Button
             className="w-full bg-green-700 hover:bg-green-600 text-white flex items-center justify-start gap-2"
-            onClick={() => router.push("/roles/employee/rentals")}
+            onClick={() => router.push("/roles/employee/location")}
           >
             <Building2 className="h-5 w-5" />
             <span>Gestion des Locations</span>

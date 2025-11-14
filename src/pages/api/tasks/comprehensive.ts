@@ -290,7 +290,7 @@ export default async function handler(
             deviceName: rental.medicalDevice.name,
             rentalId: rental.id
           },
-          actionUrl: session.user.role === 'ADMIN' ? `/roles/admin/rentals/${rental.id}` : `/roles/employee/rentals/${rental.id}`,
+          actionUrl: session.user.role === 'ADMIN' ? `/roles/admin/rentals/${rental.id}` : `/roles/employee/location/${rental.id}`,
           actionLabel: 'Voir la location',
           canComplete: true,
           createdAt: rental.createdAt,
@@ -363,7 +363,7 @@ export default async function handler(
             paymentId: payment.id,
             deviceName: payment.rental?.medicalDevice?.name
           },
-          actionUrl: payment.rentalId ? (session.user.role === 'ADMIN' ? `/roles/admin/rentals/${payment.rentalId}` : `/roles/employee/rentals/${payment.rentalId}`) : '#',
+          actionUrl: payment.rentalId ? (session.user.role === 'ADMIN' ? `/roles/admin/rentals/${payment.rentalId}` : `/roles/employee/location/${payment.rentalId}`) : '#',
           actionLabel: 'Voir le paiement',
           canComplete: true,
           createdAt: payment.createdAt,
@@ -519,7 +519,7 @@ export default async function handler(
             amount: Number(bond.bonAmount),
             deviceName: bond.rental?.medicalDevice?.name
           },
-          actionUrl: bond.rentalId ? (session.user.role === 'ADMIN' ? `/roles/admin/rentals/${bond.rentalId}` : `/roles/employee/rentals/${bond.rentalId}`) : '#',
+          actionUrl: bond.rentalId ? (session.user.role === 'ADMIN' ? `/roles/admin/rentals/${bond.rentalId}` : `/roles/employee/location/${bond.rentalId}`) : '#',
           actionLabel: 'Voir le dossier',
           canComplete: true,
           createdAt: bond.createdAt,
