@@ -115,6 +115,9 @@ export default function ArticleSelectionDialog({
     const searchLower = searchTerm.toLowerCase();
     return accessories.filter((a: any) =>
       a.name?.toLowerCase().includes(searchLower) ||
+      a.productCode?.toLowerCase().includes(searchLower) ||
+      a.brand?.toLowerCase().includes(searchLower) ||
+      a.model?.toLowerCase().includes(searchLower) ||
       a.serialNumber?.toLowerCase().includes(searchLower)
     );
   }, [accessories, searchTerm]);
@@ -125,6 +128,9 @@ export default function ArticleSelectionDialog({
     const searchLower = searchTerm.toLowerCase();
     return spareParts.filter((s: any) =>
       s.name?.toLowerCase().includes(searchLower) ||
+      s.productCode?.toLowerCase().includes(searchLower) ||
+      s.brand?.toLowerCase().includes(searchLower) ||
+      s.model?.toLowerCase().includes(searchLower) ||
       s.serialNumber?.toLowerCase().includes(searchLower)
     );
   }, [spareParts, searchTerm]);
@@ -222,7 +228,7 @@ export default function ArticleSelectionDialog({
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
-                placeholder="Rechercher par nom, code ou numéro de série..."
+                placeholder="Rechercher par nom, code, marque, modèle ou numéro de série..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -354,7 +360,9 @@ export default function ArticleSelectionDialog({
                           <div className="flex-1">
                             <div className="font-medium">{accessory.name}</div>
                             <div className="text-sm text-gray-500">
-                              Code: {accessory.productCode} {accessory.serialNumber ? `• N° Série: ${accessory.serialNumber}` : ''}
+                              Code: {accessory.productCode}
+                              {accessory.brand && ` • Marque: ${accessory.brand}`}
+                              {accessory.model && ` • Modèle: ${accessory.model}`}
                             </div>
                             {accessory.type && (
                               <Badge variant="outline" className="mt-1 text-xs bg-green-50 text-green-700 border-green-200">
@@ -411,7 +419,9 @@ export default function ArticleSelectionDialog({
                           <div className="flex-1">
                             <div className="font-medium">{sparePart.name}</div>
                             <div className="text-sm text-gray-500">
-                              Code: {sparePart.productCode} {sparePart.serialNumber ? `• N° Série: ${sparePart.serialNumber}` : ''}
+                              Code: {sparePart.productCode}
+                              {sparePart.brand && ` • Marque: ${sparePart.brand}`}
+                              {sparePart.model && ` • Modèle: ${sparePart.model}`}
                             </div>
                             {sparePart.type && (
                               <Badge variant="outline" className="mt-1 text-xs bg-orange-50 text-orange-700 border-orange-200">

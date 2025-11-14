@@ -70,6 +70,8 @@ interface SaleItem {
     name: string;
     productCode: string;
     type?: string;
+    brand?: string;
+    model?: string;
   };
   medicalDevice?: {
     id: string;
@@ -975,6 +977,7 @@ export default function ArticlesExcelTable() {
                 <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[180px]">Client</th>
                 <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[100px]">Type</th>
                 <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[200px]">Article</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[150px]">Marque/Modèle</th>
                 <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[120px]">N° Série</th>
                 <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[300px]">Description</th>
                 <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[200px]">Stock</th>
@@ -1082,6 +1085,11 @@ export default function ArticlesExcelTable() {
                         'Sélectionner Article'
                       )}
                     </Button>
+                  </td>
+
+                  {/* Brand/Model - New Row */}
+                  <td className="px-3 py-2.5 border-r border-slate-100">
+                    <div className="text-xs text-center text-gray-400">-</div>
                   </td>
 
                   {/* Serial Number */}
@@ -1248,7 +1256,7 @@ export default function ArticlesExcelTable() {
 
               {paginatedArticles.length === 0 && !isAddingNew ? (
                 <tr>
-                  <td colSpan={11} className="px-3 py-8 text-center text-slate-500">
+                  <td colSpan={14} className="px-3 py-8 text-center text-slate-500">
                     Aucun article trouvé
                   </td>
                 </tr>
@@ -1411,27 +1419,33 @@ export default function ArticlesExcelTable() {
 
                       {/* Type & Article - Editable */}
                       {editingId === article.id ? (
-                        <td colSpan={2} className="px-3 py-2.5 border-r border-slate-100">
-                          <Button
-                            variant="outline"
-                            className="h-8 w-full text-xs justify-start overflow-hidden"
-                            onClick={() => setArticleDialogOpen(true)}
-                          >
-                            <Package className="h-4 w-4 mr-2 shrink-0" />
-                            {selectedArticle ? (
-                              <div className="flex items-center gap-1.5 overflow-hidden">
-                                {selectedArticle.code && (
-                                  <Badge variant="outline" className="bg-slate-100 text-slate-700 border-slate-300 text-xs font-mono shrink-0">
-                                    {selectedArticle.code}
-                                  </Badge>
-                                )}
-                                <span className="truncate">{selectedArticle.name}</span>
-                              </div>
-                            ) : (
-                              'Changer Article'
-                            )}
-                          </Button>
-                        </td>
+                        <>
+                          <td colSpan={2} className="px-3 py-2.5 border-r border-slate-100">
+                            <Button
+                              variant="outline"
+                              className="h-8 w-full text-xs justify-start overflow-hidden"
+                              onClick={() => setArticleDialogOpen(true)}
+                            >
+                              <Package className="h-4 w-4 mr-2 shrink-0" />
+                              {selectedArticle ? (
+                                <div className="flex items-center gap-1.5 overflow-hidden">
+                                  {selectedArticle.code && (
+                                    <Badge variant="outline" className="bg-slate-100 text-slate-700 border-slate-300 text-xs font-mono shrink-0">
+                                      {selectedArticle.code}
+                                    </Badge>
+                                  )}
+                                  <span className="truncate">{selectedArticle.name}</span>
+                                </div>
+                              ) : (
+                                'Changer Article'
+                              )}
+                            </Button>
+                          </td>
+                          {/* Brand/Model - Edit mode */}
+                          <td className="px-3 py-2.5 border-r border-slate-100">
+                            <div className="text-xs text-center text-gray-400">-</div>
+                          </td>
+                        </>
                       ) : (
                         <>
                           {/* Type */}
@@ -1459,6 +1473,26 @@ export default function ArticlesExcelTable() {
                               )}
                               <span>{getArticleName()}</span>
                             </div>
+                          </td>
+
+                          {/* Brand/Model */}
+                          <td className="px-3 py-2.5 text-xs text-slate-600 border-r border-slate-100">
+                            {article.product?.brand || article.product?.model ? (
+                              <div className="flex flex-col gap-0.5">
+                                {article.product.brand && (
+                                  <div className="text-xs">
+                                    <span className="text-slate-500">Marque:</span> <span className="font-medium">{article.product.brand}</span>
+                                  </div>
+                                )}
+                                {article.product.model && (
+                                  <div className="text-xs">
+                                    <span className="text-slate-500">Modèle:</span> <span className="font-medium">{article.product.model}</span>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="text-center text-gray-400">-</div>
+                            )}
                           </td>
                         </>
                       )}

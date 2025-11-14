@@ -73,6 +73,8 @@ export default async function handler(
               name: true,
               productCode: true,
               type: true,
+              brand: true,
+              model: true,
             }
           },
           medicalDevice: {
