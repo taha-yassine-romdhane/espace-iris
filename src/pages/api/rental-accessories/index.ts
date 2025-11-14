@@ -35,6 +35,8 @@ export default async function handler(
               rentalCode: true,
               patient: {
                 select: {
+                  id: true,
+                  patientCode: true,
                   firstName: true,
                   lastName: true,
                 },
@@ -53,6 +55,14 @@ export default async function handler(
               name: true,
               brand: true,
               model: true,
+              productCode: true,
+              type: true,
+            },
+          },
+          stockLocation: {
+            select: {
+              id: true,
+              name: true,
             },
           },
         },
@@ -65,37 +75,97 @@ export default async function handler(
     }
 
     if (req.method === 'POST') {
-      const { rentalId, productId, quantity, unitPrice } = req.body;
+      const { rentalId, productId, stockLocationId, quantity, unitPrice } = req.body;
+
+      console.log('[RENTAL-ACCESSORY-CREATE] Request:', { rentalId, productId, stockLocationId, quantity, unitPrice });
 
       if (!rentalId || !productId || !quantity) {
-        return res.status(400).json({ error: 'Missing required fields' });
+        return res.status(400).json({ error: 'Missing required fields: rentalId, productId, quantity' });
       }
 
-      // Use upsert to update quantity if already exists
-      const accessory = await prisma.rentalAccessory.upsert({
-        where: {
-          rentalId_productId: {
+      if (!stockLocationId) {
+        return res.status(400).json({ error: 'Stock location is required (stockLocationId)' });
+      }
+
+      // Start a transaction to ensure data consistency
+      const result = await prisma.$transaction(async (tx) => {
+        // 1. Get the rental to fetch rentalCode
+        const rental = await tx.rental.findUnique({
+          where: { id: rentalId },
+          select: { rentalCode: true },
+        });
+
+        if (!rental) {
+          throw new Error('Rental not found');
+        }
+
+        // 2. Get the stock for this product at this location
+        const stock = await tx.stock.findUnique({
+          where: {
+            locationId_productId: {
+              locationId: stockLocationId,
+              productId,
+            },
+          },
+        });
+
+        if (!stock) {
+          throw new Error(`No stock found for this product at the selected location`);
+        }
+
+        if (stock.quantity < parseInt(quantity)) {
+          throw new Error(`Insufficient stock. Available: ${stock.quantity}, Requested: ${quantity}`);
+        }
+
+        // 3. Create the rental accessory
+        const accessory = await tx.rentalAccessory.create({
+          data: {
             rentalId,
             productId,
+            stockLocationId,
+            quantity: parseInt(quantity),
+            unitPrice: parseFloat(unitPrice) || 0,
           },
-        },
-        update: {
-          quantity: parseInt(quantity),
-          unitPrice: parseFloat(unitPrice) || 0,
-        },
-        create: {
-          rentalId,
-          productId,
-          quantity: parseInt(quantity),
-          unitPrice: parseFloat(unitPrice) || 0,
-        },
-        include: {
-          rental: true,
-          product: true,
-        },
+        });
+
+        // 4. Decrease stock quantity
+        await tx.stock.update({
+          where: {
+            id: stock.id,
+          },
+          data: {
+            quantity: {
+              decrement: parseInt(quantity),
+            },
+          },
+        });
+
+        // 5. Create stock movement record (sortie de stock)
+        await tx.stockMovement.create({
+          data: {
+            productId,
+            locationId: stockLocationId,
+            type: 'SORTIE',
+            quantity: parseInt(quantity),
+            notes: `Location ${rental.rentalCode} - Accessoire ajouté`,
+            createdById: session.user.id,
+          },
+        });
+
+        console.log('[RENTAL-ACCESSORY-CREATE] Success - Stock decreased and movement created');
+
+        // Return with full relations
+        return tx.rentalAccessory.findUnique({
+          where: { id: accessory.id },
+          include: {
+            rental: true,
+            product: true,
+            stockLocation: true,
+          },
+        });
       });
 
-      return res.status(201).json(accessory);
+      return res.status(201).json(result);
     }
 
     return res.status(405).json({ error: 'Method not allowed' });

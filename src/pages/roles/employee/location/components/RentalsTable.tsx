@@ -2,27 +2,16 @@ import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import {
   Plus,
-  Save,
   X,
   Check,
   Trash2,
   Edit2,
-  Search,
-  Filter,
   AlertTriangle,
   CheckCircle,
   Clock,
-  Shield,
-  User,
-  Building2,
-  Package,
-  FileText
 } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -32,12 +21,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 interface Rental {
   id?: string;
@@ -92,12 +75,6 @@ export default function RentalsTable() {
   const [newRow, setNewRow] = useState<Partial<Rental> | null>(null);
   const [editData, setEditData] = useState<Partial<Rental>>({});
 
-  // Search and Filter State
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [clientTypeFilter, setClientTypeFilter] = useState<string>("all");
-  const [cnamFilter, setCnamFilter] = useState<string>("all");
-
   // Fetch rentals
   const { data: rentalsData, isLoading } = useQuery({
     queryKey: ['rentals-simple'],
@@ -127,7 +104,7 @@ export default function RentalsTable() {
   const patients = patientsResponse || [];
 
   // Fetch companies for dropdown
-  const { data: companiesResponse } = useQuery({
+  const {  } = useQuery({
     queryKey: ['companies-for-rentals'],
     queryFn: async () => {
       const response = await fetch('/api/companies');
@@ -136,9 +113,6 @@ export default function RentalsTable() {
       return Array.isArray(data) ? data : (data.companies || []);
     },
   });
-
-  const companies = companiesResponse || [];
-
   // Fetch devices for dropdown
   const { data: devicesResponse } = useQuery({
     queryKey: ['devices'],
@@ -152,51 +126,7 @@ export default function RentalsTable() {
 
   const devices = devicesResponse || [];
 
-  // Filter rentals based on search and filters
-  const filteredRentals = (rentals || []).filter((rental: Rental) => {
-    // Search filter
-    if (searchTerm) {
-      const search = searchTerm.toLowerCase();
-      const clientName = rental.patient
-        ? `${rental.patient.firstName} ${rental.patient.lastName}`.toLowerCase()
-        : rental.company?.companyName?.toLowerCase() || '';
-      const deviceName = rental.medicalDevice?.name?.toLowerCase() || '';
-      const deviceCode = rental.medicalDevice?.deviceCode?.toLowerCase() || '';
-      const rentalCode = rental.rentalCode?.toLowerCase() || '';
-      const patientCode = rental.patient?.patientCode?.toLowerCase() || '';
-      const companyCode = rental.company?.companyCode?.toLowerCase() || '';
 
-      if (
-        !clientName.includes(search) &&
-        !deviceName.includes(search) &&
-        !deviceCode.includes(search) &&
-        !rentalCode.includes(search) &&
-        !patientCode.includes(search) &&
-        !companyCode.includes(search)
-      ) {
-        return false;
-      }
-    }
-
-    // Status filter
-    if (statusFilter !== 'all' && rental.status !== statusFilter) {
-      return false;
-    }
-
-    // Client type filter
-    if (clientTypeFilter !== 'all') {
-      if (clientTypeFilter === 'patient' && rental.clientType !== 'patient') return false;
-      if (clientTypeFilter === 'company' && rental.clientType !== 'company') return false;
-    }
-
-    // CNAM filter
-    if (cnamFilter !== 'all') {
-      if (cnamFilter === 'eligible' && !rental.cnamEligible) return false;
-      if (cnamFilter === 'not_eligible' && rental.cnamEligible) return false;
-    }
-
-    return true;
-  });
 
   // Create rental mutation
   const createMutation = useMutation({
@@ -331,7 +261,7 @@ export default function RentalsTable() {
         label: 'Suspendu'
       },
       COMPLETED: {
-        color: 'bg-blue-100 text-blue-800 border-blue-200',
+        color: 'bg-green-100 text-green-800 border-green-200',
         icon: CheckCircle,
         label: 'Terminé'
       },
@@ -355,13 +285,14 @@ export default function RentalsTable() {
 
   const renderCell = (
     value: any,
-    field: keyof Rental,
+    field: string,
     isEditing: boolean,
-    onChange: (field: keyof Rental, value: any) => void
+    onChange: (field: string, value: any) => void
   ) => {
     if (!isEditing) {
       if (field === 'patient') return `${value?.firstName} ${value?.lastName}`;
-      if (field === 'medicalDevice') return `${value?.deviceCode} - ${value?.name}`;
+      if (field === 'device') return `${value?.deviceCode} - ${value?.name}`;
+      if (field === 'monthlyRate') return `${value} DT`;
       if (field === 'startDate' || field === 'endDate') {
         return value ? new Date(value).toLocaleDateString('fr-FR') : '-';
       }
@@ -372,7 +303,7 @@ export default function RentalsTable() {
       case 'patientId':
         return (
           <Select value={value || ''} onValueChange={(v) => onChange(field, v)}>
-            <SelectTrigger className="h-8 border-blue-300 focus:ring-blue-500">
+            <SelectTrigger className="h-8 border-blue-300 focus:ring-green-500">
               <SelectValue placeholder="Sélectionner" />
             </SelectTrigger>
             <SelectContent>
@@ -387,7 +318,7 @@ export default function RentalsTable() {
       case 'medicalDeviceId':
         return (
           <Select value={value || ''} onValueChange={(v) => onChange(field, v)}>
-            <SelectTrigger className="h-8 border-blue-300 focus:ring-blue-500">
+            <SelectTrigger className="h-8 border-blue-300 focus:ring-green-500">
               <SelectValue placeholder="Sélectionner" />
             </SelectTrigger>
             <SelectContent>
@@ -402,7 +333,7 @@ export default function RentalsTable() {
       case 'status':
         return (
           <Select value={value || 'ACTIVE'} onValueChange={(v) => onChange(field, v)}>
-            <SelectTrigger className="h-8 border-blue-300 focus:ring-blue-500">
+            <SelectTrigger className="h-8 border-blue-300 focus:ring-green-500">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -412,6 +343,15 @@ export default function RentalsTable() {
             </SelectContent>
           </Select>
         );
+      case 'monthlyRate':
+        return (
+          <Input
+            type="number"
+            value={value || 0}
+            onChange={(e) => onChange(field, parseFloat(e.target.value))}
+            className="h-8 border-blue-300 focus:ring-green-500"
+          />
+        );
       case 'startDate':
       case 'endDate':
         return (
@@ -419,7 +359,7 @@ export default function RentalsTable() {
             type="date"
             value={value || ''}
             onChange={(e) => onChange(field, e.target.value)}
-            className="h-8 border-blue-300 focus:ring-blue-500"
+            className="h-8 border-blue-300 focus:ring-green-500"
           />
         );
       default:
@@ -427,7 +367,7 @@ export default function RentalsTable() {
           <Input
             value={value || ''}
             onChange={(e) => onChange(field, e.target.value)}
-            className="h-8 border-blue-300 focus:ring-blue-500"
+            className="h-8 border-blue-300 focus:ring-green-500"
           />
         );
     }
@@ -482,6 +422,9 @@ export default function RentalsTable() {
                     )}
                   </td>
                   <td className="px-4 py-2">
+                    <span className="text-xs text-muted-foreground">N/A</span>
+                  </td>
+                  <td className="px-4 py-2">
                     {renderCell(newRow.status, 'status', true, (field, value) =>
                       setNewRow({ ...newRow, [field]: value })
                     )}
@@ -507,7 +450,7 @@ export default function RentalsTable() {
                 return (
                   <tr
                     key={rental.id}
-                    className={`border-b hover:bg-gray-50 ${isEditing ? 'bg-blue-50' : ''}`}
+                    className={`border-b hover:bg-gray-50 ${isEditing ? 'bg-green-50' : ''}`}
                   >
                     <td className="px-4 py-2">
                       {renderCell(isEditing ? currentData.patientId : rental.patient, isEditing ? 'patientId' : 'patient', isEditing, (field, value) =>
@@ -515,7 +458,7 @@ export default function RentalsTable() {
                       )}
                     </td>
                     <td className="px-4 py-2">
-                      {renderCell(isEditing ? currentData.medicalDeviceId : rental.medicalDevice, isEditing ? 'medicalDeviceId' : 'medicalDevice', isEditing, (field, value) =>
+                      {renderCell(isEditing ? currentData.medicalDeviceId : rental.medicalDevice, isEditing ? 'medicalDeviceId' : 'device', isEditing, (field, value) =>
                         setEditData({ ...editData, [field]: value })
                       )}
                     </td>
@@ -530,6 +473,13 @@ export default function RentalsTable() {
                       )}
                     </td>
                     <td className="px-4 py-2">
+                      {isEditing ? (
+                        <span className="text-xs text-muted-foreground">N/A</span>
+                      ) : (
+                        renderCell((rental as any).configuration?.rentalRate, 'monthlyRate', false, () => {})
+                      )}
+                    </td>
+                    <td className="px-4 py-2">
                       {renderCell(currentData.status, 'status', isEditing, (field, value) =>
                         setEditData({ ...editData, [field]: value })
                       )}
@@ -537,7 +487,7 @@ export default function RentalsTable() {
                     <td className="px-4 py-2">
                       {isEditing ? (
                         <div className="flex gap-2 justify-center">
-                          <Button size="sm" onClick={handleSaveEdit} className="bg-blue-600 hover:bg-blue-700 h-7 px-2">
+                          <Button size="sm" onClick={handleSaveEdit} className="bg-green-600 hover:bg-green-700 h-7 px-2">
                             <Check className="h-3.5 w-3.5" />
                           </Button>
                           <Button size="sm" variant="destructive" onClick={() => {setEditingId(null); setEditData({});}} className="h-7 px-2">

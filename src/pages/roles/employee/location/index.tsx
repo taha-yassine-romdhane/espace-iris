@@ -7,15 +7,19 @@ import {
   Package,
   Shield,
   BarChart3,
+  Stethoscope,
+  Calendar,
 } from "lucide-react";
-import EmployeeLayout from '../EmployeeLayout';
 import ComprehensiveRentalsTable from './components/ComprehensiveRentalsTable';
 import PaymentsTable from './components/PaymentsTable';
 import RentalAccessoriesTable from './components/RentalAccessoriesTable';
 import CNAMBondsTable from './components/CNAMBondsTable';
 import RentalStatistics from './components/RentalStatistics';
+import RentalDevicesTable from './components/RentalDevicesTable';
+import { RentalWorkflowGuideDialog } from '@/components/dialogs/RentalWorkflowGuideDialog';
+import EmployeeLayout from '../EmployeeLayout';
 
-export default function LocationPage() {
+function LocationPage() {
   const [activeTab, setActiveTab] = useState("rentals");
 
   return (
@@ -26,24 +30,32 @@ export default function LocationPage() {
           <div>
             <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
               <KeyRound className="h-8 w-8 text-green-600" />
-              Gestion des Locations
+              Mes Locations
             </h1>
             <p className="text-slate-600 mt-1">
               Système de gestion complet des locations et paiements
             </p>
           </div>
+          <RentalWorkflowGuideDialog />
         </div>
 
         {/* Main Tabs */}
         <Card className="shadow-lg">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-5 bg-gray-100 p-1 rounded-t-lg">
+            <TabsList className="grid w-full grid-cols-6 bg-slate-100 p-1 rounded-t-lg">
               <TabsTrigger
                 value="rentals"
                 className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm"
               >
                 <KeyRound className="h-4 w-4" />
                 <span className="hidden sm:inline">Locations</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="devices"
+                className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm"
+              >
+                <Stethoscope className="h-4 w-4" />
+                <span className="hidden sm:inline">Articles</span>
               </TabsTrigger>
               <TabsTrigger
                 value="cnam"
@@ -79,6 +91,10 @@ export default function LocationPage() {
               <ComprehensiveRentalsTable />
             </TabsContent>
 
+            <TabsContent value="devices" className="p-6">
+              <RentalDevicesTable />
+            </TabsContent>
+
             <TabsContent value="cnam" className="p-6">
               <CNAMBondsTable showGlobalView={true} />
             </TabsContent>
@@ -104,3 +120,5 @@ export default function LocationPage() {
 LocationPage.getLayout = function getLayout(page: React.ReactElement) {
   return <EmployeeLayout>{page}</EmployeeLayout>;
 };
+
+export default LocationPage;

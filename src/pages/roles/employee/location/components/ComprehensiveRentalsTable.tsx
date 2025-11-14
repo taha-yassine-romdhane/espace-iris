@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSession } from 'next-auth/react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,6 +19,8 @@ import {
   Clock,
   Shield,
   User,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -37,8 +41,9 @@ import {
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { PatientSelectorDialog, PatientDisplay } from "@/components/forms/components/PatientSelectorDialog";
-import { MedicalDeviceSelectorDialog, DeviceDisplay } from "@/components/forms/components/MedicalDeviceSelectorDialog";
+import { PatientSelectorDialog } from "@/components/dialogs/PatientSelectorDialog";
+import { MedicalDeviceSelectorDialog } from "@/components/dialogs/MedicalDeviceSelectorDialog";
+import { EmployeeSelectorDialog } from "@/components/dialogs/EmployeeSelectorDialog";
 
 interface Rental {
   id?: string;
@@ -50,7 +55,7 @@ interface Rental {
   status: string;
   createdById?: string;
   assignedToId?: string;
-  patient?: { id: string; firstName: string; lastName: string; cnamId?: string; telephone?: string };
+  patient?: { id: string; firstName: string; lastName: string; patientCode?: string; cnamId?: string; telephone?: string };
   medicalDevice?: { id: string; name: string; deviceCode: string; rentalPrice: number };
   createdBy?: { id: string; firstName: string; lastName: string };
   assignedTo?: { id: string; firstName: string; lastName: string };
@@ -67,6 +72,7 @@ interface Rental {
 export default function ComprehensiveRentalsTable() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { data: session } = useSession();
 
   // State
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -77,8 +83,16 @@ export default function ComprehensiveRentalsTable() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [cnamFilter, setCnamFilter] = useState<string>("all");
+  const [deviceFilter, setDeviceFilter] = useState<string>("all");
+  const [createdByFilter, setCreatedByFilter] = useState<string>("all");
+  const [assignedToFilter, setAssignedToFilter] = useState<string>("all");
+  const [dateRangeFilter, setDateRangeFilter] = useState<string>("all");
   const [sortField, setSortField] = useState<string>("startDate");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(50);
 
   // Fetch rentals with complete data
   const { data: rentalsData, isLoading } = useQuery({
@@ -91,33 +105,35 @@ export default function ComprehensiveRentalsTable() {
     },
   });
 
-  // Fetch patients - only assigned to current employee
+  // Fetch patients
   const { data: patientsData } = useQuery({
-    queryKey: ['patients-for-rentals-employee'],
+    queryKey: ['patients-for-rentals'],
     queryFn: async () => {
-      const response = await fetch('/api/renseignements/patients?assignedToMe=true');
+      const response = await fetch('/api/renseignements/patients');
       const data = await response.json();
       return data.patients || [];
     },
   });
 
-  // Fetch devices
+  // Fetch medical devices
   const { data: devicesData } = useQuery({
-    queryKey: ['devices-for-rentals'],
+    queryKey: ['medical-devices-for-rentals'],
     queryFn: async () => {
       const response = await fetch('/api/medical-devices');
+      if (!response.ok) throw new Error('Failed to fetch devices');
       const data = await response.json();
-      return Array.isArray(data) ? data : (data.devices || []);
+      return data.devices || data || [];
     },
   });
 
-  // Fetch users
+  // Fetch users (employees)
   const { data: usersData } = useQuery({
     queryKey: ['users-for-rentals'],
     queryFn: async () => {
       const response = await fetch('/api/users');
       if (!response.ok) throw new Error('Failed to fetch users');
-      return response.json();
+      const data = await response.json();
+      return data.users || data || [];
     },
   });
 
@@ -125,6 +141,32 @@ export default function ComprehensiveRentalsTable() {
   const patients = patientsData || [];
   const devices = devicesData || [];
   const users = usersData || [];
+
+  // Extract unique devices from rental data (by device name)
+  const uniqueDevices = Array.from(
+    new Map(
+      rentals
+        .filter((r: Rental) => r.medicalDevice?.name)
+        .map((r: Rental) => [r.medicalDevice!.name, r.medicalDevice!.name])
+    ).values()
+  ).sort();
+
+  // Extract unique users from rental data (createdBy and assignedTo)
+  const uniqueCreatedByUsers = Array.from(
+    new Map(
+      rentals
+        .filter((r: Rental) => r.createdBy)
+        .map((r: Rental) => [r.createdBy!.id, r.createdBy])
+    ).values()
+  );
+
+  const uniqueAssignedToUsers = Array.from(
+    new Map(
+      rentals
+        .filter((r: Rental) => r.assignedTo)
+        .map((r: Rental) => [r.assignedTo!.id, r.assignedTo])
+    ).values()
+  );
 
   // Filter and sort rentals
   const filteredRentals = rentals
@@ -137,8 +179,10 @@ export default function ComprehensiveRentalsTable() {
           : '';
         const deviceName = rental.medicalDevice?.name?.toLowerCase() || '';
         const rentalCode = rental.rentalCode?.toLowerCase() || '';
+        const deviceCode = rental.medicalDevice?.deviceCode || ''; // Case-sensitive
+        const patientCode = rental.patient?.patientCode || ''; // Case-sensitive
 
-        if (!patientName.includes(search) && !deviceName.includes(search) && !rentalCode.includes(search)) {
+        if (!patientName.includes(search) && !deviceName.includes(search) && !rentalCode.includes(search) && !deviceCode.includes(searchTerm) && !patientCode.includes(searchTerm)) {
           return false;
         }
       }
@@ -154,12 +198,53 @@ export default function ComprehensiveRentalsTable() {
         if (cnamFilter === 'not_eligible' && rental.configuration?.cnamEligible) return false;
       }
 
+      // Device filter (by device name)
+      if (deviceFilter !== 'all' && rental.medicalDevice?.name !== deviceFilter) {
+        return false;
+      }
+
+      // Created by filter
+      if (createdByFilter !== 'all' && rental.createdById !== createdByFilter) {
+        return false;
+      }
+
+      // Assigned to filter
+      if (assignedToFilter !== 'all' && rental.assignedToId !== assignedToFilter) {
+        return false;
+      }
+
+      // Date range filter
+      if (dateRangeFilter !== 'all') {
+        const now = new Date();
+        const startDate = new Date(rental.startDate);
+
+        switch (dateRangeFilter) {
+          case 'today':
+            if (startDate.toDateString() !== now.toDateString()) return false;
+            break;
+          case 'this_week':
+            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            if (startDate < weekAgo) return false;
+            break;
+          case 'this_month':
+            if (startDate.getMonth() !== now.getMonth() || startDate.getFullYear() !== now.getFullYear()) return false;
+            break;
+          case 'this_year':
+            if (startDate.getFullYear() !== now.getFullYear()) return false;
+            break;
+        }
+      }
+
       return true;
     })
     .sort((a: Rental, b: Rental) => {
       let aValue: any, bValue: any;
 
       switch (sortField) {
+        case 'rentalCode':
+          aValue = a.rentalCode || '';
+          bValue = b.rentalCode || '';
+          break;
         case 'client':
           aValue = a.patient ? `${a.patient.firstName} ${a.patient.lastName}` : '';
           bValue = b.patient ? `${b.patient.firstName} ${b.patient.lastName}` : '';
@@ -171,6 +256,10 @@ export default function ComprehensiveRentalsTable() {
         case 'status':
           aValue = a.status;
           bValue = b.status;
+          break;
+        case 'device':
+          aValue = a.medicalDevice?.name || '';
+          bValue = b.medicalDevice?.name || '';
           break;
         default:
           aValue = a.id;
@@ -184,6 +273,18 @@ export default function ComprehensiveRentalsTable() {
       }
       return sortOrder === 'asc' ? aValue - bValue : bValue - aValue;
     });
+
+  // Pagination calculations
+  const totalItems = filteredRentals.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedRentals = filteredRentals.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, cnamFilter, deviceFilter, createdByFilter, assignedToFilter, dateRangeFilter]);
 
   // Mutations
   const createMutation = useMutation({
@@ -302,7 +403,7 @@ export default function ComprehensiveRentalsTable() {
       ACTIVE: { color: 'bg-green-100 text-green-800 border-green-200', icon: CheckCircle, label: 'Actif' },
       PENDING: { color: 'bg-yellow-100 text-yellow-800 border-yellow-200', icon: Clock, label: 'En attente' },
       PAUSED: { color: 'bg-orange-100 text-orange-800 border-orange-200', icon: Clock, label: 'Suspendu' },
-      COMPLETED: { color: 'bg-blue-100 text-blue-800 border-blue-200', icon: CheckCircle, label: 'Terminé' },
+      COMPLETED: { color: 'bg-green-100 text-green-800 border-green-200', icon: CheckCircle, label: 'Terminé' },
       CANCELLED: { color: 'bg-red-100 text-red-800 border-red-200', icon: X, label: 'Annulé' },
     };
 
@@ -320,7 +421,7 @@ export default function ComprehensiveRentalsTable() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
       </div>
     );
   }
@@ -328,22 +429,28 @@ export default function ComprehensiveRentalsTable() {
   return (
     <div className="space-y-4">
       {/* Toolbar */}
-      <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between bg-white p-4 rounded-lg shadow-sm border">
-        {/* Search */}
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <Input
-            placeholder="Rechercher par client, appareil, code..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+      <div className="flex flex-col gap-4 bg-white p-4 rounded-lg shadow-sm border">
+        {/* Search and Action Button */}
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Input
+              placeholder="Rechercher par client, appareil, code..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <Button onClick={handleAddNew} className="bg-green-600 hover:bg-green-700 whitespace-nowrap">
+            <Plus className="h-4 w-4 mr-2" />
+            Nouvelle Location
+          </Button>
         </div>
 
         {/* Filters */}
-        <div className="flex gap-2 flex-wrap">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[150px]">
+            <SelectTrigger className="w-full">
               <SelectValue placeholder="Statut" />
             </SelectTrigger>
             <SelectContent>
@@ -357,7 +464,7 @@ export default function ComprehensiveRentalsTable() {
           </Select>
 
           <Select value={cnamFilter} onValueChange={setCnamFilter}>
-            <SelectTrigger className="w-[150px]">
+            <SelectTrigger className="w-full">
               <SelectValue placeholder="CNAM" />
             </SelectTrigger>
             <SelectContent>
@@ -367,16 +474,207 @@ export default function ComprehensiveRentalsTable() {
             </SelectContent>
           </Select>
 
-          <Button onClick={handleAddNew} className="bg-blue-600 hover:bg-blue-700">
-            <Plus className="h-4 w-4 mr-2" />
-            Nouvelle Location
+          <Select value={deviceFilter} onValueChange={setDeviceFilter}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Appareil" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous les appareils</SelectItem>
+              {uniqueDevices.map((deviceName) => (
+                <SelectItem key={deviceName as string} value={deviceName as string}>
+                  {deviceName as string}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={createdByFilter} onValueChange={setCreatedByFilter}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Créé par" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous</SelectItem>
+              {uniqueCreatedByUsers.map((user: any) => (
+                <SelectItem key={user.id} value={user.id}>
+                  {user.firstName} {user.lastName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={assignedToFilter} onValueChange={setAssignedToFilter}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Assigné à" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous</SelectItem>
+              {uniqueAssignedToUsers.map((user: any) => (
+                <SelectItem key={user.id} value={user.id}>
+                  {user.firstName} {user.lastName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={dateRangeFilter} onValueChange={setDateRangeFilter}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Période" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Toutes les périodes</SelectItem>
+              <SelectItem value="today">Aujourd'hui</SelectItem>
+              <SelectItem value="this_week">Cette semaine</SelectItem>
+              <SelectItem value="this_month">Ce mois</SelectItem>
+              <SelectItem value="this_year">Cette année</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Button
+            onClick={() => {
+              setStatusFilter("all");
+              setCnamFilter("all");
+              setDeviceFilter("all");
+              setCreatedByFilter("all");
+              setAssignedToFilter("all");
+              setDateRangeFilter("all");
+              setSearchTerm("");
+            }}
+            variant="outline"
+            className="w-full"
+          >
+            <Filter className="h-4 w-4 mr-2" />
+            Réinitialiser
           </Button>
         </div>
       </div>
 
-      {/* Results count */}
-      <div className="text-sm text-slate-600">
-        {filteredRentals.length} location(s) trouvée(s)
+      {/* Pagination Controls - Top */}
+      <div className="flex items-center justify-between px-4 py-3 bg-white border border-slate-200 rounded-lg shadow-sm">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-slate-600">
+            Affichage de {startIndex + 1} à {Math.min(endIndex, totalItems)} sur {totalItems} résultats
+          </span>
+        </div>
+
+        <div className="flex items-center gap-4">
+          {/* Items per page selector */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-slate-600">Par page:</span>
+            <Select
+              value={itemsPerPage.toString()}
+              onValueChange={(value) => {
+                setItemsPerPage(Number(value));
+                setCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="w-[100px] h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+                <SelectItem value="200">200</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Page navigation */}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+              className="h-9 w-9 p-0"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+
+            <div className="flex items-center gap-1">
+              {totalPages <= 5 ? (
+                // Show all pages if 5 or less
+                Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(page)}
+                    className="h-9 w-9 p-0"
+                  >
+                    {page}
+                  </Button>
+                ))
+              ) : (
+                // Show smart pagination for many pages
+                <>
+                  <Button
+                    variant={currentPage === 1 ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(1)}
+                    className="h-9 w-9 p-0"
+                  >
+                    1
+                  </Button>
+
+                  {currentPage > 3 && <span className="px-2">...</span>}
+
+                  {currentPage > 2 && currentPage < totalPages - 1 && (
+                    <>
+                      {currentPage > 3 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(currentPage - 1)}
+                          className="h-9 w-9 p-0"
+                        >
+                          {currentPage - 1}
+                        </Button>
+                      )}
+                      <Button
+                        variant="default"
+                        size="sm"
+                        className="h-9 w-9 p-0"
+                      >
+                        {currentPage}
+                      </Button>
+                      {currentPage < totalPages - 2 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(currentPage + 1)}
+                          className="h-9 w-9 p-0"
+                        >
+                          {currentPage + 1}
+                        </Button>
+                      )}
+                    </>
+                  )}
+
+                  {currentPage < totalPages - 2 && <span className="px-2">...</span>}
+
+                  <Button
+                    variant={currentPage === totalPages ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(totalPages)}
+                    className="h-9 w-9 p-0"
+                  >
+                    {totalPages}
+                  </Button>
+                </>
+              )}
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+              className="h-9 w-9 p-0"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Table */}
@@ -387,7 +685,7 @@ export default function ComprehensiveRentalsTable() {
               <th className="px-4 py-3 text-left">
                 <button
                   onClick={() => handleSort('rentalCode')}
-                  className="flex items-center gap-1 text-xs font-semibold text-slate-700 hover:text-blue-600"
+                  className="flex items-center gap-1 text-xs font-semibold text-slate-700 hover:text-green-600"
                 >
                   Code
                   {sortField === 'rentalCode' && (
@@ -398,7 +696,7 @@ export default function ComprehensiveRentalsTable() {
               <th className="px-4 py-3 text-left">
                 <button
                   onClick={() => handleSort('client')}
-                  className="flex items-center gap-1 text-xs font-semibold text-slate-700 hover:text-blue-600"
+                  className="flex items-center gap-1 text-xs font-semibold text-slate-700 hover:text-green-600"
                 >
                   Client
                   {sortField === 'client' && (
@@ -406,11 +704,21 @@ export default function ComprehensiveRentalsTable() {
                   )}
                 </button>
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700">Appareil</th>
+              <th className="px-4 py-3 text-left">
+                <button
+                  onClick={() => handleSort('device')}
+                  className="flex items-center gap-1 text-xs font-semibold text-slate-700 hover:text-green-600"
+                >
+                  Appareil
+                  {sortField === 'device' && (
+                    sortOrder === 'asc' ? <SortAsc className="h-3 w-3" /> : <SortDesc className="h-3 w-3" />
+                  )}
+                </button>
+              </th>
               <th className="px-4 py-3 text-left">
                 <button
                   onClick={() => handleSort('startDate')}
-                  className="flex items-center gap-1 text-xs font-semibold text-slate-700 hover:text-blue-600"
+                  className="flex items-center gap-1 text-xs font-semibold text-slate-700 hover:text-green-600"
                 >
                   Dates
                   {sortField === 'startDate' && (
@@ -421,7 +729,7 @@ export default function ComprehensiveRentalsTable() {
               <th className="px-4 py-3 text-left">
                 <button
                   onClick={() => handleSort('status')}
-                  className="flex items-center gap-1 text-xs font-semibold text-slate-700 hover:text-blue-600"
+                  className="flex items-center gap-1 text-xs font-semibold text-slate-700 hover:text-green-600"
                 >
                   Statut
                   {sortField === 'status' && (
@@ -451,7 +759,7 @@ export default function ComprehensiveRentalsTable() {
             )}
 
             {/* Existing Rows */}
-            {filteredRentals.map((rental: Rental) => (
+            {paginatedRentals.map((rental: Rental) => (
               editingId === rental.id ? (
                 <EditRowComponent
                   key={rental.id}
@@ -493,6 +801,7 @@ export default function ComprehensiveRentalsTable() {
 
 // View Row Component
 function ViewRowComponent({ rental, onEdit, onDelete, getStatusBadge }: any) {
+  const router = useRouter();
   const patientName = rental.patient
     ? `${rental.patient.firstName} ${rental.patient.lastName}`
     : 'N/A';
@@ -500,13 +809,28 @@ function ViewRowComponent({ rental, onEdit, onDelete, getStatusBadge }: any) {
   return (
     <tr className="border-b hover:bg-slate-50 transition-colors">
       <td className="px-4 py-3">
-        <div className="text-sm font-medium text-slate-900">{rental.rentalCode || 'N/A'}</div>
+        <Badge variant="outline" className="text-xs font-mono bg-indigo-50 text-indigo-700 border-indigo-200">
+          {rental.rentalCode || 'N/A'}
+        </Badge>
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
           <User className="h-4 w-4 text-slate-400" />
           <div>
-            <div className="text-sm font-medium text-slate-900">{patientName}</div>
+            <div
+              className="text-sm font-medium text-green-600 hover:text-green-800 hover:underline cursor-pointer transition-colors"
+              onClick={() => router.push(`/roles/admin/renseignement/patient/${rental.patient.id}`)}
+            >
+              {patientName}
+            </div>
+            {rental.patient?.patientCode && (
+              <div
+                className="text-xs text-slate-500 font-mono cursor-pointer hover:text-green-600 transition-colors"
+                onClick={() => router.push(`/roles/admin/renseignement/patient/${rental.patient.id}`)}
+              >
+                {rental.patient.patientCode}
+              </div>
+            )}
             {rental.patient?.cnamId && (
               <Badge variant="outline" className="text-xs mt-1">
                 <Shield className="h-3 w-3 mr-1" />
@@ -517,14 +841,26 @@ function ViewRowComponent({ rental, onEdit, onDelete, getStatusBadge }: any) {
         </div>
       </td>
       <td className="px-4 py-3">
-        <div className="text-sm font-medium text-slate-900">{rental.medicalDevice?.name || 'N/A'}</div>
-        <div className="text-xs text-slate-500">{rental.medicalDevice?.deviceCode || ''}</div>
+        <div
+          className="text-sm font-medium text-green-600 hover:text-green-800 hover:underline cursor-pointer transition-colors"
+          onClick={() => router.push(`/roles/admin/appareils/medical-device/${rental.medicalDevice?.id}`)}
+        >
+          {rental.medicalDevice?.name || 'N/A'}
+        </div>
+        <div
+          className="text-xs text-slate-500 font-mono cursor-pointer hover:text-green-600 transition-colors"
+          onClick={() => router.push(`/roles/admin/appareils/medical-device/${rental.medicalDevice?.id}`)}
+        >
+          {rental.medicalDevice?.deviceCode || ''}
+        </div>
       </td>
       <td className="px-4 py-3">
         <div className="text-xs text-slate-700">
           <div>Début: {format(new Date(rental.startDate), 'dd/MM/yyyy', { locale: fr })}</div>
           <div className="text-slate-500">
-            Fin: {rental.endDate ? format(new Date(rental.endDate), 'dd/MM/yyyy', { locale: fr }) : 'Ouvert'}
+            Fin: {rental.endDate ? (
+              new Date(rental.endDate).getFullYear() >= 2099 ? 'Ouvert' : format(new Date(rental.endDate), 'dd/MM/yyyy', { locale: fr })
+            ) : 'Ouvert'}
           </div>
         </div>
       </td>
@@ -546,7 +882,7 @@ function ViewRowComponent({ rental, onEdit, onDelete, getStatusBadge }: any) {
       <td className="px-4 py-3">
         <div className="flex gap-1">
           {rental.configuration?.cnamEligible && (
-            <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700">
+            <Badge variant="outline" className="text-xs bg-green-50 text-green-700">
               <Shield className="h-3 w-3" />
               CNAM
             </Badge>
@@ -581,50 +917,59 @@ function ViewRowComponent({ rental, onEdit, onDelete, getStatusBadge }: any) {
 // Due to length, I'll create them as separate components
 
 function NewRowComponent({ data, onChange, onSave, onCancel, patients, devices, users }: any) {
-  const [patientDialogOpen, setPatientDialogOpen] = useState(false);
-  const [deviceDialogOpen, setDeviceDialogOpen] = useState(false);
+  const { data: session } = useSession();
 
-  const selectedPatient = patients.find((p: any) => p.id === data.patientId);
-  const selectedDevice = devices.find((d: any) => d.id === data.medicalDeviceId);
+  const [selectedPatientName, setSelectedPatientName] = useState<string>(
+    data.patientId
+      ? patients.find((p: any) => p.id === data.patientId)
+        ? `${patients.find((p: any) => p.id === data.patientId).firstName} ${patients.find((p: any) => p.id === data.patientId).lastName}`
+        : ''
+      : ''
+  );
+
+  const [selectedDeviceName, setSelectedDeviceName] = useState<string>(
+    data.medicalDeviceId
+      ? devices.find((d: any) => d.id === data.medicalDeviceId)?.name || ''
+      : ''
+  );
+
+  const [selectedAssignedToName, setSelectedAssignedToName] = useState<string>(
+    data.assignedToId
+      ? users.find((u: any) => u.id === data.assignedToId)
+        ? `${users.find((u: any) => u.id === data.assignedToId).firstName} ${users.find((u: any) => u.id === data.assignedToId).lastName}`
+        : ''
+      : ''
+  );
+
+  // Get current user name from session
+  const currentUserName = session?.user?.name || 'Utilisateur actuel';
 
   return (
-    <>
-      <PatientSelectorDialog
-        open={patientDialogOpen}
-        onOpenChange={setPatientDialogOpen}
-        patients={patients}
-        selectedPatientId={data.patientId}
-        onSelectPatient={(patientId) => onChange({ ...data, patientId })}
-        title="Sélectionner un patient"
-      />
-
-      <MedicalDeviceSelectorDialog
-        open={deviceDialogOpen}
-        onOpenChange={setDeviceDialogOpen}
-        devices={devices}
-        selectedDeviceId={data.medicalDeviceId}
-        onSelectDevice={(deviceId) => onChange({ ...data, medicalDeviceId: deviceId })}
-        title="Sélectionner un appareil"
-      />
-
-      <tr className="bg-green-50 border-b-2 border-green-200">
-        <td className="px-4 py-3">
-          <span className="text-xs text-slate-500">Auto</span>
-        </td>
-        <td className="px-4 py-3">
-          <PatientDisplay
-            patient={selectedPatient}
-            onClick={() => setPatientDialogOpen(true)}
-            placeholder="Sélectionner patient"
-          />
-        </td>
-        <td className="px-4 py-3">
-          <DeviceDisplay
-            device={selectedDevice}
-            onClick={() => setDeviceDialogOpen(true)}
-            placeholder="Sélectionner appareil"
-          />
-        </td>
+    <tr className="bg-green-50 border-b-2 border-green-200">
+      <td className="px-4 py-3">
+        <span className="text-xs text-slate-500">Auto</span>
+      </td>
+      <td className="px-4 py-3">
+        <PatientSelectorDialog
+          onSelect={(type, id, name) => {
+            onChange({ ...data, patientId: id });
+            setSelectedPatientName(name);
+          }}
+          selectedId={data.patientId}
+          selectedName={selectedPatientName}
+        />
+      </td>
+      <td className="px-4 py-3">
+        <MedicalDeviceSelectorDialog
+          onSelect={(id, name) => {
+            onChange({ ...data, medicalDeviceId: id });
+            setSelectedDeviceName(name);
+          }}
+          selectedId={data.medicalDeviceId}
+          selectedName={selectedDeviceName}
+          excludeRented={true}
+        />
+      </td>
       <td className="px-4 py-3">
         <div className="space-y-1">
           <Input
@@ -702,39 +1047,21 @@ function NewRowComponent({ data, onChange, onSave, onCancel, patients, devices, 
         </label>
       </td>
       <td className="px-4 py-3">
-        <Select
-          value={data.createdById || ''}
-          onValueChange={(value) => onChange({ ...data, createdById: value || undefined })}
-        >
-          <SelectTrigger className="text-xs">
-            <SelectValue placeholder="Créé par (auto)" />
-          </SelectTrigger>
-          <SelectContent>
-            {users.map((u: any) => (
-              <SelectItem key={u.id} value={u.id}>
-                {u.firstName} {u.lastName}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="text-xs text-slate-600 bg-slate-50 px-3 py-2 rounded border border-slate-200">
+          {currentUserName}
+        </div>
       </td>
       <td className="px-4 py-3">
-        <Select
-          value={data.assignedToId || 'none'}
-          onValueChange={(value) => onChange({ ...data, assignedToId: value === 'none' ? undefined : value })}
-        >
-          <SelectTrigger className="text-xs">
-            <SelectValue placeholder="Non assigné" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">Non assigné</SelectItem>
-            {users.map((u: any) => (
-              <SelectItem key={u.id} value={u.id}>
-                {u.firstName} {u.lastName}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <EmployeeSelectorDialog
+          onSelect={(id, name) => {
+            onChange({ ...data, assignedToId: id || undefined });
+            setSelectedAssignedToName(name);
+          }}
+          selectedId={data.assignedToId}
+          selectedName={selectedAssignedToName}
+          placeholder="Non assigné"
+          allowNone={true}
+        />
       </td>
       <td className="px-4 py-3 text-right">
         <div className="flex justify-end gap-2">
@@ -747,55 +1074,65 @@ function NewRowComponent({ data, onChange, onSave, onCancel, patients, devices, 
         </div>
       </td>
     </tr>
-    </>
   );
 }
 
 function EditRowComponent({ data, onChange, onSave, onCancel, patients, devices, users }: any) {
-  const [patientDialogOpen, setPatientDialogOpen] = useState(false);
-  const [deviceDialogOpen, setDeviceDialogOpen] = useState(false);
+  const [selectedPatientName, setSelectedPatientName] = useState<string>(
+    data.patientId
+      ? patients.find((p: any) => p.id === data.patientId)
+        ? `${patients.find((p: any) => p.id === data.patientId).firstName} ${patients.find((p: any) => p.id === data.patientId).lastName}`
+        : ''
+      : ''
+  );
 
-  const selectedPatient = patients.find((p: any) => p.id === data.patientId);
-  const selectedDevice = devices.find((d: any) => d.id === data.medicalDeviceId);
+  const [selectedDeviceName, setSelectedDeviceName] = useState<string>(
+    data.medicalDeviceId
+      ? devices.find((d: any) => d.id === data.medicalDeviceId)?.name || ''
+      : ''
+  );
+
+  const [selectedAssignedToName, setSelectedAssignedToName] = useState<string>(
+    data.assignedToId
+      ? users.find((u: any) => u.id === data.assignedToId)
+        ? `${users.find((u: any) => u.id === data.assignedToId).firstName} ${users.find((u: any) => u.id === data.assignedToId).lastName}`
+        : ''
+      : ''
+  );
+
+  // Get the creator name from the data (already set when rental was created)
+  const createdByName = data.createdBy
+    ? `${data.createdBy.firstName} ${data.createdBy.lastName}`
+    : users.find((u: any) => u.id === data.createdById)
+    ? `${users.find((u: any) => u.id === data.createdById).firstName} ${users.find((u: any) => u.id === data.createdById).lastName}`
+    : 'N/A';
 
   return (
-    <>
-      <PatientSelectorDialog
-        open={patientDialogOpen}
-        onOpenChange={setPatientDialogOpen}
-        patients={patients}
-        selectedPatientId={data.patientId}
-        onSelectPatient={(patientId) => onChange({ ...data, patientId })}
-        title="Sélectionner un patient"
-      />
-
-      <MedicalDeviceSelectorDialog
-        open={deviceDialogOpen}
-        onOpenChange={setDeviceDialogOpen}
-        devices={devices}
-        selectedDeviceId={data.medicalDeviceId}
-        onSelectDevice={(deviceId) => onChange({ ...data, medicalDeviceId: deviceId })}
-        title="Sélectionner un appareil"
-      />
-
-      <tr className="bg-blue-50 border-b-2 border-blue-200">
+    <tr className="bg-green-50 border-b-2 border-green-200">
       <td className="px-4 py-3">
         <Badge variant="outline" className="text-xs font-mono bg-indigo-50 text-indigo-700 border-indigo-200">
           {data.rentalCode || 'N/A'}
         </Badge>
       </td>
       <td className="px-4 py-3">
-        <PatientDisplay
-          patient={selectedPatient}
-          onClick={() => setPatientDialogOpen(true)}
-          placeholder="Sélectionner patient"
+        <PatientSelectorDialog
+          onSelect={(type, id, name) => {
+            onChange({ ...data, patientId: id });
+            setSelectedPatientName(name);
+          }}
+          selectedId={data.patientId}
+          selectedName={selectedPatientName}
         />
       </td>
       <td className="px-4 py-3">
-        <DeviceDisplay
-          device={selectedDevice}
-          onClick={() => setDeviceDialogOpen(true)}
-          placeholder="Sélectionner appareil"
+        <MedicalDeviceSelectorDialog
+          onSelect={(id, name) => {
+            onChange({ ...data, medicalDeviceId: id });
+            setSelectedDeviceName(name);
+          }}
+          selectedId={data.medicalDeviceId}
+          selectedName={selectedDeviceName}
+          excludeRented={false}
         />
       </td>
       <td className="px-4 py-3">
@@ -875,43 +1212,25 @@ function EditRowComponent({ data, onChange, onSave, onCancel, patients, devices,
         </label>
       </td>
       <td className="px-4 py-3">
-        <Select
-          value={data.createdById || ''}
-          onValueChange={(value) => onChange({ ...data, createdById: value || undefined })}
-        >
-          <SelectTrigger className="text-xs">
-            <SelectValue placeholder="Sélectionner" />
-          </SelectTrigger>
-          <SelectContent>
-            {users.map((u: any) => (
-              <SelectItem key={u.id} value={u.id}>
-                {u.firstName} {u.lastName}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="text-xs text-slate-600 bg-slate-50 px-3 py-2 rounded border border-slate-200">
+          {createdByName}
+        </div>
       </td>
       <td className="px-4 py-3">
-        <Select
-          value={data.assignedToId || 'none'}
-          onValueChange={(value) => onChange({ ...data, assignedToId: value === 'none' ? null : value })}
-        >
-          <SelectTrigger className="text-xs">
-            <SelectValue placeholder="Non assigné" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">Non assigné</SelectItem>
-            {users.map((u: any) => (
-              <SelectItem key={u.id} value={u.id}>
-                {u.firstName} {u.lastName}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <EmployeeSelectorDialog
+          onSelect={(id, name) => {
+            onChange({ ...data, assignedToId: id || undefined });
+            setSelectedAssignedToName(name);
+          }}
+          selectedId={data.assignedToId}
+          selectedName={selectedAssignedToName}
+          placeholder="Non assigné"
+          allowNone={true}
+        />
       </td>
       <td className="px-4 py-3 text-right">
         <div className="flex justify-end gap-2">
-          <Button size="sm" onClick={onSave} className="bg-blue-600 hover:bg-blue-700">
+          <Button size="sm" onClick={onSave} className="bg-green-600 hover:bg-green-700">
             <Save className="h-3 w-3" />
           </Button>
           <Button size="sm" variant="outline" onClick={onCancel}>
@@ -920,6 +1239,5 @@ function EditRowComponent({ data, onChange, onSave, onCancel, patients, devices,
         </div>
       </td>
     </tr>
-    </>
   );
 }

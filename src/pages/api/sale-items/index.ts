@@ -15,7 +15,22 @@ export default async function handler(
 
   if (req.method === 'GET') {
     try {
+      // Build where clause based on user role
+      const whereClause: any = {};
+
+      // If user is EMPLOYEE, only show sale items from sales assigned to them or processed by them
+      if (session.user.role === 'EMPLOYEE') {
+        whereClause.sale = {
+          OR: [
+            { assignedToId: session.user.id },
+            { processedById: session.user.id }
+          ]
+        };
+      }
+      // ADMIN and DOCTOR can see all sale items (no filter)
+
       const items = await prisma.saleItem.findMany({
+        where: whereClause,
         include: {
           sale: {
             select: {
@@ -67,6 +82,12 @@ export default async function handler(
               deviceCode: true,
               serialNumber: true,
               type: true,
+            }
+          },
+          stockLocation: {
+            select: {
+              id: true,
+              name: true,
             }
           },
           configuration: true,
@@ -104,42 +125,21 @@ export default async function handler(
         return res.status(400).json({ error: 'Prix unitaire invalide' });
       }
 
-      // Get user information for stock location
-      const user = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        include: { stockLocation: true }
-      });
-
-      // Determine stock location based on role
-      let stockLocationId: string | null = null;
-
-      if (itemData.productId) {
-        if (user?.role === 'ADMIN') {
-          // Admin can specify location, defaults to their own
-          stockLocationId = itemData.stockLocationId || user.stockLocation?.id || null;
-        } else if (user?.role === 'EMPLOYEE') {
-          // Employee uses only their stock location
-          stockLocationId = user.stockLocation?.id || null;
-        }
-
-        if (!stockLocationId) {
-          return res.status(400).json({ error: 'Emplacement de stock non trouvé pour cet utilisateur' });
-        }
-
-        // Check stock availability
-        const stock = await prisma.stock.findUnique({
-          where: {
-            locationId_productId: {
-              locationId: stockLocationId,
-              productId: itemData.productId
-            }
-          }
+      // Validate stockLocationId is provided for products
+      if (itemData.productId && !itemData.stockLocationId) {
+        return res.status(400).json({
+          error: 'Emplacement de stock requis pour les produits (stockLocationId)'
         });
+      }
 
-        if (!stock || stock.quantity < itemData.quantity) {
-          return res.status(400).json({
-            error: `Stock insuffisant. Disponible: ${stock?.quantity || 0}, Demandé: ${itemData.quantity}`
-          });
+      // For medical devices, use device's current stockLocationId
+      if (itemData.medicalDeviceId && !itemData.stockLocationId) {
+        const device = await prisma.medicalDevice.findUnique({
+          where: { id: itemData.medicalDeviceId },
+          select: { stockLocationId: true }
+        });
+        if (device?.stockLocationId) {
+          itemData.stockLocationId = device.stockLocationId;
         }
       }
 
@@ -154,74 +154,134 @@ export default async function handler(
         }
       }
 
-      // Create the sale item
-      const newItem = await prisma.saleItem.create({
-        data: {
-          saleId: itemData.saleId,
-          productId: itemData.productId || null,
-          medicalDeviceId: itemData.medicalDeviceId || null,
-          quantity: parseInt(itemData.quantity),
-          unitPrice: parseFloat(itemData.unitPrice),
-          discount: itemData.discount ? parseFloat(itemData.discount) : 0,
-          itemTotal: parseFloat(itemData.itemTotal),
-          serialNumber: itemData.serialNumber || null,
-          description: itemData.description || null,
-        },
-        include: {
-          sale: {
-            select: {
-              id: true,
-              saleCode: true,
-              invoiceNumber: true,
-              assignedTo: {
-                select: {
-                  id: true,
-                  firstName: true,
-                  lastName: true,
-                  stockLocation: {
-                    select: {
-                      id: true,
-                      name: true,
+      // Create the sale item within a transaction for stock management
+      const newItem = await prisma.$transaction(async (tx) => {
+        // For products, check stock and create movement
+        if (itemData.productId && itemData.stockLocationId) {
+          const stock = await tx.stock.findUnique({
+            where: {
+              locationId_productId: {
+                locationId: itemData.stockLocationId,
+                productId: itemData.productId,
+              },
+            },
+          });
+
+          if (!stock) {
+            throw new Error(`Aucun stock trouvé pour ce produit à l'emplacement sélectionné`);
+          }
+
+          if (stock.quantity < parseInt(itemData.quantity)) {
+            throw new Error(`Stock insuffisant. Disponible: ${stock.quantity}, Demandé: ${itemData.quantity}`);
+          }
+
+          // Decrease stock quantity
+          await tx.stock.update({
+            where: { id: stock.id },
+            data: {
+              quantity: { decrement: parseInt(itemData.quantity) },
+            },
+          });
+
+          // Fetch sale code for better tracking
+          const sale = await tx.sale.findUnique({
+            where: { id: itemData.saleId },
+            select: { saleCode: true },
+          });
+
+          // Create stock movement record (SORTIE)
+          await tx.stockMovement.create({
+            data: {
+              productId: itemData.productId,
+              locationId: itemData.stockLocationId,
+              type: 'SORTIE',
+              quantity: parseInt(itemData.quantity),
+              notes: `Vente ${sale?.saleCode || itemData.saleId} - Article vendu`,
+              createdById: session.user.id,
+            },
+          });
+
+          console.log('[SALE-ITEM-CREATE] Stock decreased and movement created');
+        }
+
+        // Create the sale item
+        const saleItem = await tx.saleItem.create({
+          data: {
+            saleId: itemData.saleId,
+            productId: itemData.productId || null,
+            medicalDeviceId: itemData.medicalDeviceId || null,
+            stockLocationId: itemData.stockLocationId || null,
+            quantity: parseInt(itemData.quantity),
+            unitPrice: parseFloat(itemData.unitPrice),
+            discount: itemData.discount ? parseFloat(itemData.discount) : 0,
+            itemTotal: parseFloat(itemData.itemTotal),
+            serialNumber: itemData.serialNumber || null,
+            description: itemData.description || null,
+          },
+          include: {
+            sale: {
+              select: {
+                id: true,
+                saleCode: true,
+                invoiceNumber: true,
+                assignedTo: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    stockLocation: {
+                      select: {
+                        id: true,
+                        name: true,
+                      }
                     }
                   }
-                }
-              },
-              patient: {
-                select: {
-                  id: true,
-                  patientCode: true,
-                  firstName: true,
-                  lastName: true,
-                }
-              },
-              company: {
-                select: {
-                  id: true,
-                  companyCode: true,
-                  companyName: true,
+                },
+                patient: {
+                  select: {
+                    id: true,
+                    patientCode: true,
+                    firstName: true,
+                    lastName: true,
+                  }
+                },
+                company: {
+                  select: {
+                    id: true,
+                    companyCode: true,
+                    companyName: true,
+                  }
                 }
               }
-            }
-          },
-          product: {
-            select: {
-              id: true,
-              name: true,
-              productCode: true,
-              type: true,
-            }
-          },
-          medicalDevice: {
-            select: {
-              id: true,
-              name: true,
-              deviceCode: true,
-              serialNumber: true,
-              type: true,
-            }
-          },
-          configuration: true,
-        }
+            },
+            product: {
+              select: {
+                id: true,
+                name: true,
+                productCode: true,
+                type: true,
+              }
+            },
+            medicalDevice: {
+              select: {
+                id: true,
+                name: true,
+                deviceCode: true,
+                serialNumber: true,
+                type: true,
+              }
+            },
+            stockLocation: {
+              select: {
+                id: true,
+                name: true,
+              }
+            },
+            configuration: true,
+          }
+        });
+
+        return saleItem;
       });
 
       // If parameters are provided, create configuration
@@ -265,21 +325,6 @@ export default async function handler(
           data: {
             stockLocationId: null, // Remove from stock location (now at patient's location)
             // status remains ACTIVE for maintenance tracking
-          }
-        });
-      }
-
-      // Decrease product stock quantity if product sold
-      if (itemData.productId && stockLocationId) {
-        await prisma.stock.update({
-          where: {
-            locationId_productId: {
-              locationId: stockLocationId,
-              productId: itemData.productId
-            }
-          },
-          data: {
-            quantity: { decrement: parseInt(itemData.quantity) }
           }
         });
       }

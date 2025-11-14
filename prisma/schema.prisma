@@ -37,6 +37,7 @@ model User {
   createdRentals       Rental[]               @relation("CreatedRentals")
   assignedRentals      Rental[]               @relation("AssignedRentals")
   stockLocation        StockLocation?
+  stockMovements       StockMovement[]
   receivedTransfers    StockTransfer[]        @relation("ReceivedTransfers")
   sentTransfers        StockTransfer[]        @relation("SentTransfers")
   stockTransfers       StockTransfer[]        @relation("TransferredByUser")
@@ -83,6 +84,9 @@ model StockLocation {
   updatedAt         DateTime               @updatedAt
   medicalDevices    MedicalDevice[]
   stocks            Stock[]
+  stockMovements    StockMovement[]
+  rentalAccessories RentalAccessory[]
+  saleItems         SaleItem[]
   user              User?                  @relation(fields: [userId], references: [id])
   outgoingTransfers StockTransfer[]        @relation("FromLocation")
   incomingTransfers StockTransfer[]        @relation("ToLocation")
@@ -102,6 +106,24 @@ model Stock {
   product    Product       @relation(fields: [productId], references: [id])
 
   @@unique([locationId, productId])
+}
+
+model StockMovement {
+  id          String              @id @default(cuid())
+  productId   String
+  locationId  String
+  type        StockMovementType
+  quantity    Int
+  notes       String?
+  createdById String
+  createdAt   DateTime            @default(now())
+  product     Product             @relation(fields: [productId], references: [id])
+  location    StockLocation       @relation(fields: [locationId], references: [id])
+  createdBy   User                @relation(fields: [createdById], references: [id])
+
+  @@index([productId])
+  @@index([locationId])
+  @@index([createdById])
 }
 
 model StockTransfer {
@@ -178,6 +200,7 @@ model Product {
   RepairSparePart    RepairSparePart[]
   saleItems          SaleItem[]
   stocks             Stock[]
+  stockMovements     StockMovement[]
   transfers          StockTransfer[]
   transferRequests   StockTransferRequest[]
 }
@@ -587,6 +610,7 @@ model SaleItem {
   saleId          String
   productId       String?
   medicalDeviceId String?
+  stockLocationId String?
   quantity        Int
   unitPrice       Decimal            @db.Decimal(10, 2)
   discount        Decimal?           @db.Decimal(10, 2)
@@ -599,7 +623,13 @@ model SaleItem {
   medicalDevice   MedicalDevice?     @relation(fields: [medicalDeviceId], references: [id])
   product         Product?           @relation(fields: [productId], references: [id])
   sale            Sale               @relation(fields: [saleId], references: [id])
+  stockLocation   StockLocation?     @relation(fields: [stockLocationId], references: [id])
   configuration   SaleConfiguration?
+
+  @@index([saleId])
+  @@index([productId])
+  @@index([medicalDeviceId])
+  @@index([stockLocationId])
 }
 
 model SaleConfiguration {
@@ -799,19 +829,21 @@ model CNAMBonRental {
 }
 
 model RentalAccessory {
-  id        String   @id @default(cuid())
-  rentalId  String
-  productId String
-  quantity  Int
-  unitPrice Decimal  @db.Decimal(10, 2)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  product   Product  @relation(fields: [productId], references: [id])
-  rental    Rental   @relation(fields: [rentalId], references: [id], onDelete: Cascade)
+  id              String          @id @default(cuid())
+  rentalId        String
+  productId       String
+  stockLocationId String?
+  quantity        Int
+  unitPrice       Decimal         @db.Decimal(10, 2)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  product         Product         @relation(fields: [productId], references: [id])
+  rental          Rental          @relation(fields: [rentalId], references: [id], onDelete: Cascade)
+  stockLocation   StockLocation?  @relation(fields: [stockLocationId], references: [id])
 
-  @@unique([rentalId, productId])
   @@index([rentalId])
   @@index([productId])
+  @@index([stockLocationId])
 }
 
 model RentalConfiguration {
@@ -939,6 +971,12 @@ enum StockStatus {
   FOR_SALE
   IN_REPAIR
   OUT_OF_SERVICE
+}
+
+enum StockMovementType {
+  ENTREE
+  SORTIE
+  TRANSFERT
 }
 
 enum TaskStatus {

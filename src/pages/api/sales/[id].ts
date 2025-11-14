@@ -350,17 +350,22 @@ export default async function handler(
             // Only update these if they are provided
             patientId: updateData.patientId || undefined,
             companyId: updateData.companyId || undefined,
+            // Update assignedToId if provided
+            assignedToId: updateData.assignedToId !== undefined ? updateData.assignedToId : undefined,
             // Don't allow updating the processedBy user
           },
           include: {
             processedBy: true,
+            assignedTo: true,
             patient: true,
             company: true,
-            payment: {
+            payments: {
               include: {
                 paymentDetails: true
               }
             },
+            cnamBons: true,
+            cnamDossiers: true,
             items: {
               include: {
                 product: true,

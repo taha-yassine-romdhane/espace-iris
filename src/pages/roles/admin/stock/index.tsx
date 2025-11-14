@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import StockLocations from './components/StockLocations';
 import StockTransfers from './components/StockTransfers';
 import StockInventory from './components/StockInventory';
+import StockMovements from './components/StockMovements';
 
 export default function StockPage() {
   const [activeTab, setActiveTab] = useState("inventory");
@@ -22,6 +23,7 @@ export default function StockPage() {
           <TabsTrigger value="inventory">Inventaire</TabsTrigger>
           <TabsTrigger value="locations">Emplacements</TabsTrigger>
           <TabsTrigger value="transfers">Transferts</TabsTrigger>
+          <TabsTrigger value="movements">Mouvements</TabsTrigger>
         </TabsList>
 
         <TabsContent value="inventory" className="space-y-4">
@@ -34,6 +36,10 @@ export default function StockPage() {
 
         <TabsContent value="transfers" className="space-y-4">
           <StockTransfers />
+        </TabsContent>
+
+        <TabsContent value="movements" className="space-y-4">
+          <StockMovements />
         </TabsContent>
       </Tabs>
     </div>

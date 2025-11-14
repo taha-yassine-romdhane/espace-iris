@@ -62,10 +62,11 @@ export function transformPaymentData(
  * Determine the primary payment method for the main Payment record
  */
 function getPrimaryPaymentMethod(payments: PaymentFormData[]): CreatePaymentRequest['method'] {
-  // Priority order: CNAM > CHEQUE > VIREMENT > TRAITE > MANDAT > CASH
+  // Priority order: CNAM > CHEQUE > BANK_TRANSFER > VIREMENT > TRAITE > MANDAT > CASH
   const methodPriority = {
     'cnam': 'CNAM',
     'cheque': 'CHEQUE',
+    'bank_transfer': 'BANK_TRANSFER',
     'virement': 'VIREMENT',
     'traite': 'TRAITE',
     'mondat': 'MANDAT',
@@ -89,6 +90,8 @@ function getPaymentReference(payment: PaymentFormData): string | undefined {
     case 'cheque':
       return payment.numCheque ? `Chèque N°: ${payment.numCheque}` : undefined;
     case 'virement':
+      return payment.reference ? `Ref: ${payment.reference}` : undefined;
+    case 'bank_transfer':
       return payment.reference ? `Ref: ${payment.reference}` : undefined;
     case 'traite':
       return payment.nomTraite ? `Traite: ${payment.nomTraite}` : undefined;
@@ -126,6 +129,14 @@ function getPaymentMetadata(payment: PaymentFormData): any {
       return {
         ...baseMetadata,
         reference: payment.reference,
+        dueDate: payment.dateReste
+      };
+
+    case 'bank_transfer':
+      return {
+        ...baseMetadata,
+        reference: payment.reference,
+        bankName: payment.banque,
         dueDate: payment.dateReste
       };
 
@@ -194,7 +205,7 @@ function getChequeNumber(payments: PaymentFormData[]): string | undefined {
  * Extract bank name for backward compatibility
  */
 function getBankName(payments: PaymentFormData[]): string | undefined {
-  const bankPayment = payments.find(p => p.type === 'cheque' || p.type === 'traite');
+  const bankPayment = payments.find(p => p.type === 'cheque' || p.type === 'traite' || p.type === 'bank_transfer');
   return bankPayment?.banque;
 }
 
@@ -265,6 +276,12 @@ export function validatePaymentData(payments: PaymentFormData[]): { isValid: boo
       case 'virement':
         if (!payment.reference) {
           errors.push(`Référence requise pour le virement ${index + 1}`);
+        }
+        break;
+
+      case 'bank_transfer':
+        if (!payment.reference) {
+          errors.push(`Référence requise pour le virement bancaire ${index + 1}`);
         }
         break;
 

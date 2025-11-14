@@ -740,10 +740,10 @@ export default function ArticlesExcelTable() {
   return (
     <div className="space-y-4">
       {/* Central Filter Panel */}
-      <div className="bg-gradient-to-r from-blue-50 to-slate-50 border border-blue-200 rounded-lg p-6">
+      <div className="bg-gradient-to-r from-green-50 to-slate-50 border border-green-200 rounded-lg p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="bg-blue-600 p-2 rounded-lg">
+            <div className="bg-green-600 p-2 rounded-lg">
               <Filter className="h-5 w-5 text-white" />
             </div>
             <div>
@@ -751,7 +751,7 @@ export default function ArticlesExcelTable() {
               <p className="text-sm text-slate-600">
                 {filteredArticles.length} article(s) sur {articles.length} au total
                 {activeFiltersCount > 0 && (
-                  <span className="ml-2 text-blue-600 font-medium">
+                  <span className="ml-2 text-green-600 font-medium">
                     ({activeFiltersCount} filtre{activeFiltersCount > 1 ? 's' : ''} actif{activeFiltersCount > 1 ? 's' : ''})
                   </span>
                 )}
@@ -787,7 +787,7 @@ export default function ArticlesExcelTable() {
               placeholder="Rechercher par vente, produit, code, numéro de série, client..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 h-11 bg-white border-slate-300 focus:border-blue-500"
+              className="pl-10 h-11 bg-white border-slate-300 focus:border-green-500"
             />
           </div>
         </div>
@@ -805,7 +805,7 @@ export default function ArticlesExcelTable() {
                 <SelectItem value="all">Tous les clients</SelectItem>
                 <SelectItem value="patient">
                   <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-blue-600" />
+                    <User className="h-4 w-4 text-green-600" />
                     Patients
                   </div>
                 </SelectItem>
@@ -1104,7 +1104,7 @@ export default function ArticlesExcelTable() {
                       value={newArticle.description}
                       onChange={(e) => setNewArticle({...newArticle, description: e.target.value})}
                       placeholder="Description ou note..."
-                      className="w-full h-8 text-xs border border-gray-300 rounded px-2 py-1 resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full h-8 text-xs border border-gray-300 rounded px-2 py-1 resize-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
                       rows={1}
                     />
                   </td>
@@ -1285,7 +1285,7 @@ export default function ArticlesExcelTable() {
                   return (
                     <tr
                       key={article.id}
-                      className={`border-b border-slate-100 hover:bg-blue-50/50 transition-colors ${
+                      className={`border-b border-slate-100 hover:bg-green-50/50 transition-colors ${
                         index % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'
                       }`}
                     >
@@ -1347,7 +1347,7 @@ export default function ArticlesExcelTable() {
 
                           {/* Invoice Number */}
                           <td className="px-3 py-2.5 text-xs border-r border-slate-100 whitespace-nowrap">
-                            <Badge variant="outline" className="text-xs font-mono bg-blue-50 text-blue-700 border-blue-200">
+                            <Badge variant="outline" className="text-xs font-mono bg-green-50 text-green-700 border-green-200">
                               {article.sale?.invoiceNumber || 'N/A'}
                             </Badge>
                           </td>
@@ -1379,8 +1379,8 @@ export default function ArticlesExcelTable() {
                           {article.sale?.patient ? (
                             <div className="flex flex-col gap-1">
                               <div
-                                className="flex items-center gap-1.5 whitespace-nowrap text-blue-600 hover:text-blue-800 hover:underline cursor-pointer transition-colors"
-                                onClick={() => router.push(`/roles/admin/renseignement/patient/${article.sale.patient.id}`)}
+                                className="flex items-center gap-1.5 whitespace-nowrap text-green-600 hover:text-green-800 hover:underline cursor-pointer transition-colors"
+                                onClick={() => router.push(`/roles/employee/renseignement/patient/${article.sale.patient.id}`)}
                               >
                                 <Users className="h-3.5 w-3.5 shrink-0" />
                                 <span className="text-xs font-medium">
@@ -1389,8 +1389,8 @@ export default function ArticlesExcelTable() {
                               </div>
                               {article.sale.patient.patientCode && (
                                 <div
-                                  className="text-xs text-slate-500 font-mono cursor-pointer hover:text-blue-600 transition-colors ml-5"
-                                  onClick={() => router.push(`/roles/admin/renseignement/patient/${article.sale.patient.id}`)}
+                                  className="text-xs text-slate-500 font-mono cursor-pointer hover:text-green-600 transition-colors ml-5"
+                                  onClick={() => router.push(`/roles/employee/renseignement/patient/${article.sale.patient.id}`)}
                                 >
                                   {article.sale.patient.patientCode}
                                 </div>
@@ -1442,7 +1442,7 @@ export default function ArticlesExcelTable() {
                               </Badge>
                             )}
                             {article.medicalDeviceId && (
-                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
+                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
                                 Appareil
                               </Badge>
                             )}
@@ -1475,7 +1475,7 @@ export default function ArticlesExcelTable() {
                             value={editedData.description || ''}
                             onChange={(e) => setEditedData({...editedData, description: e.target.value})}
                             placeholder="Description ou note..."
-                            className="w-full h-8 text-xs border border-gray-300 rounded px-2 py-1 resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="w-full h-8 text-xs border border-gray-300 rounded px-2 py-1 resize-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
                             rows={1}
                           />
                         ) : (
@@ -1506,7 +1506,7 @@ export default function ArticlesExcelTable() {
                         ) : article.stockLocation?.name ? (
                           <div className="flex flex-col">
                             <span className="text-xs text-slate-500">Sortie de:</span>
-                            <span className="text-xs font-medium text-blue-600">
+                            <span className="text-xs font-medium text-green-600">
                               {article.stockLocation.name}
                             </span>
                           </div>
@@ -1633,7 +1633,7 @@ export default function ArticlesExcelTable() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleEdit(article)}
-                                className="h-8 w-8 p-0 hover:bg-blue-100 hover:text-blue-700"
+                                className="h-8 w-8 p-0 hover:bg-green-100 hover:text-green-700"
                                 title="Modifier"
                               >
                                 <Edit className="h-4 w-4" />

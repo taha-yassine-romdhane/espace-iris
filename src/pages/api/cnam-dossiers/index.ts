@@ -51,6 +51,17 @@ export default async function handler(
         ];
       }
 
+      // If user is EMPLOYEE, only show dossiers for sales assigned to them or processed by them
+      if (session.user.role === 'EMPLOYEE') {
+        where.sale = {
+          OR: [
+            { assignedToId: session.user.id },
+            { processedById: session.user.id }
+          ]
+        };
+      }
+      // ADMIN and DOCTOR can see all dossiers (no additional filter)
+
       // Get dossiers with pagination
       const [dossiers, totalCount] = await Promise.all([
         prisma.cNAMDossier.findMany({

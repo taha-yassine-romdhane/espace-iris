@@ -607,7 +607,7 @@ export default function PaymentsExcelTable() {
       PENDING: { label: 'En attente', className: 'bg-yellow-100 text-yellow-700 border-yellow-200' },
       PARTIAL: { label: 'Partiel', className: 'bg-orange-100 text-orange-700 border-orange-200' },
       CANCELLED: { label: 'Annulé', className: 'bg-red-100 text-red-700 border-red-200' },
-      GUARANTEE: { label: 'Garantie', className: 'bg-blue-100 text-blue-700 border-blue-200' },
+      GUARANTEE: { label: 'Garantie', className: 'bg-green-100 text-green-700 border-green-200' },
     };
     const config = statusConfig[status] || statusConfig.PENDING;
     return <Badge variant="outline" className={`${config.className} text-xs`}>{config.label}</Badge>;
@@ -616,7 +616,7 @@ export default function PaymentsExcelTable() {
   const getMethodBadge = (method: string) => {
     const methodConfig: Record<string, { label: string; className: string }> = {
       CASH: { label: 'Espèces', className: 'bg-emerald-100 text-emerald-700' },
-      CHEQUE: { label: 'Chèque', className: 'bg-blue-100 text-blue-700' },
+      CHEQUE: { label: 'Chèque', className: 'bg-green-100 text-green-700' },
       VIREMENT: { label: 'Virement', className: 'bg-purple-100 text-purple-700' },
       BANK_TRANSFER: { label: 'Virement Bancaire', className: 'bg-cyan-100 text-cyan-700' },
       CNAM: { label: 'CNAM', className: 'bg-red-100 text-red-700' },
@@ -631,7 +631,7 @@ export default function PaymentsExcelTable() {
   const getSourceBadge = (source: string) => {
     const sourceConfig: Record<string, { label: string; className: string }> = {
       SALE: { label: 'Vente', className: 'bg-green-100 text-green-700 border-green-200' },
-      RENTAL: { label: 'Location', className: 'bg-blue-100 text-blue-700 border-blue-200' },
+      RENTAL: { label: 'Location', className: 'bg-green-100 text-green-700 border-green-200' },
       DIAGNOSTIC: { label: 'Diagnostic', className: 'bg-purple-100 text-purple-700 border-purple-200' },
       AUTRE: { label: 'Autre', className: 'bg-gray-100 text-gray-700 border-gray-200' },
     };
@@ -672,11 +672,11 @@ export default function PaymentsExcelTable() {
   return (
     <div className="space-y-4">
       {/* Comprehensive Filter Panel */}
-      <div className="bg-gradient-to-r from-blue-50 to-slate-50 border border-blue-200 rounded-lg p-6">
+      <div className="bg-gradient-to-r from-green-50 to-slate-50 border border-green-200 rounded-lg p-6">
         {/* Filter Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="bg-blue-600 p-2 rounded-lg">
+            <div className="bg-green-600 p-2 rounded-lg">
               <Filter className="h-5 w-5 text-white" />
             </div>
             <div>
@@ -684,7 +684,7 @@ export default function PaymentsExcelTable() {
               <p className="text-sm text-slate-600">
                 {filteredPayments.length} paiement(s) sur {payments.length} au total
                 {activeFiltersCount > 0 && (
-                  <span className="ml-2 text-blue-600 font-medium">
+                  <span className="ml-2 text-green-600 font-medium">
                     ({activeFiltersCount} filtre{activeFiltersCount > 1 ? 's' : ''} actif{activeFiltersCount > 1 ? 's' : ''})
                   </span>
                 )}
@@ -1021,7 +1021,7 @@ export default function PaymentsExcelTable() {
                     {selectedClient ? (
                       <div className="flex items-center gap-2">
                         {selectedClient.type === 'patient' ? (
-                          <User className="h-4 w-4 text-blue-600" />
+                          <User className="h-4 w-4 text-green-600" />
                         ) : (
                           <Building2 className="h-4 w-4 text-purple-600" />
                         )}
@@ -1150,7 +1150,7 @@ export default function PaymentsExcelTable() {
                     {newPayment.method === 'CNAM' ? (
                       <div className="flex flex-col gap-2">
                         {newPayment.cnamBonId && (
-                          <Badge variant="outline" className="text-xs font-mono bg-blue-50 text-blue-700 border-blue-200 whitespace-nowrap">
+                          <Badge variant="outline" className="text-xs font-mono bg-green-50 text-green-700 border-green-200 whitespace-nowrap">
                             {(() => {
                               const bon = cnamBonsData?.find((b: any) => b.id === newPayment.cnamBonId);
                               return bon?.bonNumber || bon?.dossierNumber || 'N/A';
@@ -1228,7 +1228,7 @@ export default function PaymentsExcelTable() {
                 return (
                   <tr
                     key={payment.id}
-                    className={`border-b border-slate-100 hover:bg-blue-50/50 transition-colors ${
+                    className={`border-b border-slate-100 hover:bg-green-50/50 transition-colors ${
                       index % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'
                     }`}
                   >
@@ -1266,16 +1266,16 @@ export default function PaymentsExcelTable() {
                       {payment.sale?.patient ? (
                         <div className="flex flex-col gap-1">
                           <div
-                            className="flex items-center gap-2 text-blue-600 hover:text-blue-800 hover:underline cursor-pointer transition-colors"
-                            onClick={() => router.push(`/roles/admin/renseignement/patient/${payment.sale.patient.id}`)}
+                            className="flex items-center gap-2 text-green-600 hover:text-green-800 hover:underline cursor-pointer transition-colors"
+                            onClick={() => router.push(`/roles/employee/renseignement/patient/${payment.sale.patient.id}`)}
                           >
                             <User className="h-4 w-4" />
                             <span>{clientName}</span>
                           </div>
                           {payment.sale.patient.patientCode && (
                             <div
-                              className="text-xs text-slate-500 font-mono cursor-pointer hover:text-blue-600 transition-colors ml-6"
-                              onClick={() => router.push(`/roles/admin/renseignement/patient/${payment.sale.patient.id}`)}
+                              className="text-xs text-slate-500 font-mono cursor-pointer hover:text-green-600 transition-colors ml-6"
+                              onClick={() => router.push(`/roles/employee/renseignement/patient/${payment.sale.patient.id}`)}
                             >
                               {payment.sale.patient.patientCode}
                             </div>
@@ -1417,14 +1417,14 @@ export default function PaymentsExcelTable() {
                       ) : payment.method === 'CNAM' ? (
                         <div className="flex flex-col gap-1">
                           {payment.cnamBonId ? (
-                            <Badge variant="outline" className="text-xs font-mono bg-blue-50 text-blue-700 border-blue-200 whitespace-nowrap">
+                            <Badge variant="outline" className="text-xs font-mono bg-green-50 text-green-700 border-green-200 whitespace-nowrap">
                               {(() => {
                                 const bon = cnamBonsData?.find((b: any) => b.id === payment.cnamBonId);
                                 return bon?.bonNumber || bon?.dossierNumber || 'N/A';
                               })()}
                             </Badge>
                           ) : payment.cnamCardNumber ? (
-                            <span className="text-xs font-mono text-blue-700">{payment.cnamCardNumber}</span>
+                            <span className="text-xs font-mono text-green-700">{payment.cnamCardNumber}</span>
                           ) : (
                             <div className="text-slate-400">-</div>
                           )}
@@ -1501,7 +1501,7 @@ export default function PaymentsExcelTable() {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleEdit(payment)}
-                              className="h-8 w-8 p-0 hover:bg-blue-100 hover:text-blue-700"
+                              className="h-8 w-8 p-0 hover:bg-green-100 hover:text-green-700"
                               title="Modifier"
                             >
                               <Edit2 className="h-4 w-4" />
@@ -1557,11 +1557,11 @@ export default function PaymentsExcelTable() {
                   {filteredClients.map((client) => (
                     <tr
                       key={`${client.type}-${client.id}`}
-                      className="border-b hover:bg-blue-50 transition-colors"
+                      className="border-b hover:bg-green-50 transition-colors"
                     >
                       <td className="px-4 py-2">
                         {client.type === 'patient' ? (
-                          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
                             <User className="h-3 w-3 mr-1" />
                             Patient
                           </Badge>

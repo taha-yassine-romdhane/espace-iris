@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import Link from 'next/link';
 import {
   Plus,
   Save,
@@ -11,6 +12,8 @@ import {
   Edit2,
   Search,
   Package,
+  Warehouse,
+  ShoppingCart,
 } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -20,16 +23,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface RentalAccessory {
   id?: string;
   rentalId: string;
   productId: string;
+  stockLocationId?: string;
   quantity: number;
   unitPrice: number;
   rental?: {
     rentalCode: string;
-    patient?: { firstName: string; lastName: string };
+    patient?: {
+      id: string;
+      patientCode: string;
+      firstName: string;
+      lastName: string;
+    };
     medicalDevice?: { name: string; deviceCode: string };
   };
   product?: {
@@ -37,6 +53,20 @@ interface RentalAccessory {
     name: string;
     brand?: string;
     model?: string;
+    type?: string;
+    productCode?: string;
+    stocks?: Array<{
+      id: string;
+      quantity: number;
+      location: {
+        id: string;
+        name: string;
+      };
+    }>;
+  };
+  stockLocation?: {
+    id: string;
+    name: string;
   };
 }
 
@@ -47,6 +77,10 @@ export default function RentalAccessoriesTable() {
   const [newRow, setNewRow] = useState<Partial<RentalAccessory> | null>(null);
   const [editData, setEditData] = useState<Partial<RentalAccessory>>({});
   const [searchTerm, setSearchTerm] = useState("");
+  const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
+  const [dialogMode, setDialogMode] = useState<'new' | 'edit'>('new');
+  const [productSearchTerm, setProductSearchTerm] = useState("");
+  const [selectedProductType, setSelectedProductType] = useState<'all' | 'ACCESSORY' | 'SPARE_PART'>('all');
 
   // Fetch rental accessories
   const { data: accessoriesData, isLoading } = useQuery({
@@ -70,14 +104,16 @@ export default function RentalAccessoriesTable() {
     },
   });
 
-  // Fetch products (accessories/spare parts)
+  // Fetch products (accessories AND spare parts with stock info)
   const { data: productsData } = useQuery({
-    queryKey: ['products-accessories'],
+    queryKey: ['products-accessories-spareparts'],
     queryFn: async () => {
-      const response = await fetch('/api/products?type=ACCESSORY');
+      const response = await fetch('/api/products?includeStock=true');
       if (!response.ok) throw new Error('Failed to fetch products');
       const data = await response.json();
-      return Array.isArray(data) ? data : (data.products || []);
+      const allProducts = Array.isArray(data) ? data : (data.products || []);
+      // Filter to only accessories and spare parts
+      return allProducts.filter((p: any) => p.type === 'ACCESSORY' || p.type === 'SPARE_PART');
     },
   });
 
@@ -110,8 +146,12 @@ export default function RentalAccessoriesTable() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['rental-accessories'] });
+      queryClient.invalidateQueries({ queryKey: ['products-accessories-spareparts'] }); // Refresh stock
       setNewRow(null);
-      toast({ title: "Succès", description: "Accessoire ajouté" });
+      toast({
+        title: "Succès",
+        description: "Accessoire ajouté et stock mis à jour"
+      });
     },
     onError: (error: Error) => {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
@@ -167,7 +207,15 @@ export default function RentalAccessoriesTable() {
 
   const handleSaveNew = () => {
     if (!newRow?.rentalId || !newRow?.productId) {
-      toast({ title: "Erreur", description: "Remplissez tous les champs", variant: "destructive" });
+      toast({ title: "Erreur", description: "Veuillez sélectionner une location et un produit", variant: "destructive" });
+      return;
+    }
+    if (!newRow?.stockLocationId) {
+      toast({ title: "Erreur", description: "Veuillez sélectionner un emplacement de stock", variant: "destructive" });
+      return;
+    }
+    if (!newRow?.quantity || newRow.quantity < 1) {
+      toast({ title: "Erreur", description: "La quantité doit être supérieure à 0", variant: "destructive" });
       return;
     }
     createMutation.mutate(newRow);
@@ -192,7 +240,7 @@ export default function RentalAccessoriesTable() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
       </div>
     );
   }
@@ -210,7 +258,7 @@ export default function RentalAccessoriesTable() {
             className="pl-10"
           />
         </div>
-        <Button onClick={handleAddNew} disabled={newRow !== null} className="bg-blue-600 hover:bg-blue-700">
+        <Button onClick={handleAddNew} disabled={newRow !== null} className="bg-green-600 hover:bg-green-700">
           <Plus className="h-4 w-4 mr-2" />
           Ajouter Accessoire
         </Button>
@@ -229,7 +277,8 @@ export default function RentalAccessoriesTable() {
               <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700">Location</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700">Client</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700">Appareil</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700">Accessoire</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700">Produit</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700">Emplacement Stock</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700">Quantité</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700">Prix Unitaire</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700">Total</th>
@@ -264,28 +313,37 @@ export default function RentalAccessoriesTable() {
                   <span className="text-xs text-slate-500">Auto</span>
                 </td>
                 <td className="px-4 py-3">
-                  <Select
-                    value={newRow.productId}
-                    onValueChange={(value) => {
-                      const product = products.find((p: any) => p.id === value);
-                      setNewRow({
-                        ...newRow,
-                        productId: value,
-                        unitPrice: product?.price || 0,
-                      });
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setDialogMode('new');
+                      setIsProductDialogOpen(true);
                     }}
+                    className="w-full justify-start"
                   >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Sélectionner produit" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {products.map((product: any) => (
-                        <SelectItem key={product.id} value={product.id}>
-                          {product.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    {newRow.productId ? (
+                      <span className="flex items-center gap-2">
+                        <Package className="h-4 w-4" />
+                        {products.find((p: any) => p.id === newRow.productId)?.name || 'Produit'}
+                      </span>
+                    ) : (
+                      <span className="text-slate-400 flex items-center gap-2">
+                        <ShoppingCart className="h-4 w-4" />
+                        Sélectionner produit
+                      </span>
+                    )}
+                  </Button>
+                </td>
+                <td className="px-4 py-3">
+                  {newRow.stockLocationId ? (
+                    <Badge variant="outline" className="flex items-center gap-1 w-fit">
+                      <Warehouse className="h-3 w-3" />
+                      {products.find((p: any) => p.id === newRow.productId)?.stocks?.find((s: any) => s.location.id === newRow.stockLocationId)?.location.name || 'N/A'}
+                    </Badge>
+                  ) : (
+                    <span className="text-xs text-slate-400">Non sélectionné</span>
+                  )}
                 </td>
                 <td className="px-4 py-3">
                   <Input
@@ -332,7 +390,7 @@ export default function RentalAccessoriesTable() {
 
               if (isEditing) {
                 return (
-                  <tr key={accessory.id} className="bg-blue-50 border-b-2 border-blue-200">
+                  <tr key={accessory.id} className="bg-green-50 border-b-2 border-green-200">
                     <td className="px-4 py-3">
                       <Select
                         value={editData.rentalId}
@@ -357,21 +415,37 @@ export default function RentalAccessoriesTable() {
                       <span className="text-xs text-slate-500">Auto</span>
                     </td>
                     <td className="px-4 py-3">
-                      <Select
-                        value={editData.productId}
-                        onValueChange={(value) => setEditData({ ...editData, productId: value })}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setDialogMode('edit');
+                          setIsProductDialogOpen(true);
+                        }}
+                        className="w-full justify-start"
                       >
-                        <SelectTrigger className="w-full">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {products.map((product: any) => (
-                            <SelectItem key={product.id} value={product.id}>
-                              {product.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        {editData.productId ? (
+                          <span className="flex items-center gap-2">
+                            <Package className="h-4 w-4" />
+                            {products.find((p: any) => p.id === editData.productId)?.name || 'Produit'}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 flex items-center gap-2">
+                            <ShoppingCart className="h-4 w-4" />
+                            Sélectionner produit
+                          </span>
+                        )}
+                      </Button>
+                    </td>
+                    <td className="px-4 py-3">
+                      {editData.stockLocationId ? (
+                        <Badge variant="outline" className="flex items-center gap-1 w-fit">
+                          <Warehouse className="h-3 w-3" />
+                          {products.find((p: any) => p.id === editData.productId)?.stocks?.find((s: any) => s.location.id === editData.stockLocationId)?.location.name || 'N/A'}
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-slate-400">Non sélectionné</span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <Input
@@ -398,7 +472,7 @@ export default function RentalAccessoriesTable() {
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex justify-end gap-2">
-                        <Button size="sm" onClick={handleSaveEdit} className="bg-blue-600 hover:bg-blue-700">
+                        <Button size="sm" onClick={handleSaveEdit} className="bg-green-600 hover:bg-green-700">
                           <Save className="h-3 w-3" />
                         </Button>
                         <Button
@@ -425,7 +499,21 @@ export default function RentalAccessoriesTable() {
                     </Badge>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="text-sm text-slate-900">{patientName}</div>
+                    {accessory.rental?.patient ? (
+                      <Link
+                        href={`/roles/admin/renseignements?patientId=${accessory.rental.patient.id}`}
+                        className="flex flex-col hover:underline cursor-pointer"
+                      >
+                        <span className="text-sm font-medium text-green-600">
+                          {patientName}
+                        </span>
+                        <span className="text-xs text-slate-500">
+                          {accessory.rental.patient.patientCode}
+                        </span>
+                      </Link>
+                    ) : (
+                      <span className="text-sm text-slate-400">N/A</span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <div className="text-sm text-slate-700">
@@ -437,11 +525,29 @@ export default function RentalAccessoriesTable() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <Package className="h-4 w-4 text-blue-600" />
-                      <span className="text-sm font-medium text-slate-900">
-                        {accessory.product?.name || 'N/A'}
-                      </span>
+                      <Package className="h-4 w-4 text-green-600" />
+                      <div>
+                        <div className="text-sm font-medium text-slate-900">
+                          {accessory.product?.name || 'N/A'}
+                        </div>
+                        {accessory.product?.productCode && (
+                          <div className="text-xs text-slate-500">{accessory.product.productCode}</div>
+                        )}
+                      </div>
                     </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    {accessory.stockLocation ? (
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-slate-500">Sortie de:</span>
+                        <Badge variant="outline" className="flex items-center gap-1 w-fit">
+                          <Warehouse className="h-3 w-3" />
+                          {accessory.stockLocation.name}
+                        </Badge>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-slate-400">Non spécifié</span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <Badge variant="secondary">{accessory.quantity}</Badge>
@@ -452,7 +558,7 @@ export default function RentalAccessoriesTable() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="text-sm font-semibold text-blue-700">
+                    <span className="text-sm font-semibold text-green-700">
                       {(accessory.quantity * Number(accessory.unitPrice)).toFixed(2)} DT
                     </span>
                   </td>
@@ -477,7 +583,7 @@ export default function RentalAccessoriesTable() {
 
             {filteredAccessories.length === 0 && !newRow && (
               <tr>
-                <td colSpan={8} className="px-4 py-12 text-center text-slate-500">
+                <td colSpan={9} className="px-4 py-12 text-center text-slate-500">
                   Aucun accessoire trouvé. Cliquez sur "Ajouter Accessoire" pour commencer.
                 </td>
               </tr>
@@ -485,6 +591,174 @@ export default function RentalAccessoriesTable() {
           </tbody>
         </table>
       </div>
+
+      {/* Product Selection Dialog */}
+      <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Sélectionner un Produit (Accessoire / Pièce Détachée)
+            </DialogTitle>
+            <DialogDescription>
+              Choisissez un accessoire ou une pièce détachée et sélectionnez l'emplacement de stock
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Search and Filter Bar */}
+          <div className="flex gap-4 mb-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Rechercher par nom, code, marque..."
+                value={productSearchTerm}
+                onChange={(e) => setProductSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Select value={selectedProductType} onValueChange={(value: any) => setSelectedProductType(value)}>
+              <SelectTrigger className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous les types</SelectItem>
+                <SelectItem value="ACCESSORY">Accessoires</SelectItem>
+                <SelectItem value="SPARE_PART">Pièces Détachées</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Products Grid */}
+          <div className="grid gap-4">
+            {products
+              .filter((product: any) => {
+                // Filter by type
+                if (selectedProductType !== 'all' && product.type !== selectedProductType) {
+                  return false;
+                }
+                // Filter by search term
+                if (productSearchTerm) {
+                  const search = productSearchTerm.toLowerCase();
+                  return (
+                    product.name?.toLowerCase().includes(search) ||
+                    product.productCode?.toLowerCase().includes(search) ||
+                    product.brand?.toLowerCase().includes(search) ||
+                    product.model?.toLowerCase().includes(search)
+                  );
+                }
+                return true;
+              })
+              .map((product: any) => {
+                const totalStock = product.stocks?.reduce((sum: number, stock: any) => sum + stock.quantity, 0) || 0;
+                const typeLabel = product.type === 'ACCESSORY' ? 'Accessoire' : 'Pièce Détachée';
+                const typeBadgeColor = product.type === 'ACCESSORY' ? 'bg-green-100 text-green-700' : 'bg-purple-100 text-purple-700';
+
+                return (
+                  <div
+                    key={product.id}
+                    className="border rounded-lg p-4 hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="font-semibold text-slate-900">{product.name}</h4>
+                          <Badge className={typeBadgeColor}>{typeLabel}</Badge>
+                        </div>
+                        <div className="text-sm text-slate-600 space-y-1">
+                          {product.productCode && (
+                            <div>Code: <span className="font-medium">{product.productCode}</span></div>
+                          )}
+                          {(product.brand || product.model) && (
+                            <div>{[product.brand, product.model].filter(Boolean).join(' - ')}</div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-lg font-bold text-slate-900">
+                          {product.price?.toFixed(2) || '0.00'} DT
+                        </div>
+                        <div className={`text-sm font-medium ${totalStock > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          Stock total: {totalStock}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Stock by Location */}
+                    {product.stocks && product.stocks.length > 0 ? (
+                      <div className="space-y-2 mt-3 pt-3 border-t">
+                        <div className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                          <Warehouse className="h-3 w-3" />
+                          Stock par emplacement:
+                        </div>
+                        {product.stocks.map((stock: any) => (
+                          <div
+                            key={stock.id}
+                            className="flex items-center justify-between bg-slate-50 p-2 rounded hover:bg-slate-100 transition-colors"
+                          >
+                            <div className="flex items-center gap-2">
+                              <Warehouse className={`h-4 w-4 ${stock.quantity > 0 ? 'text-green-600' : 'text-red-600'}`} />
+                              <span className="text-sm font-medium text-slate-700">
+                                {stock.location?.name || 'N/A'}
+                              </span>
+                              <span className={`text-sm font-bold ${stock.quantity > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                ({stock.quantity} unité{stock.quantity > 1 ? 's' : ''})
+                              </span>
+                            </div>
+                            <Button
+                              size="sm"
+                              disabled={stock.quantity === 0}
+                              onClick={() => {
+                                const dataToUpdate = dialogMode === 'new' ? newRow : editData;
+                                const setterFn = dialogMode === 'new' ? setNewRow : setEditData;
+
+                                setterFn({
+                                  ...dataToUpdate,
+                                  productId: product.id,
+                                  stockLocationId: stock.location.id,
+                                  unitPrice: product.price || 0,
+                                  quantity: 1,
+                                });
+                                setIsProductDialogOpen(false);
+                                setProductSearchTerm('');
+                              }}
+                              className="bg-green-600 hover:bg-green-700"
+                            >
+                              <ShoppingCart className="h-3 w-3 mr-1" />
+                              Sélectionner
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="mt-3 pt-3 border-t text-sm text-red-600">
+                        Aucun stock disponible
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+          </div>
+
+          {products.filter((product: any) => {
+            if (selectedProductType !== 'all' && product.type !== selectedProductType) return false;
+            if (productSearchTerm) {
+              const search = productSearchTerm.toLowerCase();
+              return (
+                product.name?.toLowerCase().includes(search) ||
+                product.productCode?.toLowerCase().includes(search) ||
+                product.brand?.toLowerCase().includes(search) ||
+                product.model?.toLowerCase().includes(search)
+              );
+            }
+            return true;
+          }).length === 0 && (
+            <div className="text-center py-12 text-slate-500">
+              <Package className="h-12 w-12 mx-auto mb-3 text-slate-300" />
+              <p>Aucun produit trouvé</p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -23,15 +23,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         where.category = category as string;
       }
 
-      // If user is EMPLOYEE, only show bonds for rentals they created or are assigned to
-      if (session.user.role === 'EMPLOYEE' && !category) {
-        where.rental = {
-          OR: [
-            { createdById: session.user.id },
-            { assignedToId: session.user.id }
-          ]
-        };
+      // If user is EMPLOYEE, only show bonds for their rentals/sales
+      if (session.user.role === 'EMPLOYEE') {
+        where.OR = [
+          // Rental bonds where employee created or is assigned to the rental
+          {
+            rental: {
+              OR: [
+                { createdById: session.user.id },
+                { assignedToId: session.user.id }
+              ]
+            }
+          },
+          // Sale bonds where employee is assigned or processed the sale
+          {
+            sale: {
+              OR: [
+                { assignedToId: session.user.id },
+                { processedById: session.user.id }
+              ]
+            }
+          }
+        ];
       }
+      // ADMIN and DOCTOR can see all bonds (no additional filter)
 
       const cnamBons = await prisma.cNAMBonRental.findMany({
         where,

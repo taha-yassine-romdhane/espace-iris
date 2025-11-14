@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useRouter } from 'next/router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -28,18 +29,43 @@ import {
   Minimize2,
   Filter,
   XCircle,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  Warehouse,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
+interface RentalAccessory {
+  id: string;
+  quantity: number;
+  unitPrice: number | string;
+  product: {
+    id: string;
+    name: string;
+    productCode: string | null;
+    brand: string | null;
+    model: string | null;
+  };
+  stockLocation: {
+    id: string;
+    name: string;
+  } | null;
+}
+
 interface PatientStatistic {
   id: string;
+  patientId?: string;
   patientName: string;
+  patientCode?: string;
   patientPhone?: string;
   patientPhoneTwo?: string | null;
   doctorName?: string;
   rentalCode?: string;
+  deviceId?: string;
   deviceName?: string;
   deviceCode?: string;
   employeeName?: string;
@@ -59,15 +85,18 @@ interface PatientStatistic {
   lastPaymentType?: string | null;
   lastPaymentStatus?: string | null;
   daysSinceLastPayment?: number | null;
+  accessories?: RentalAccessory[];
 }
 
 export default function RentalStatistics() {
   const { toast } = useToast();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState<Partial<PatientStatistic>>({});
   const [searchTerm, setSearchTerm] = useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   // Filter states
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
@@ -79,10 +108,27 @@ export default function RentalStatistics() {
   const [doctorFilter, setDoctorFilter] = useState<string>('ALL');
   const [monthFilter, setMonthFilter] = useState<string>('ALL');
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 50;
+
   // Prevent losing focus when editing - use callback to update editData
   const handleEditDataChange = React.useCallback((field: keyof PatientStatistic, value: any) => {
     setEditData(prev => ({ ...prev, [field]: value }));
   }, []);
+
+  // Toggle row expansion for accessories
+  const toggleRowExpansion = (rentalId: string) => {
+    setExpandedRows(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(rentalId)) {
+        newSet.delete(rentalId);
+      } else {
+        newSet.add(rentalId);
+      }
+      return newSet;
+    });
+  };
 
   // Fetch rental statistics with all relationships
   const { data: statisticsData, isLoading } = useQuery({
@@ -119,15 +165,18 @@ export default function RentalStatistics() {
 
         return {
           id: rental.id,
+          patientId: rental.patient?.id || undefined,
           patientName: rental.patient
             ? `${rental.patient.firstName} ${rental.patient.lastName}`
             : rental.company?.companyName || 'N/A',
+          patientCode: rental.patient?.patientCode || undefined,
           patientPhone: rental.patient?.telephone || '-',
           patientPhoneTwo: rental.patient?.telephoneTwo || null,
           doctorName: rental.patient?.doctor?.user
             ? `Dr. ${rental.patient.doctor.user.firstName} ${rental.patient.doctor.user.lastName}`
             : '-',
           rentalCode: rental.rentalCode || '-',
+          deviceId: rental.medicalDevice?.id || undefined,
           deviceName: rental.medicalDevice?.name || '-',
           deviceCode: rental.medicalDevice?.deviceCode || '-',
           employeeName: rental.assignedTo
@@ -149,6 +198,7 @@ export default function RentalStatistics() {
           lastPaymentType: rental.lastPaymentType,
           lastPaymentStatus: rental.lastPaymentStatus,
           daysSinceLastPayment: daysSinceLastPayment,
+          accessories: rental.accessories || [],
         };
       }) : [];
     },
@@ -250,6 +300,17 @@ export default function RentalStatistics() {
     return true;
   });
 
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredStats.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedStats = filteredStats.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, paymentStatusFilter, dateFromFilter, dateToFilter, daysFilter, employeeFilter, doctorFilter, monthFilter]);
+
   // Get unique employees, doctors, and months for filter dropdowns
   const uniqueEmployees = useMemo(() => {
     const employees = new Set<string>();
@@ -331,6 +392,9 @@ export default function RentalStatistics() {
           <table className="min-w-max w-full">
             <thead className="bg-gradient-to-r from-green-600 to-green-700 text-white">
               <tr>
+                <th className="px-4 py-3 text-center text-xs font-semibold uppercase whitespace-nowrap w-12">
+                  {/* Expand/Collapse column */}
+                </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase whitespace-nowrap">
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4" />
@@ -391,27 +455,65 @@ export default function RentalStatistics() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-slate-200">
-              {filteredStats.length === 0 ? (
+              {paginatedStats.length === 0 ? (
                 <tr>
-                  <td colSpan={17} className="px-4 py-12 text-center text-slate-500">
+                  <td colSpan={18} className="px-4 py-12 text-center text-slate-500">
                     Aucune location trouvée
                   </td>
                 </tr>
               ) : (
-                filteredStats.map((stat: PatientStatistic) => {
+                paginatedStats.map((stat: PatientStatistic) => {
                   const isEditing = editingId === stat.id;
+                  const isExpanded = expandedRows.has(stat.id);
+                  const hasAccessories = stat.accessories && stat.accessories.length > 0;
 
                   return (
-                    <tr
-                      key={stat.id}
-                      className={`hover:bg-green-50 transition-colors ${
-                        isEditing ? 'bg-green-100 border-2 border-green-300' : ''
-                      }`}
-                    >
-                      {/* Patient */}
+                    <React.Fragment key={stat.id}>
+                      <tr
+                        className={`hover:bg-green-50 transition-colors ${
+                          isEditing ? 'bg-green-100 border-2 border-blue-300' : ''
+                        }`}
+                      >
+                        {/* Expand/Collapse Button */}
+                        <td className="px-4 py-3 text-center">
+                          {hasAccessories ? (
+                            <button
+                              onClick={() => toggleRowExpansion(stat.id)}
+                              className="p-1 hover:bg-green-100 rounded transition-colors"
+                              title={isExpanded ? 'Masquer les accessoires' : 'Afficher les accessoires'}
+                            >
+                              {isExpanded ? (
+                                <ChevronUp className="h-4 w-4 text-green-600" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4 text-green-600" />
+                              )}
+                            </button>
+                          ) : (
+                            <div className="w-6 h-4"></div>
+                          )}
+                        </td>
+
+                        {/* Patient */}
                       <td className="px-4 py-3 whitespace-nowrap">
                         <div className="text-sm">
-                          <div className="font-medium text-slate-900">{stat.patientName}</div>
+                          {stat.patientId ? (
+                            <div
+                              className="font-medium text-green-600 hover:text-green-800 hover:underline cursor-pointer transition-colors"
+                              onClick={() => router.push(`/roles/admin/renseignement/patient/${stat.patientId}`)}
+                            >
+                              {stat.patientName}
+                            </div>
+                          ) : (
+                            <div className="font-medium text-slate-900">{stat.patientName}</div>
+                          )}
+                          {stat.patientCode && (
+                            <div
+                              className="text-xs text-slate-500 font-mono cursor-pointer hover:text-green-600 transition-colors"
+                              onClick={() => router.push(`/roles/admin/renseignement/patient/${stat.patientId}`)}
+                            >
+                              {stat.patientCode}
+                            </div>
+                          )}
                           {stat.patientPhone !== '-' && (
                             <div className="text-xs text-green-600">Tel: {stat.patientPhone}</div>
                           )}
@@ -436,8 +538,24 @@ export default function RentalStatistics() {
                       {/* Device */}
                       <td className="px-4 py-3 whitespace-nowrap">
                         <div className="text-sm">
-                          <div className="font-medium text-slate-900">{stat.deviceName}</div>
-                          <div className="text-xs text-slate-500">{stat.deviceCode}</div>
+                          {stat.deviceId ? (
+                            <div
+                              className="font-medium text-green-600 hover:text-green-800 hover:underline cursor-pointer transition-colors"
+                              onClick={() => router.push(`/roles/admin/appareils/medical-device/${stat.deviceId}`)}
+                            >
+                              {stat.deviceName}
+                            </div>
+                          ) : (
+                            <div className="font-medium text-slate-900">{stat.deviceName}</div>
+                          )}
+                          {stat.deviceCode && stat.deviceCode !== '-' && (
+                            <div
+                              className="text-xs text-slate-500 font-mono cursor-pointer hover:text-green-600 transition-colors"
+                              onClick={() => router.push(`/roles/admin/appareils/medical-device/${stat.deviceId}`)}
+                            >
+                              {stat.deviceCode}
+                            </div>
+                          )}
                         </div>
                       </td>
 
@@ -452,11 +570,6 @@ export default function RentalStatistics() {
                           <div className="text-slate-600">
                             Début: {stat.startDate ? format(new Date(stat.startDate), 'dd/MM/yy', { locale: fr }) : '-'}
                           </div>
-                          {stat.endDate && (
-                            <div className="text-slate-600">
-                              Fin: {format(new Date(stat.endDate), 'dd/MM/yy', { locale: fr })}
-                            </div>
-                          )}
                         </div>
                       </td>
 
@@ -672,7 +785,7 @@ export default function RentalStatistics() {
                               size="sm"
                               variant="outline"
                               onClick={() => handleEdit(stat)}
-                              className="h-8 px-3 hover:bg-green-50 hover:border-green-300"
+                              className="h-8 px-3 hover:bg-green-50 hover:border-blue-300"
                             >
                               <Edit2 className="h-3 w-3 mr-1" />
                               Éditer
@@ -681,6 +794,81 @@ export default function RentalStatistics() {
                         )}
                       </td>
                     </tr>
+
+                    {/* Accessories Expansion Row */}
+                    {isExpanded && hasAccessories && (
+                      <tr className="bg-green-50">
+                        <td colSpan={18} className="px-4 py-4">
+                          <div className="ml-8">
+                            <div className="flex items-center gap-2 mb-3">
+                              <Package className="h-4 w-4 text-green-600" />
+                              <h4 className="text-sm font-semibold text-green-900">
+                                Accessoires ({stat.accessories!.length})
+                              </h4>
+                            </div>
+                            <div className="bg-white rounded-lg border border-green-200 overflow-hidden">
+                              <table className="min-w-full divide-y divide-slate-200">
+                                <thead className="bg-slate-50">
+                                  <tr>
+                                    <th className="px-3 py-2 text-left text-xs font-medium text-slate-600">Produit</th>
+                                    <th className="px-3 py-2 text-left text-xs font-medium text-slate-600">Code</th>
+                                    <th className="px-3 py-2 text-left text-xs font-medium text-slate-600">Marque/Modèle</th>
+                                    <th className="px-3 py-2 text-center text-xs font-medium text-slate-600">Quantité</th>
+                                    <th className="px-3 py-2 text-right text-xs font-medium text-slate-600">Prix Unitaire</th>
+                                    <th className="px-3 py-2 text-left text-xs font-medium text-slate-600">Emplacement Stock</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                  {stat.accessories!.map((accessory) => (
+                                    <tr key={accessory.id} className="hover:bg-slate-50">
+                                      <td className="px-3 py-2">
+                                        <span className="text-sm font-medium text-slate-900">
+                                          {accessory.product.name}
+                                        </span>
+                                      </td>
+                                      <td className="px-3 py-2">
+                                        <span className="text-xs text-slate-500 font-mono">
+                                          {accessory.product.productCode || '-'}
+                                        </span>
+                                      </td>
+                                      <td className="px-3 py-2">
+                                        <span className="text-xs text-slate-600">
+                                          {accessory.product.brand || '-'} {accessory.product.model || ''}
+                                        </span>
+                                      </td>
+                                      <td className="px-3 py-2 text-center">
+                                        <Badge variant="outline" className="bg-green-50 text-green-700">
+                                          {accessory.quantity}
+                                        </Badge>
+                                      </td>
+                                      <td className="px-3 py-2 text-right">
+                                        <span className="text-sm font-semibold text-green-700">
+                                          {Number(accessory.unitPrice).toFixed(2)} DT
+                                        </span>
+                                      </td>
+                                      <td className="px-3 py-2">
+                                        {accessory.stockLocation ? (
+                                          <div className="flex items-center gap-1">
+                                            <span className="text-xs text-slate-500">Sortie de:</span>
+                                            <Badge variant="outline" className="flex items-center gap-1">
+                                              <Warehouse className="h-3 w-3" />
+                                              {accessory.stockLocation.name}
+                                            </Badge>
+                                          </div>
+                                        ) : (
+                                          <span className="text-xs text-slate-400">Non spécifié</span>
+                                        )}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    </React.Fragment>
                   );
                 })
               )}
@@ -690,7 +878,7 @@ export default function RentalStatistics() {
       </div>
     </>
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  ), [filteredStats, editingId, editData, handleEditDataChange, getStatusBadge, getPaymentMethodLabel]);
+  ), [paginatedStats, editingId, editData, handleEditDataChange, getStatusBadge, getPaymentMethodLabel]);
 
   if (isLoading) {
     return (
@@ -887,14 +1075,73 @@ export default function RentalStatistics() {
           </div>
         </Card>
 
-        {/* Statistics Count */}
-        <div className="flex items-center gap-6 text-sm">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-green-500"></div>
-            <span className="text-slate-600">
-              <strong>{filteredStats.length}</strong> location(s) trouvée(s)
-            </span>
+        {/* Statistics Count and Pagination Info */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-6 text-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-green-500"></div>
+              <span className="text-slate-600">
+                <strong>{filteredStats.length}</strong> location(s) trouvée(s)
+              </span>
+            </div>
+            {totalPages > 1 && (
+              <span className="text-slate-500 text-xs">
+                Page {currentPage} sur {totalPages} • Affichage {startIndex + 1}-{Math.min(endIndex, filteredStats.length)} sur {filteredStats.length}
+              </span>
+            )}
           </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="h-8"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={currentPage === pageNum ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(pageNum)}
+                      className="h-8 w-8 p-0"
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className="h-8"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </div>
 
         {tableContent}
@@ -927,14 +1174,73 @@ export default function RentalStatistics() {
               </Button>
             </div>
 
-            {/* Statistics Count */}
-            <div className="flex items-center gap-6 text-sm mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                <span className="text-slate-600">
-                  <strong>{filteredStats.length}</strong> location(s) trouvée(s)
-                </span>
+            {/* Statistics Count and Pagination Info */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-6 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                  <span className="text-slate-600">
+                    <strong>{filteredStats.length}</strong> location(s) trouvée(s)
+                  </span>
+                </div>
+                {totalPages > 1 && (
+                  <span className="text-slate-500 text-xs">
+                    Page {currentPage} sur {totalPages} • Affichage {startIndex + 1}-{Math.min(endIndex, filteredStats.length)} sur {filteredStats.length}
+                  </span>
+                )}
               </div>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    className="h-8"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum;
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant={currentPage === pageNum ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setCurrentPage(pageNum)}
+                          className="h-8 w-8 p-0"
+                        >
+                          {pageNum}
+                        </Button>
+                      );
+                    })}
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    className="h-8"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </div>
 
             {tableContent}

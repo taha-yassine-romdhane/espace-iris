@@ -1,63 +1,96 @@
-import React from "react";
-import { useRouter } from "next/router";
-import Head from "next/head";
-import { ShoppingCart, Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import SalesExcelTable from "../dashboard/components/tables/SalesExcelTable";
+import { useState } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import SalesExcelTable from './components/SalesExcelTable';
+import ArticlesExcelTable from './components/ArticlesExcelTable';
+import PaymentsExcelTable from './components/PaymentsExcelTable';
+import CNAMBonsExcelTable from './components/CNAMBonsExcelTable';
+import CNAMRappelsTable from './components/CNAMRappelsTable';
+import { Button } from '@/components/ui/button';
+import { FileSpreadsheet, ShoppingCart, CreditCard, FileText, Package, Bell } from 'lucide-react';
 import EmployeeLayout from '../EmployeeLayout';
 
-export default function EmployeeSalesPage() {
-  const router = useRouter();
+function SalesPage() {
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [activeTab, setActiveTab] = useState('sales');
+
+  const handleRefresh = () => {
+    setRefreshKey(prev => prev + 1);
+  };
 
   return (
-    <>
-      <Head>
-        <title>Mes Ventes - Espace Elite</title>
-        <meta name="description" content="Gestion de mes ventes" />
-      </Head>
-
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-        {/* Header Section */}
-        <div className="bg-gradient-to-r from-green-600 to-green-700 text-white px-6 py-8">
-          <div className="max-w-7xl mx-auto">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <div>
-                <h1 className="text-3xl font-bold flex items-center gap-3">
-                  <ShoppingCart className="h-8 w-8" />
-                  Mes Ventes
-                </h1>
-                <p className="text-green-100 mt-2">
-                  Gérez vos ventes et suivez vos performances
-                </p>
-              </div>
-              <Button
-                onClick={() => router.push('/roles/employee/sales/create')}
-                className="bg-white text-green-700 hover:bg-green-50 font-semibold shadow-lg flex items-center gap-2"
-              >
-                <Plus className="h-5 w-5" />
-                Nouvelle Vente
-              </Button>
-            </div>
-          </div>
+    <div className="mx-auto py-6 px-2 max-w-[98vw]">
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-green-900">Mes Ventes</h1>
+          <p className="text-slate-600 mt-1">Gérer mes ventes, paiements et bons CNAM dans des tableaux séparés</p>
         </div>
-
-        {/* Container for content */}
-        <div className="w-full px-4 -mt-6">
-          {/* Sales Table */}
-          <div className="mb-8 w-full">
-            <Card className="bg-white rounded-xl shadow-sm">
-              <CardContent className="p-6">
-                <SalesExcelTable />
-              </CardContent>
-            </Card>
-          </div>
+        <div className="flex gap-2">
+          <Button
+            onClick={handleRefresh}
+            variant="outline"
+            className="gap-2"
+          >
+            <FileSpreadsheet className="h-4 w-4" />
+            Actualiser
+          </Button>
         </div>
       </div>
-    </>
+
+      <Card>
+        <CardContent className="pt-6">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-5 mb-6">
+              <TabsTrigger value="sales" className="flex items-center gap-2">
+                <ShoppingCart className="h-4 w-4" />
+                Ventes
+              </TabsTrigger>
+              <TabsTrigger value="articles" className="flex items-center gap-2">
+                <Package className="h-4 w-4" />
+                Articles
+              </TabsTrigger>
+              <TabsTrigger value="payments" className="flex items-center gap-2">
+                <CreditCard className="h-4 w-4" />
+                Paiements
+              </TabsTrigger>
+              <TabsTrigger value="cnam-bons" className="flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Bons CNAM
+              </TabsTrigger>
+              <TabsTrigger value="rappels-cnam" className="flex items-center gap-2">
+                <Bell className="h-4 w-4" />
+                Rappels CNAM
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="sales" className="mt-0">
+              <SalesExcelTable key={`sales-${refreshKey}`} />
+            </TabsContent>
+
+            <TabsContent value="articles" className="mt-0">
+              <ArticlesExcelTable key={`articles-${refreshKey}`} />
+            </TabsContent>
+
+            <TabsContent value="payments" className="mt-0">
+              <PaymentsExcelTable key={`payments-${refreshKey}`} />
+            </TabsContent>
+
+            <TabsContent value="cnam-bons" className="mt-0">
+              <CNAMBonsExcelTable key={`cnam-${refreshKey}`} />
+            </TabsContent>
+
+            <TabsContent value="rappels-cnam" className="mt-0">
+              <CNAMRappelsTable key={`rappels-${refreshKey}`} />
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
-EmployeeSalesPage.getLayout = function getLayout(page: React.ReactElement) {
+SalesPage.getLayout = function getLayout(page: React.ReactElement) {
   return <EmployeeLayout>{page}</EmployeeLayout>;
 };
+
+export default SalesPage;

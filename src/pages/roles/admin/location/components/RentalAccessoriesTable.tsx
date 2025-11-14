@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import Link from 'next/link';
 import {
   Plus,
   Save,
@@ -39,7 +40,12 @@ interface RentalAccessory {
   unitPrice: number;
   rental?: {
     rentalCode: string;
-    patient?: { firstName: string; lastName: string };
+    patient?: {
+      id: string;
+      patientCode: string;
+      firstName: string;
+      lastName: string;
+    };
     medicalDevice?: { name: string; deviceCode: string };
   };
   product?: {
@@ -140,8 +146,12 @@ export default function RentalAccessoriesTable() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['rental-accessories'] });
+      queryClient.invalidateQueries({ queryKey: ['products-accessories-spareparts'] }); // Refresh stock
       setNewRow(null);
-      toast({ title: "Succès", description: "Accessoire ajouté" });
+      toast({
+        title: "Succès",
+        description: "Accessoire ajouté et stock mis à jour"
+      });
     },
     onError: (error: Error) => {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
@@ -197,7 +207,15 @@ export default function RentalAccessoriesTable() {
 
   const handleSaveNew = () => {
     if (!newRow?.rentalId || !newRow?.productId) {
-      toast({ title: "Erreur", description: "Remplissez tous les champs", variant: "destructive" });
+      toast({ title: "Erreur", description: "Veuillez sélectionner une location et un produit", variant: "destructive" });
+      return;
+    }
+    if (!newRow?.stockLocationId) {
+      toast({ title: "Erreur", description: "Veuillez sélectionner un emplacement de stock", variant: "destructive" });
+      return;
+    }
+    if (!newRow?.quantity || newRow.quantity < 1) {
+      toast({ title: "Erreur", description: "La quantité doit être supérieure à 0", variant: "destructive" });
       return;
     }
     createMutation.mutate(newRow);
@@ -481,7 +499,21 @@ export default function RentalAccessoriesTable() {
                     </Badge>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="text-sm text-slate-900">{patientName}</div>
+                    {accessory.rental?.patient ? (
+                      <Link
+                        href={`/roles/admin/renseignements?patientId=${accessory.rental.patient.id}`}
+                        className="flex flex-col hover:underline cursor-pointer"
+                      >
+                        <span className="text-sm font-medium text-blue-600">
+                          {patientName}
+                        </span>
+                        <span className="text-xs text-slate-500">
+                          {accessory.rental.patient.patientCode}
+                        </span>
+                      </Link>
+                    ) : (
+                      <span className="text-sm text-slate-400">N/A</span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <div className="text-sm text-slate-700">
@@ -506,10 +538,13 @@ export default function RentalAccessoriesTable() {
                   </td>
                   <td className="px-4 py-3">
                     {accessory.stockLocation ? (
-                      <Badge variant="outline" className="flex items-center gap-1 w-fit">
-                        <Warehouse className="h-3 w-3" />
-                        {accessory.stockLocation.name}
-                      </Badge>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-slate-500">Sortie de:</span>
+                        <Badge variant="outline" className="flex items-center gap-1 w-fit">
+                          <Warehouse className="h-3 w-3" />
+                          {accessory.stockLocation.name}
+                        </Badge>
+                      </div>
                     ) : (
                       <span className="text-xs text-slate-400">Non spécifié</span>
                     )}
@@ -661,7 +696,7 @@ export default function RentalAccessoriesTable() {
                             className="flex items-center justify-between bg-slate-50 p-2 rounded hover:bg-slate-100 transition-colors"
                           >
                             <div className="flex items-center gap-2">
-                              <div className={`w-2 h-2 rounded-full ${stock.quantity > 0 ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                              <Warehouse className={`h-4 w-4 ${stock.quantity > 0 ? 'text-green-600' : 'text-red-600'}`} />
                               <span className="text-sm font-medium text-slate-700">
                                 {stock.location?.name || 'N/A'}
                               </span>

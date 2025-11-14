@@ -34,6 +34,60 @@ export const PatientDiagnostics = ({ diagnostics = [], isLoading = false }: Pati
     }
   };
 
+  const getStatusLabel = (status: string) => {
+    const statusLabels: Record<string, string> = {
+      'COMPLETED': 'Terminé',
+      'PENDING': 'En attente',
+      'IN_PROGRESS': 'En cours',
+    };
+    return statusLabels[status] || status;
+  };
+
+  const getSeverityLabel = (severity: string) => {
+    const severityLabels: Record<string, string> = {
+      'NORMAL': 'Normal',
+      'LIGHT': 'Léger',
+      'MODERATE': 'Modéré',
+      'SEVERE': 'Sévère',
+      'VERY_SEVERE': 'Très sévère',
+    };
+    return severityLabels[severity] || severity;
+  };
+
+  const getSeverityColor = (severity: string) => {
+    switch (severity) {
+      case 'NORMAL':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'LIGHT':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'MODERATE':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'SEVERE':
+        return 'bg-orange-100 text-orange-800 border-orange-200';
+      case 'VERY_SEVERE':
+        return 'bg-red-100 text-red-800 border-red-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  // Calculate severity from IAH value
+  const calculateSeverityFromIAH = (iah: number | null | undefined): { severity: string; label: string; color: string } => {
+    if (iah === null || iah === undefined) {
+      return { severity: 'UNKNOWN', label: '-', color: 'bg-gray-100 text-gray-800 border-gray-200' };
+    }
+
+    if (iah < 5) {
+      return { severity: 'NORMAL', label: 'Normal', color: 'bg-green-100 text-green-800 border-green-200' };
+    } else if (iah < 15) {
+      return { severity: 'LIGHT', label: 'Léger', color: 'bg-blue-100 text-blue-800 border-blue-200' };
+    } else if (iah < 30) {
+      return { severity: 'MODERATE', label: 'Modéré', color: 'bg-yellow-100 text-yellow-800 border-yellow-200' };
+    } else {
+      return { severity: 'SEVERE', label: 'Sévère', color: 'bg-orange-100 text-orange-800 border-orange-200' };
+    }
+  };
+
   const handlePrint = () => {
     window.print();
   };
@@ -133,20 +187,23 @@ export const PatientDiagnostics = ({ diagnostics = [], isLoading = false }: Pati
                       </div>
                     </TableCell>
                     <TableCell>
-                      {diagnostic.result?.status ? (
-                        <Badge variant="outline" className="text-xs whitespace-nowrap">
-                          {diagnostic.result.status}
-                        </Badge>
-                      ) : (
-                        <span className="text-gray-400 text-sm">-</span>
-                      )}
+                      {(() => {
+                        const severityData = calculateSeverityFromIAH(diagnostic.result?.iah);
+                        return severityData.label === '-' ? (
+                          <span className="text-gray-400 text-sm">-</span>
+                        ) : (
+                          <Badge variant="outline" className={`text-xs whitespace-nowrap ${severityData.color}`}>
+                            {severityData.label}
+                          </Badge>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell className="text-xs text-gray-600 max-w-[200px] truncate">
                       {diagnostic.notes || diagnostic.description || '-'}
                     </TableCell>
                     <TableCell>
                       <Badge className={getStatusColor(diagnostic.status || 'PENDING')} size="sm">
-                        {diagnostic.status === 'COMPLETED' ? 'Terminé' : diagnostic.status === 'PENDING' ? 'En attente' : diagnostic.status === 'IN_PROGRESS' ? 'En cours' : diagnostic.status}
+                        {getStatusLabel(diagnostic.status || 'PENDING')}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm">

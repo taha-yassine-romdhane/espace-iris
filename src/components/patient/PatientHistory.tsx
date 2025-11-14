@@ -31,9 +31,24 @@ export const PatientHistory = ({ history = [], isLoading = false }: PatientHisto
         return 'bg-amber-100 text-amber-800';
       case 'PAYMENT':
         return 'bg-indigo-100 text-indigo-800';
+      case 'SALE':
+        return 'bg-emerald-100 text-emerald-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const getActionTypeLabel = (actionType: string) => {
+    const actionLabels: Record<string, string> = {
+      'CREATE': 'Création',
+      'UPDATE': 'Mise à jour',
+      'DELETE': 'Suppression',
+      'DIAGNOSTIC': 'Diagnostic',
+      'RENTAL': 'Location',
+      'PAYMENT': 'Paiement',
+      'SALE': 'Vente',
+    };
+    return actionLabels[actionType] || actionType;
   };
 
   return (
@@ -76,14 +91,17 @@ export const PatientHistory = ({ history = [], isLoading = false }: PatientHisto
                       })}
                     </TableCell>
                     <TableCell>
-                      <Badge className={getActionTypeColor(item.actionType)}>{item.actionType}</Badge>
+                      <Badge className={getActionTypeColor(item.actionType)}>{getActionTypeLabel(item.actionType)}</Badge>
                     </TableCell>
                     <TableCell>
-                      {item.details?.description || 'N/A'}
-                      {item.relatedItemType && (
-                        <span className="text-xs text-gray-500 block mt-1">
-                          {item.relatedItemType}: {item.relatedItemId}
-                        </span>
+                      {item.details?.description || item.description || (
+                        item.actionType === 'SALE' ? 'Vente créée' :
+                        item.actionType === 'RENTAL' ? 'Location créée' :
+                        item.actionType === 'DIAGNOSTIC' ? 'Diagnostic effectué' :
+                        item.actionType === 'PAYMENT' ? 'Paiement reçu' :
+                        item.actionType === 'UPDATE' ? 'Mise à jour des informations' :
+                        item.actionType === 'CREATE' ? 'Patient créé' :
+                        'Action effectuée'
                       )}
                     </TableCell>
                     <TableCell>{item.performedBy?.name || 'Système'}</TableCell>

@@ -20,7 +20,11 @@ const PatientPrintPage: NextPageWithLayout = () => {
       'OVERDUE': 'En retard',
       'APPROUVE': 'Approuvé',
       'EN_ATTENTE': 'En attente',
-      'REFUSE': 'Refusé'
+      'REFUSE': 'Refusé',
+      'PAID': 'Payé',
+      'UNPAID': 'Non payé',
+      'PARTIAL': 'Partiel',
+      'IN_PROGRESS': 'En cours'
     };
     return translations[status] || status;
   };
@@ -38,11 +42,23 @@ const PatientPrintPage: NextPageWithLayout = () => {
 
   const translateCategory = (category: string) => {
     const translations: Record<string, string> = {
-      'PREMIERE_INSTALLATION': 'Première Installation',
-      'RENOUVELLEMENT': 'Renouvellement',
-      'REMPLACEMENT': 'Remplacement'
+      'LOCATION': 'Location',
+      'ACHAT': 'Achat'
     };
     return translations[category] || category;
+  };
+
+  const getProgressionStepLabel = (step: number): string => {
+    const steps: Record<number, string> = {
+      1: 'Étape 1 - En attente approbation CNAM',
+      2: 'Étape 2 - Accord avec patient',
+      3: 'Étape 3 - Tech récupère Bon CNAM',
+      4: 'Étape 4 - Livraison Bon à Admin',
+      5: 'Étape 5 - Livraison au Technicien',
+      6: 'Étape 6 - Signature Médecin',
+      7: 'Étape 7 - Livraison finale Admin'
+    };
+    return steps[step] || `Étape ${step}`;
   };
 
   const translateBillingCycle = (cycle: string) => {
@@ -58,12 +74,39 @@ const PatientPrintPage: NextPageWithLayout = () => {
   const translatePaymentMethod = (method: string) => {
     const translations: Record<string, string> = {
       'CASH': 'Espèces',
+      'CHEQUE': 'Chèque',
       'CHECK': 'Chèque',
+      'VIREMENT': 'Virement',
       'BANK_TRANSFER': 'Virement Bancaire',
+      'TRAITE': 'Traite',
+      'MANDAT': 'Mandat',
       'CARD': 'Carte Bancaire',
-      'CNAM': 'CNAM'
+      'CNAM': 'CNAM',
+      'MIXED': 'Mixte'
     };
     return translations[method] || method;
+  };
+
+  const calculateSeverityFromIAH = (iah: number | null | undefined): string => {
+    if (iah === null || iah === undefined) return '-';
+    if (iah < 5) return 'Normal';
+    if (iah < 15) return 'Léger';
+    if (iah < 30) return 'Modéré';
+    return 'Sévère';
+  };
+
+  const translateDeviceType = (type: string) => {
+    const translations: Record<string, string> = {
+      'CPAP': 'CPAP',
+      'BIPAP': 'BiPAP',
+      'VNI': 'VNI',
+      'CONCENTRATEUR': 'Concentrateur',
+      'CONCENTRATEUR_OXYGENE': 'Concentrateur Oxygène',
+      'MEDICAL_DEVICE': 'Appareil Médical',
+      'OTHER': 'Autre',
+      'AUTRE': 'Autre'
+    };
+    return translations[type] || type;
   };
 
   const { data: patient, isLoading } = useQuery({
@@ -132,11 +175,14 @@ const PatientPrintPage: NextPageWithLayout = () => {
           <table className="w-full border-collapse border">
             <thead>
               <tr className="bg-gray-100">
+                <th className="border p-2 text-left">Code Location</th>
                 <th className="border p-2 text-left">Code Appareil</th>
                 <th className="border p-2 text-left">Nom de l'Appareil</th>
                 <th className="border p-2 text-left">Numéro de Série</th>
                 <th className="border p-2 text-left">Type</th>
-                <th className="border p-2 text-left">Location Active</th>
+                <th className="border p-2 text-left">Marque</th>
+                <th className="border p-2 text-left">Date Début</th>
+                <th className="border p-2 text-left">Statut</th>
               </tr>
             </thead>
             <tbody>
@@ -144,15 +190,18 @@ const PatientPrintPage: NextPageWithLayout = () => {
                 .filter((rental: any) => rental.medicalDevice)
                 .map((rental: any) => (
                   <tr key={rental.id}>
-                    <td className="border p-2 font-mono">{rental.medicalDevice.deviceCode || '-'}</td>
+                    <td className="border p-2 font-mono text-xs">{rental.rentalCode || '-'}</td>
+                    <td className="border p-2 font-mono text-xs">{rental.medicalDevice.deviceCode || '-'}</td>
                     <td className="border p-2 font-semibold">{rental.medicalDevice.name}</td>
-                    <td className="border p-2 font-mono">{rental.medicalDevice.serialNumber || '-'}</td>
-                    <td className="border p-2">{rental.medicalDevice.type || '-'}</td>
+                    <td className="border p-2 font-mono text-xs">{rental.medicalDevice.serialNumber || '-'}</td>
+                    <td className="border p-2">{translateDeviceType(rental.medicalDevice.type) || '-'}</td>
+                    <td className="border p-2">{rental.medicalDevice.brand || '-'}</td>
+                    <td className="border p-2 text-xs">{format(new Date(rental.startDate), 'dd/MM/yyyy', { locale: fr })}</td>
                     <td className="border p-2">
                       {rental.status === 'ACTIVE' ? (
-                        <span className="text-green-600 font-semibold">Oui</span>
+                        <span className="text-green-600 font-semibold">Actif</span>
                       ) : (
-                        <span className="text-gray-500">Non</span>
+                        <span className="text-gray-500">{translateStatus(rental.status)}</span>
                       )}
                     </td>
                   </tr>
@@ -171,7 +220,8 @@ const PatientPrintPage: NextPageWithLayout = () => {
               <tr className="bg-gray-100">
                 <th className="border p-2 text-left">Date</th>
                 <th className="border p-2 text-left">Appareil</th>
-                <th className="border p-2 text-left">Résultat</th>
+                <th className="border p-2 text-left">IAH / ID</th>
+                <th className="border p-2 text-left">Sévérité</th>
                 <th className="border p-2 text-left">Effectué par</th>
               </tr>
             </thead>
@@ -181,7 +231,12 @@ const PatientPrintPage: NextPageWithLayout = () => {
                   <td className="border p-2">{format(new Date(diag.diagnosticDate), 'dd/MM/yyyy', { locale: fr })}</td>
                   <td className="border p-2">{diag.medicalDevice?.name || 'N/A'}</td>
                   <td className="border p-2">
-                    {diag.result ? `IAH: ${diag.result.iah || 'N/A'}, ID: ${diag.result.idValue || 'N/A'}` : 'En attente'}
+                    {diag.result ? `IAH: ${diag.result.iah || '-'}, ID: ${diag.result.idValue || '-'}` : 'En attente'}
+                  </td>
+                  <td className="border p-2">
+                    {diag.result?.iah ? (
+                      <strong>{calculateSeverityFromIAH(diag.result.iah)}</strong>
+                    ) : '-'}
                   </td>
                   <td className="border p-2">{diag.performedBy ? `${diag.performedBy.firstName} ${diag.performedBy.lastName}` : 'N/A'}</td>
                 </tr>
@@ -200,19 +255,27 @@ const PatientPrintPage: NextPageWithLayout = () => {
               <tr className="bg-gray-100">
                 <th className="border p-2 text-left">Code</th>
                 <th className="border p-2 text-left">Appareil</th>
+                <th className="border p-2 text-left">Type</th>
+                <th className="border p-2 text-left">N° Série</th>
                 <th className="border p-2 text-left">Début</th>
                 <th className="border p-2 text-left">Fin</th>
+                <th className="border p-2 text-left">Tarif Mensuel</th>
                 <th className="border p-2 text-left">Statut</th>
+                <th className="border p-2 text-left">Créé par</th>
               </tr>
             </thead>
             <tbody>
               {patient.rentals.map((rental: any) => (
                 <tr key={rental.id}>
-                  <td className="border p-2">{rental.rentalCode}</td>
-                  <td className="border p-2">{rental.medicalDevice?.name}</td>
-                  <td className="border p-2">{format(new Date(rental.startDate), 'dd/MM/yyyy', { locale: fr })}</td>
-                  <td className="border p-2">{rental.endDate ? format(new Date(rental.endDate), 'dd/MM/yyyy', { locale: fr }) : 'En cours'}</td>
-                  <td className="border p-2">{translateStatus(rental.status)}</td>
+                  <td className="border p-2 font-mono text-xs">{rental.rentalCode}</td>
+                  <td className="border p-2 font-semibold">{rental.medicalDevice?.name || '-'}</td>
+                  <td className="border p-2 text-xs">{translateDeviceType(rental.medicalDevice?.type) || '-'}</td>
+                  <td className="border p-2 font-mono text-xs">{rental.medicalDevice?.serialNumber || '-'}</td>
+                  <td className="border p-2 text-xs">{format(new Date(rental.startDate), 'dd/MM/yyyy', { locale: fr })}</td>
+                  <td className="border p-2 text-xs">{rental.endDate ? format(new Date(rental.endDate), 'dd/MM/yyyy', { locale: fr }) : 'En cours'}</td>
+                  <td className="border p-2 text-xs font-semibold text-green-700">{rental.configuration?.rentalRate ? `${Number(rental.configuration.rentalRate).toFixed(2)} TND` : '-'}</td>
+                  <td className="border p-2 text-xs">{translateStatus(rental.status)}</td>
+                  <td className="border p-2 text-xs">{rental.createdBy ? `${rental.createdBy.firstName} ${rental.createdBy.lastName}` : '-'}</td>
                 </tr>
               ))}
             </tbody>
@@ -227,19 +290,25 @@ const PatientPrintPage: NextPageWithLayout = () => {
           <table className="w-full border-collapse border">
             <thead>
               <tr className="bg-gray-100">
-                <th className="border p-2 text-left">Code</th>
+                <th className="border p-2 text-left">Code Vente</th>
+                <th className="border p-2 text-left">N° Facture</th>
                 <th className="border p-2 text-left">Date</th>
-                <th className="border p-2 text-left">Montant</th>
                 <th className="border p-2 text-left">Articles</th>
+                <th className="border p-2 text-left">Montant Total</th>
+                <th className="border p-2 text-left">Statut Paiement</th>
+                <th className="border p-2 text-left">Créé par</th>
               </tr>
             </thead>
             <tbody>
               {patient.sales.map((sale: any) => (
                 <tr key={sale.id}>
-                  <td className="border p-2">{sale.saleCode || 'N/A'}</td>
-                  <td className="border p-2">{format(new Date(sale.saleDate), 'dd/MM/yyyy', { locale: fr })}</td>
-                  <td className="border p-2">{Number(sale.totalAmount).toFixed(2)} TND</td>
-                  <td className="border p-2">{sale.items?.length || 0} article(s)</td>
+                  <td className="border p-2 font-mono text-xs">{sale.saleCode || '-'}</td>
+                  <td className="border p-2 font-mono text-xs">{sale.invoiceNumber || '-'}</td>
+                  <td className="border p-2 text-xs">{format(new Date(sale.saleDate), 'dd/MM/yyyy', { locale: fr })}</td>
+                  <td className="border p-2 text-xs">{sale.items?.length || 0} article(s)</td>
+                  <td className="border p-2 font-bold text-green-700">{Number(sale.totalAmount).toFixed(2)} TND</td>
+                  <td className="border p-2 text-xs">{translateStatus(sale.payment?.status || 'UNPAID')}</td>
+                  <td className="border p-2 text-xs">{sale.processedBy ? `${sale.processedBy.firstName} ${sale.processedBy.lastName}` : '-'}</td>
                 </tr>
               ))}
             </tbody>
@@ -258,19 +327,37 @@ const PatientPrintPage: NextPageWithLayout = () => {
                 <th className="border p-2 text-left">Date</th>
                 <th className="border p-2 text-left">Montant</th>
                 <th className="border p-2 text-left">Méthode</th>
+                <th className="border p-2 text-left">Type</th>
+                <th className="border p-2 text-left">Source</th>
                 <th className="border p-2 text-left">Statut</th>
               </tr>
             </thead>
             <tbody>
-              {patient.payments.map((payment: any) => (
-                <tr key={payment.id}>
-                  <td className="border p-2">{payment.paymentCode}</td>
-                  <td className="border p-2">{format(new Date(payment.paymentDate), 'dd/MM/yyyy', { locale: fr })}</td>
-                  <td className="border p-2">{Number(payment.amount).toFixed(2)} TND</td>
-                  <td className="border p-2">{translatePaymentMethod(payment.method)}</td>
-                  <td className="border p-2">{translateStatus(payment.status)}</td>
-                </tr>
-              ))}
+              {patient.payments.map((payment: any) => {
+                // Determine payment source
+                let source = '-';
+                if (payment.saleId && payment.sale?.saleCode) {
+                  source = `Vente: ${payment.sale.saleCode}`;
+                } else if (payment.rentalId && payment.rental?.rentalCode) {
+                  source = `Location: ${payment.rental.rentalCode}`;
+                } else if (payment.diagnosticId) {
+                  source = 'Diagnostic';
+                } else {
+                  source = 'Paiement direct';
+                }
+
+                return (
+                  <tr key={payment.id}>
+                    <td className="border p-2 font-mono text-xs">{payment.paymentCode}</td>
+                    <td className="border p-2 text-xs">{format(new Date(payment.paymentDate), 'dd/MM/yyyy', { locale: fr })}</td>
+                    <td className="border p-2 font-bold text-green-700">{Number(payment.amount).toFixed(2)} TND</td>
+                    <td className="border p-2 text-xs">{translatePaymentMethod(payment.method)}</td>
+                    <td className="border p-2 text-xs">{payment.paymentType || 'STANDARD'}</td>
+                    <td className="border p-2 text-xs">{source}</td>
+                    <td className="border p-2 text-xs">{translateStatus(payment.status)}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </section>
@@ -298,7 +385,11 @@ const PatientPrintPage: NextPageWithLayout = () => {
                       <div><strong>Type:</strong> {translateBonType(bond.bonType)}</div>
                       <div><strong>Catégorie:</strong> {translateCategory(bond.category)}</div>
                       <div><strong>Statut:</strong> {translateStatus(bond.status)}</div>
-                      {bond.currentStep && <div><strong>Étape Actuelle:</strong> {bond.currentStep}</div>}
+                      {bond.currentStep && (
+                        <div className="col-span-2">
+                          <strong>Progression:</strong> {getProgressionStepLabel(bond.currentStep)}
+                        </div>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 mb-3 border-t pt-3">
@@ -363,6 +454,7 @@ const PatientPrintPage: NextPageWithLayout = () => {
                 <th className="border p-2 text-left">Nom de l'Appareil</th>
                 <th className="border p-2 text-left">Numéro de Série</th>
                 <th className="border p-2 text-left">Type</th>
+                <th className="border p-2 text-left">Marque</th>
                 <th className="border p-2 text-left">Statut</th>
               </tr>
             </thead>
@@ -374,7 +466,8 @@ const PatientPrintPage: NextPageWithLayout = () => {
                     <td className="border p-2 font-mono">{rental.medicalDevice.deviceCode || '-'}</td>
                     <td className="border p-2 font-semibold">{rental.medicalDevice.name}</td>
                     <td className="border p-2 font-mono">{rental.medicalDevice.serialNumber || '-'}</td>
-                    <td className="border p-2">{rental.medicalDevice.type || '-'}</td>
+                    <td className="border p-2">{translateDeviceType(rental.medicalDevice.type) || '-'}</td>
+                    <td className="border p-2">{rental.medicalDevice.brand || '-'}</td>
                     <td className="border p-2">
                       {rental.status === 'ACTIVE' ? (
                         <span className="text-green-600 font-semibold">Actif</span>
@@ -518,8 +611,8 @@ const PatientPrintPage: NextPageWithLayout = () => {
                   <td className="border p-2">{payment.paymentCode}</td>
                   <td className="border p-2">{format(new Date(payment.paymentDate), 'dd/MM/yyyy', { locale: fr })}</td>
                   <td className="border p-2 font-bold">{Number(payment.amount).toFixed(2)} TND</td>
-                  <td className="border p-2">{payment.method}</td>
-                  <td className="border p-2">{payment.status}</td>
+                  <td className="border p-2">{translatePaymentMethod(payment.method)}</td>
+                  <td className="border p-2">{translateStatus(payment.status)}</td>
                 </tr>
               ))}
             </tbody>

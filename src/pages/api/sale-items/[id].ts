@@ -23,6 +23,15 @@ export default async function handler(
     try {
       const updateData = req.body;
 
+      // Get existing sale item to check for changes
+      const existingItem = await prisma.saleItem.findUnique({
+        where: { id },
+      });
+
+      if (!existingItem) {
+        return res.status(404).json({ error: 'Article non trouvé' });
+      }
+
       // Build update data object
       const dataToUpdate: any = {};
 
@@ -32,6 +41,7 @@ export default async function handler(
       if (updateData.description !== undefined) dataToUpdate.description = updateData.description;
       if (updateData.itemTotal !== undefined) dataToUpdate.itemTotal = parseFloat(updateData.itemTotal);
       if (updateData.serialNumber !== undefined) dataToUpdate.serialNumber = updateData.serialNumber;
+      if (updateData.stockLocationId !== undefined) dataToUpdate.stockLocationId = updateData.stockLocationId;
 
       // Allow changing product or medical device
       if (updateData.productId !== undefined) {
@@ -48,10 +58,97 @@ export default async function handler(
         dataToUpdate.saleId = updateData.saleId;
       }
 
-      // Update the sale item
-      const updatedItem = await prisma.saleItem.update({
-        where: { id },
-        data: dataToUpdate
+      // Check if stock location or quantity is changing for products
+      const isLocationChanging = updateData.stockLocationId &&
+                                  updateData.stockLocationId !== existingItem.stockLocationId;
+      const isQuantityChanging = updateData.quantity &&
+                                 parseInt(updateData.quantity) !== existingItem.quantity;
+
+      // Update the sale item with stock handling
+      const updatedItem = await prisma.$transaction(async (tx) => {
+        // If product and (location or quantity changing), handle stock movements
+        if (existingItem.productId && (isLocationChanging || isQuantityChanging)) {
+          const oldLocationId = existingItem.stockLocationId;
+          const newLocationId = updateData.stockLocationId || oldLocationId;
+          const oldQuantity = existingItem.quantity;
+          const newQuantity = dataToUpdate.quantity || oldQuantity;
+
+          // Fetch sale code for better tracking
+          const sale = await tx.sale.findUnique({
+            where: { id: existingItem.saleId },
+            select: { saleCode: true },
+          });
+
+          // Restore stock to old location
+          if (oldLocationId) {
+            await tx.stock.update({
+              where: {
+                locationId_productId: {
+                  locationId: oldLocationId,
+                  productId: existingItem.productId,
+                },
+              },
+              data: {
+                quantity: { increment: oldQuantity },
+              },
+            });
+
+            // Create ENTREE movement for restoration
+            await tx.stockMovement.create({
+              data: {
+                productId: existingItem.productId,
+                locationId: oldLocationId,
+                type: 'ENTREE',
+                quantity: oldQuantity,
+                notes: `Vente ${sale?.saleCode || existingItem.saleId} - Modification article (restauration)`,
+                createdById: session.user.id,
+              },
+            });
+          }
+
+          // Decrease stock at new location
+          if (newLocationId) {
+            const stock = await tx.stock.findUnique({
+              where: {
+                locationId_productId: {
+                  locationId: newLocationId,
+                  productId: existingItem.productId,
+                },
+              },
+            });
+
+            if (!stock || stock.quantity < newQuantity) {
+              throw new Error(`Stock insuffisant au nouvel emplacement. Disponible: ${stock?.quantity || 0}, Requis: ${newQuantity}`);
+            }
+
+            await tx.stock.update({
+              where: { id: stock.id },
+              data: {
+                quantity: { decrement: newQuantity },
+              },
+            });
+
+            // Create SORTIE movement for new location
+            await tx.stockMovement.create({
+              data: {
+                productId: existingItem.productId,
+                locationId: newLocationId,
+                type: 'SORTIE',
+                quantity: newQuantity,
+                notes: `Vente ${sale?.saleCode || existingItem.saleId} - Modification article`,
+                createdById: session.user.id,
+              },
+            });
+          }
+
+          console.log('[SALE-ITEM-UPDATE] Stock movements created for location/quantity change');
+        }
+
+        // Update the sale item
+        return await tx.saleItem.update({
+          where: { id },
+          data: dataToUpdate
+        });
       });
 
       // Handle configuration updates
@@ -219,46 +316,62 @@ export default async function handler(
         return res.status(404).json({ error: 'Article non trouvé' });
       }
 
-      // Get user info to determine stock location
-      const user = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        include: { stockLocation: true }
+      // Use transaction to ensure atomicity
+      await prisma.$transaction(async (tx) => {
+        // If it was a medical device, restore it to available
+        if (saleItem.medicalDeviceId) {
+          await tx.medicalDevice.update({
+            where: { id: saleItem.medicalDeviceId },
+            data: {
+              destination: 'FOR_SALE',
+              stockLocationId: saleItem.stockLocationId, // Restore to original location
+            }
+          });
+        }
+
+        // If it was a product, restore stock quantity and create ENTREE movement
+        if (saleItem.productId && saleItem.stockLocationId) {
+          // Fetch sale code for better tracking
+          const sale = await tx.sale.findUnique({
+            where: { id: saleItem.saleId },
+            select: { saleCode: true },
+          });
+
+          // Restore stock
+          await tx.stock.update({
+            where: {
+              locationId_productId: {
+                locationId: saleItem.stockLocationId,
+                productId: saleItem.productId,
+              },
+            },
+            data: {
+              quantity: { increment: saleItem.quantity },
+            },
+          });
+
+          // Create ENTREE movement
+          await tx.stockMovement.create({
+            data: {
+              productId: saleItem.productId,
+              locationId: saleItem.stockLocationId,
+              type: 'ENTREE',
+              quantity: saleItem.quantity,
+              notes: `Vente ${sale?.saleCode || saleItem.saleId} - Article supprimé (restauration stock)`,
+              createdById: session.user.id,
+            },
+          });
+
+          console.log('[SALE-ITEM-DELETE] Stock restored and ENTREE movement created');
+        }
+
+        // Delete the sale item
+        await tx.saleItem.delete({
+          where: { id }
+        });
       });
 
-      // If it was a medical device, restore it to available
-      if (saleItem.medicalDeviceId) {
-        await prisma.medicalDevice.update({
-          where: { id: saleItem.medicalDeviceId },
-          data: {
-            destination: 'FOR_SALE',
-            stockLocationId: user?.stockLocation?.id || null, // Return to user's stock location
-          }
-        });
-      }
-
-      // If it was a product, restore stock quantity
-      if (saleItem.productId && user?.stockLocation?.id) {
-        // Try to restore stock, create if doesn't exist
-        await prisma.stock.upsert({
-          where: {
-            locationId_productId: {
-              locationId: user.stockLocation.id,
-              productId: saleItem.productId
-            }
-          },
-          update: {
-            quantity: { increment: saleItem.quantity }
-          },
-          create: {
-            locationId: user.stockLocation.id,
-            productId: saleItem.productId,
-            quantity: saleItem.quantity,
-            status: 'FOR_SALE'
-          }
-        });
-      }
-
-      // Update sale total
+      // Update sale total (outside transaction)
       const sale = await prisma.sale.findUnique({
         where: { id: saleItem.saleId },
         include: { items: true }
@@ -277,11 +390,6 @@ export default async function handler(
           }
         });
       }
-
-      // Delete the sale item
-      await prisma.saleItem.delete({
-        where: { id }
-      });
 
       return res.status(200).json({ message: 'Article supprimé avec succès' });
     } catch (error) {

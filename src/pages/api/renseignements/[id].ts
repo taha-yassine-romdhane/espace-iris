@@ -158,6 +158,8 @@ export default async function handler(
                   category: true,
                   currentStep: true,
                   coveredMonths: true,
+                  startDate: true,
+                  endDate: true,
                   createdAt: true,
                 }
               },
@@ -267,6 +269,8 @@ export default async function handler(
                   category: true,
                   currentStep: true,
                   coveredMonths: true,
+                  startDate: true,
+                  endDate: true,
                   createdAt: true,
                 }
               },
@@ -290,7 +294,14 @@ export default async function handler(
             }
           },
           PatientHistory: {
-            include: {
+            select: {
+              id: true,
+              actionType: true,
+              details: true,
+              relatedItemId: true,
+              relatedItemType: true,
+              createdAt: true,
+              updatedAt: true,
               performedBy: {
                 select: {
                   id: true,
@@ -438,7 +449,51 @@ export default async function handler(
                 saleDate: sale.saleDate
               }))
             ) || [],
-            history: patient.PatientHistory || [],
+            // Enrich history with related codes
+            history: await Promise.all((patient.PatientHistory || []).map(async (historyItem: any) => {
+              let relatedItemCode = null;
+
+              // Fetch related codes based on type
+              if (historyItem.relatedItemId && historyItem.relatedItemType) {
+                try {
+                  if (historyItem.relatedItemType === 'Sale') {
+                    const sale = await prisma.sale.findUnique({
+                      where: { id: historyItem.relatedItemId },
+                      select: { saleCode: true, invoiceNumber: true }
+                    });
+                    relatedItemCode = sale?.saleCode || sale?.invoiceNumber;
+                  } else if (historyItem.relatedItemType === 'Rental') {
+                    const rental = await prisma.rental.findUnique({
+                      where: { id: historyItem.relatedItemId },
+                      select: { rentalCode: true }
+                    });
+                    relatedItemCode = rental?.rentalCode;
+                  } else if (historyItem.relatedItemType === 'Payment') {
+                    const payment = await prisma.payment.findUnique({
+                      where: { id: historyItem.relatedItemId },
+                      select: { paymentCode: true }
+                    });
+                    relatedItemCode = payment?.paymentCode;
+                  } else if (historyItem.relatedItemType === 'Diagnostic') {
+                    const diagnostic = await prisma.diagnostic.findUnique({
+                      where: { id: historyItem.relatedItemId },
+                      select: { id: true }
+                    });
+                    relatedItemCode = diagnostic?.id ? `DIAG-${diagnostic.id.substring(0, 8)}` : null;
+                  }
+                } catch (error) {
+                  console.error(`Error fetching related code for ${historyItem.relatedItemType}:`, error);
+                }
+              }
+
+              return {
+                ...historyItem,
+                relatedItemCode,
+                performedBy: historyItem.performedBy ? {
+                  name: `${historyItem.performedBy.firstName} ${historyItem.performedBy.lastName}`
+                } : null
+              };
+            })),
             manualTasks: patient.manualTasks || [],
             createdAt: patient.createdAt,
             updatedAt: patient.updatedAt,

@@ -36,6 +36,7 @@ import ProductParameterDialog from '@/pages/roles/admin/dashboard/components/ste
 
 // Additional icons
 import { Stethoscope} from 'lucide-react';
+import EmployeeLayout from '../EmployeeLayout';
 
 
 // Helper function to translate payment methods to French
@@ -53,7 +54,7 @@ const getPaymentMethodLabel = (method: string): string => {
   return methodLabels[method] || method;
 };
 
-export default function EnhancedSaleDetailsPage() {
+function EnhancedSaleDetailsPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { id } = router.query;
@@ -197,7 +198,7 @@ export default function EnhancedSaleDetailsPage() {
   });
 
   const handleBack = () => {
-    router.push('/roles/admin/dashboard');
+    router.push('/roles/employee/sales');
   };
 
   const handleSaveGeneralInfo = () => {
@@ -265,7 +266,7 @@ export default function EnhancedSaleDetailsPage() {
     return (
       <div className="container mx-auto py-10 px-4">
         <div className="flex justify-center items-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          <Loader2 className="h-8 w-8 animate-spin text-green-600" />
           <span className="ml-2 text-gray-600">Chargement des détails de la vente...</span>
         </div>
       </div>
@@ -473,8 +474,8 @@ export default function EnhancedSaleDetailsPage() {
         {/* Products Tab */}
         <TabsContent value="products">
           <Card className="shadow-lg">
-            <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-lg">
-              <CardTitle className="flex items-center gap-2 text-blue-900">
+            <CardHeader className="bg-gradient-to-r from-green-50 to-indigo-50 rounded-t-lg">
+              <CardTitle className="flex items-center gap-2 text-green-900">
                 <Package className="h-5 w-5" />
                 Produits Vendus
               </CardTitle>
@@ -491,7 +492,7 @@ export default function EnhancedSaleDetailsPage() {
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-3">
                             {item.medicalDevice ? (
-                              <Badge variant="default" className="bg-blue-100 text-blue-800 border-blue-200">
+                              <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">
                                 <Stethoscope className="w-3 h-3 mr-1" />
                                 Appareil Médical
                               </Badge>
@@ -535,7 +536,7 @@ export default function EnhancedSaleDetailsPage() {
                             <div className="grid grid-cols-3 gap-6">
                               <div className="text-center">
                                 <p className="text-sm text-gray-500">Quantité</p>
-                                <p className="text-xl font-bold text-blue-600">{item.quantity}</p>
+                                <p className="text-xl font-bold text-green-600">{item.quantity}</p>
                               </div>
                               <div className="text-center">
                                 <p className="text-sm text-gray-500">Prix Unitaire</p>
@@ -552,58 +553,58 @@ export default function EnhancedSaleDetailsPage() {
                           
                           {/* Display configuration */}
                           {hasParameters && (
-                            <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+                            <div className="mt-4 p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg border border-green-200">
                               <div className="flex items-center gap-2 mb-3">
-                                <Settings className="h-4 w-4 text-blue-600" />
-                                <p className="font-semibold text-blue-900">Configuration de l'Appareil</p>
+                                <Settings className="h-4 w-4 text-green-600" />
+                                <p className="font-semibold text-green-900">Configuration de l'Appareil</p>
                               </div>
                               <div className="grid grid-cols-2 gap-3">
                                 {item.deviceConfiguration.debit && (
-                                  <div className="bg-white p-2 rounded border border-blue-100">
-                                    <span className="text-xs text-blue-600 font-medium">Débit:</span>
-                                    <span className="text-sm text-blue-800 ml-2 font-semibold">{item.deviceConfiguration.debit}</span>
+                                  <div className="bg-white p-2 rounded border border-green-100">
+                                    <span className="text-xs text-green-600 font-medium">Débit:</span>
+                                    <span className="text-sm text-green-800 ml-2 font-semibold">{item.deviceConfiguration.debit}</span>
                                   </div>
                                 )}
                                 {item.deviceConfiguration.pression && (
-                                  <div className="bg-white p-2 rounded border border-blue-100">
-                                    <span className="text-xs text-blue-600 font-medium">Pression:</span>
-                                    <span className="text-sm text-blue-800 ml-2 font-semibold">{item.deviceConfiguration.pression}</span>
+                                  <div className="bg-white p-2 rounded border border-green-100">
+                                    <span className="text-xs text-green-600 font-medium">Pression:</span>
+                                    <span className="text-sm text-green-800 ml-2 font-semibold">{item.deviceConfiguration.pression}</span>
                                   </div>
                                 )}
                                 {item.deviceConfiguration.pressionRampe && (
-                                  <div className="bg-white p-2 rounded border border-blue-100">
-                                    <span className="text-xs text-blue-600 font-medium">Pression Rampe:</span>
-                                    <span className="text-sm text-blue-800 ml-2 font-semibold">{item.deviceConfiguration.pressionRampe}</span>
+                                  <div className="bg-white p-2 rounded border border-green-100">
+                                    <span className="text-xs text-green-600 font-medium">Pression Rampe:</span>
+                                    <span className="text-sm text-green-800 ml-2 font-semibold">{item.deviceConfiguration.pressionRampe}</span>
                                   </div>
                                 )}
                                 {item.deviceConfiguration.dureeRampe && (
-                                  <div className="bg-white p-2 rounded border border-blue-100">
-                                    <span className="text-xs text-blue-600 font-medium">Durée Rampe:</span>
-                                    <span className="text-sm text-blue-800 ml-2 font-semibold">{item.deviceConfiguration.dureeRampe} min</span>
+                                  <div className="bg-white p-2 rounded border border-green-100">
+                                    <span className="text-xs text-green-600 font-medium">Durée Rampe:</span>
+                                    <span className="text-sm text-green-800 ml-2 font-semibold">{item.deviceConfiguration.dureeRampe} min</span>
                                   </div>
                                 )}
                                 {item.deviceConfiguration.epr && (
-                                  <div className="bg-white p-2 rounded border border-blue-100">
-                                    <span className="text-xs text-blue-600 font-medium">EPR:</span>
-                                    <span className="text-sm text-blue-800 ml-2 font-semibold">{item.deviceConfiguration.epr}</span>
+                                  <div className="bg-white p-2 rounded border border-green-100">
+                                    <span className="text-xs text-green-600 font-medium">EPR:</span>
+                                    <span className="text-sm text-green-800 ml-2 font-semibold">{item.deviceConfiguration.epr}</span>
                                   </div>
                                 )}
                                 {item.deviceConfiguration.ipap && (
-                                  <div className="bg-white p-2 rounded border border-blue-100">
-                                    <span className="text-xs text-blue-600 font-medium">IPAP:</span>
-                                    <span className="text-sm text-blue-800 ml-2 font-semibold">{item.deviceConfiguration.ipap}</span>
+                                  <div className="bg-white p-2 rounded border border-green-100">
+                                    <span className="text-xs text-green-600 font-medium">IPAP:</span>
+                                    <span className="text-sm text-green-800 ml-2 font-semibold">{item.deviceConfiguration.ipap}</span>
                                   </div>
                                 )}
                                 {item.deviceConfiguration.epap && (
-                                  <div className="bg-white p-2 rounded border border-blue-100">
-                                    <span className="text-xs text-blue-600 font-medium">EPAP:</span>
-                                    <span className="text-sm text-blue-800 ml-2 font-semibold">{item.deviceConfiguration.epap}</span>
+                                  <div className="bg-white p-2 rounded border border-green-100">
+                                    <span className="text-xs text-green-600 font-medium">EPAP:</span>
+                                    <span className="text-sm text-green-800 ml-2 font-semibold">{item.deviceConfiguration.epap}</span>
                                   </div>
                                 )}
                                 {item.deviceConfiguration.mode && (
-                                  <div className="bg-white p-2 rounded border border-blue-100">
-                                    <span className="text-xs text-blue-600 font-medium">Mode:</span>
-                                    <span className="text-sm text-blue-800 ml-2 font-semibold">{item.deviceConfiguration.mode}</span>
+                                  <div className="bg-white p-2 rounded border border-green-100">
+                                    <span className="text-xs text-green-600 font-medium">Mode:</span>
+                                    <span className="text-sm text-green-800 ml-2 font-semibold">{item.deviceConfiguration.mode}</span>
                                   </div>
                                 )}
                               </div>
@@ -616,7 +617,7 @@ export default function EnhancedSaleDetailsPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => handleConfigureProduct(item)}
-                            className="ml-4 border-blue-200 text-blue-600 hover:bg-blue-50"
+                            className="ml-4 border-green-200 text-green-600 hover:bg-green-50"
                           >
                             <Settings className="mr-2 h-4 w-4" />
                             {hasParameters ? 'Modifier Config' : 'Configurer'}
@@ -713,9 +714,9 @@ export default function EnhancedSaleDetailsPage() {
                       </div>
                       
                       {detail.metadata?.cnamInfo && (
-                        <div className="mt-3 p-3 bg-blue-50 rounded">
-                          <p className="text-sm font-medium text-blue-900">Dossier CNAM</p>
-                          <p className="text-sm text-blue-700">
+                        <div className="mt-3 p-3 bg-green-50 rounded">
+                          <p className="text-sm font-medium text-green-900">Dossier CNAM</p>
+                          <p className="text-sm text-green-700">
                             Type: {detail.metadata.cnamInfo.bonType} | 
                             Étape: {detail.metadata.cnamInfo.currentStep}/{detail.metadata.cnamInfo.totalSteps}
                           </p>
@@ -855,8 +856,8 @@ export default function EnhancedSaleDetailsPage() {
             </CardHeader>
             <CardContent className="p-8 bg-white" id="receipt-content">
               {/* Company Header */}
-              <div className="text-center border-b-2 border-blue-200 pb-6 mb-6">
-                <h1 className="text-2xl font-bold text-blue-900">ESPACE ELITE</h1>
+              <div className="text-center border-b-2 border-green-200 pb-6 mb-6">
+                <h1 className="text-2xl font-bold text-green-900">ESPACE ELITE</h1>
                 <p className="text-gray-600 mt-2">Équipements Médicaux</p>
                 <p className="text-sm text-gray-500">Adresse de l'entreprise • Téléphone • Email</p>
               </div>
@@ -899,7 +900,7 @@ export default function EnhancedSaleDetailsPage() {
               {/* Items Table */}
               <div className="mb-6">
                 <table className="w-full border border-gray-300">
-                  <thead className="bg-blue-50">
+                  <thead className="bg-green-50">
                     <tr>
                       <th className="border border-gray-300 px-4 py-2 text-left">Description</th>
                       <th className="border border-gray-300 px-4 py-2 text-center">Qté</th>
@@ -918,7 +919,7 @@ export default function EnhancedSaleDetailsPage() {
                               {product?.brand && <p className="text-xs text-gray-500">{product.brand}</p>}
                               {item.serialNumber && <p className="text-xs text-gray-500">S/N: {item.serialNumber}</p>}
                               {item.deviceConfiguration && Object.keys(item.deviceConfiguration).length > 0 && (
-                                <div className="text-xs text-blue-600 mt-1">
+                                <div className="text-xs text-green-600 mt-1">
                                   Configuration: {Object.entries(item.deviceConfiguration)
                                     .filter(([_, value]) => value)
                                     .map(([key, value]) => `${key}: ${value}`)
@@ -988,7 +989,7 @@ export default function EnhancedSaleDetailsPage() {
 
               {/* Print Button */}
               <div className="flex justify-center mt-6 no-print">
-                <Button onClick={() => window.print()} className="bg-blue-600 hover:bg-blue-700">
+                <Button onClick={() => window.print()} className="bg-green-600 hover:bg-green-700">
                   <FileText className="mr-2 h-4 w-4" />
                   Imprimer le Reçu
                 </Button>
@@ -1009,3 +1010,9 @@ export default function EnhancedSaleDetailsPage() {
     </div>
   );
 }
+
+EnhancedSaleDetailsPage.getLayout = function getLayout(page: React.ReactElement) {
+  return <EmployeeLayout>{page}</EmployeeLayout>;
+};
+
+export default EnhancedSaleDetailsPage;

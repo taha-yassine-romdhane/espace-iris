@@ -74,18 +74,20 @@ export default async function handler(
       case 'GET':
         // Build query filters
         const where: any = {};
-        
+
         // Filter by createdById if provided (for employee role)
         if (req.query.createdById) {
           where.createdById = req.query.createdById;
         }
-        
-        // Filter by role if employee
-        if (req.query.role === 'employee' && session.user?.id) {
-          // For employee role, only show rentals they created
-          // Since createdById might not exist yet in DB, we handle this carefully
-          where.createdById = session.user.id;
+
+        // Filter by role - if employee, only show rentals they created or are assigned to
+        if (session.user.role === 'EMPLOYEE') {
+          where.OR = [
+            { createdById: session.user.id },
+            { assignedToId: session.user.id }
+          ];
         }
+        // ADMIN and DOCTOR can see all rentals (no additional filter)
         
         // Fetch all rentals with enhanced related data including new relations
         const rentals = await prisma.rental.findMany({

@@ -22,6 +22,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         where.source = source;
       }
 
+      // If user is EMPLOYEE, only show payments from sales assigned to them or processed by them
+      if (session.user.role === 'EMPLOYEE') {
+        where.OR = [
+          // Sales payments where employee is assigned or processed the sale
+          {
+            sale: {
+              OR: [
+                { assignedToId: session.user.id },
+                { processedById: session.user.id }
+              ]
+            }
+          },
+          // Rental payments where employee created or is assigned to the rental
+          {
+            rental: {
+              OR: [
+                { createdById: session.user.id },
+                { assignedToId: session.user.id }
+              ]
+            }
+          }
+        ];
+      }
+      // ADMIN and DOCTOR can see all payments (no additional filter)
+
       // Get all payments matching criteria
       const payments = await prisma.payment.findMany({
         where,
