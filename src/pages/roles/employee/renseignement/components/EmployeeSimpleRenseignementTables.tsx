@@ -89,9 +89,12 @@ export default function EmployeeSimpleRenseignementTables({
     setShowPatientDeletionDialog(true);
   };
 
-  const handleConfirmDelete = async () => {
+  const handleConfirmDelete = () => {
+    // The PatientDeletionDialog handles the actual deletion
+    // This callback is called after successful deletion
+    // We call onDelete to trigger parent refresh
     if (patientToDelete) {
-      await onDelete([patientToDelete.id]);
+      onDelete([patientToDelete.id]);
       setShowPatientDeletionDialog(false);
       setPatientToDelete(null);
     }

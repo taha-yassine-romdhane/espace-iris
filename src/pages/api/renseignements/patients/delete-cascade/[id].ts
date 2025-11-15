@@ -92,7 +92,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // If force delete is enabled, also delete blockers
       if (forceDelete) {
-        // Delete related records for sales
+        // Delete CNAM Bon Rentals
+        await tx.cNAMBonRental.deleteMany({ where: { patientId: id } });
+
+        // Delete CNAM Dossiers
+        await tx.cNAMDossier.deleteMany({ where: { patientId: id } });
+
+        // Delete manual tasks
+        await tx.manualTask.deleteMany({ where: { patientId: id } });
+
+        // Delete sale items first (they reference sales)
+        await tx.saleItem.deleteMany({
+          where: {
+            sale: {
+              patientId: id
+            }
+          }
+        });
+
+        // Delete payment details for sales
         await tx.paymentDetail.deleteMany({
           where: {
             payment: {
@@ -115,10 +133,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Delete sales
         deletedCounts.sales = (await tx.sale.deleteMany({ where: { patientId: id } })).count;
 
+        // Delete comprehensive rental devices (for rentals)
+        await tx.comprehensiveRentalDevice.deleteMany({
+          where: {
+            rental: {
+              patientId: id
+            }
+          }
+        });
+
+        // Delete rental items
+        await tx.rentalItem.deleteMany({
+          where: {
+            rental: {
+              patientId: id
+            }
+          }
+        });
+
         // Delete rentals
         deletedCounts.rentals = (await tx.rental.deleteMany({ where: { patientId: id } })).count;
 
-        // Delete payments (direct)
+        // Delete direct payments
         deletedCounts.payments = (await tx.payment.deleteMany({ where: { patientId: id } })).count;
 
         // Delete diagnostic results first, then diagnostics

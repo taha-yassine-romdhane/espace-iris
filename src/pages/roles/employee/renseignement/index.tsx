@@ -278,7 +278,13 @@ export default function RenseignementPage() {
   const handleDelete = async (ids: string[]) => {
     // Get the first ID's type since we're currently only handling single deletes
     const itemToDelete = renseignements.find(item => item.id === ids[0]);
-    if (!itemToDelete) return;
+
+    // If item not found in state, it was already deleted by the dialog
+    // Just refresh the data
+    if (!itemToDelete) {
+      await fetchRenseignements();
+      return;
+    }
 
     try {
       const response = await fetch(`/api/renseignements/${itemToDelete.type === 'Patient' ? 'patients' : 'companies'}/${ids[0]}`, {
@@ -286,12 +292,19 @@ export default function RenseignementPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to delete');
+        const errorData = await response.json().catch(() => ({}));
+        // If 404, patient was already deleted (e.g. by the deletion dialog)
+        if (response.status === 404) {
+          console.log('Patient already deleted, refreshing data...');
+          await fetchRenseignements();
+          return;
+        }
+        throw new Error(errorData.error || 'Failed to delete');
       }
 
       // Remove the deleted item from the state
       setRenseignements(prev => prev.filter(item => !ids.includes(item.id)));
-      
+
       toast({
         title: "Supprimé avec succès",
         description: `${itemToDelete.type} a été supprimé avec succès.`,
