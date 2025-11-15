@@ -927,14 +927,14 @@ export default function PaymentsTable() {
                       <div>
                         <div
                           className="text-sm font-medium text-green-600 hover:text-green-800 hover:underline cursor-pointer transition-colors"
-                          onClick={() => router.push(`/roles/admin/renseignement/patient/${payment.rental?.patient?.id}`)}
+                          onClick={() => router.push(`/roles/employee/renseignement/patient/${payment.rental?.patient?.id}`)}
                         >
                           {clientName}
                         </div>
                         {payment.rental.patient.patientCode && (
                           <div
                             className="text-xs text-slate-500 font-mono cursor-pointer hover:text-green-600 transition-colors"
-                            onClick={() => router.push(`/roles/admin/renseignement/patient/${payment.rental?.patient?.id}`)}
+                            onClick={() => router.push(`/roles/employee/renseignement/patient/${payment.rental?.patient?.id}`)}
                           >
                             {payment.rental.patient.patientCode}
                           </div>
@@ -947,16 +947,21 @@ export default function PaymentsTable() {
                   <td className="px-4 py-3">
                     <div
                       className="text-sm text-green-600 hover:text-green-800 hover:underline cursor-pointer transition-colors"
-                      onClick={() => router.push(`/roles/admin/appareils/medical-device/${payment.rental?.medicalDevice?.id}`)}
+                      onClick={() => router.push(`/roles/employee/appareils/medical-device/${payment.rental?.medicalDevice?.id}`)}
                     >
                       {payment.rental?.medicalDevice?.name || 'N/A'}
                     </div>
                     <div
                       className="text-xs text-slate-500 font-mono cursor-pointer hover:text-green-600 transition-colors"
-                      onClick={() => router.push(`/roles/admin/appareils/medical-device/${payment.rental?.medicalDevice?.id}`)}
+                      onClick={() => router.push(`/roles/employee/appareils/medical-device/${payment.rental?.medicalDevice?.id}`)}
                     >
                       {payment.rental?.medicalDevice?.deviceCode}
                     </div>
+                    {payment.rental?.medicalDevice?.serialNumber && (
+                      <div className="text-xs text-slate-500 font-mono">
+                        SN: {payment.rental.medicalDevice.serialNumber}
+                      </div>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <span className="text-sm font-semibold text-green-700">

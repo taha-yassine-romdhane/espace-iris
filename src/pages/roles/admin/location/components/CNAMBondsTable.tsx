@@ -5,11 +5,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Shield, Plus, Save, X, Edit2, Trash2, CheckCircle, Clock, FileX, Info, ChevronLeft, ChevronRight, Search, Filter } from 'lucide-react';
+import { Shield, Plus, Save, X, Edit2, Trash2, CheckCircle, Clock, FileX, Info, ChevronLeft, ChevronRight, Search, Filter, DollarSign, Calendar as CalendarIcon2, Minus } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import { PatientSelectorDialog } from '@/components/dialogs/PatientSelectorDialog';
 
 interface CNAMBond {
@@ -77,11 +83,8 @@ const BOND_TYPE_LABELS: Record<string, string> = {
 };
 
 const STATUS_LABELS: Record<string, { label: string; color: string; icon: any }> = {
-  EN_ATTENTE_APPROBATION: { label: 'En attente', color: 'bg-yellow-100 text-yellow-800', icon: Clock },
-  APPROUVE: { label: 'Approuvé', color: 'bg-green-100 text-green-800', icon: CheckCircle },
-  EN_COURS: { label: 'En cours', color: 'bg-blue-100 text-blue-800', icon: Info },
-  TERMINE: { label: 'Terminé', color: 'bg-gray-100 text-gray-800', icon: CheckCircle },
-  REFUSE: { label: 'Refusé', color: 'bg-red-100 text-red-800', icon: FileX },
+  CREATION: { label: 'Création', color: 'bg-blue-100 text-blue-800', icon: Plus },
+  RENOUVELLEMENT: { label: 'Renouvellement', color: 'bg-purple-100 text-purple-800', icon: Clock },
 };
 
 export default function CNAMBondsTable({ rentalId, patientId, patientCnamId, deviceMonthlyRate, showGlobalView = false }: Props) {
@@ -92,6 +95,10 @@ export default function CNAMBondsTable({ rentalId, patientId, patientCnamId, dev
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [editData, setEditData] = useState<CNAMBond | null>(null);
   const [selectedPatientName, setSelectedPatientName] = useState<string>('');
+
+  // Dialog states
+  const [showFinancialDialog, setShowFinancialDialog] = useState(false);
+  const [selectedBondFinancials, setSelectedBondFinancials] = useState<CNAMBond | null>(null);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -288,7 +295,7 @@ export default function CNAMBondsTable({ rentalId, patientId, patientCnamId, dev
     setEditData({
       bonNumber: nextBondNumber,
       bonType: defaultBondType,
-      status: 'EN_ATTENTE_APPROBATION',
+      status: 'CREATION',
       category: 'LOCATION', // Default category for rental bonds
       cnamMonthlyRate: Number(cnamRate),
       deviceMonthlyRate: Number(deviceRate),
@@ -452,7 +459,7 @@ export default function CNAMBondsTable({ rentalId, patientId, patientCnamId, dev
     : rentals;
 
   const getStatusBadge = (status: string) => {
-    const info = STATUS_LABELS[status] || STATUS_LABELS.EN_ATTENTE_APPROBATION;
+    const info = STATUS_LABELS[status] || STATUS_LABELS.CREATION;
     const Icon = info.icon;
 
     return (
@@ -702,36 +709,26 @@ export default function CNAMBondsTable({ rentalId, patientId, patientCnamId, dev
             <TableHeader>
               <TableRow>
                 {/* Basic Info */}
-                <TableHead className="sticky left-0 bg-white z-10 min-w-[120px]">Numéro BL</TableHead>
-                <TableHead className="min-w-[100px]">Numéro Dossier</TableHead>
+                <TableHead className="sticky left-0 bg-white z-10 min-w-[140px]">Numéros</TableHead>
                 {showGlobalView && <TableHead className="min-w-[150px]">Patient</TableHead>}
                 {showGlobalView && <TableHead className="min-w-[120px]">Location</TableHead>}
 
                 {/* Bond Details */}
-                <TableHead className="min-w-[150px]">Type</TableHead>
-                <TableHead className="min-w-[100px]">Catégorie</TableHead>
-                <TableHead className="min-w-[120px]">Statut</TableHead>
+                <TableHead className="min-w-[160px]">Type & Statut</TableHead>
 
                 {/* Dates */}
-                <TableHead className="min-w-[130px]">Date Début</TableHead>
-                <TableHead className="min-w-[130px]">Date Fin</TableHead>
+                <TableHead className="min-w-[130px]">Dates</TableHead>
 
                 {/* Financial */}
-                <TableHead className="min-w-[100px]">Tarif CNAM/mois</TableHead>
-                <TableHead className="min-w-[100px]">Tarif Appareil/mois</TableHead>
-                <TableHead className="min-w-[80px]">Mois Couverts</TableHead>
-                <TableHead className="min-w-[100px]">Montant Bon Total</TableHead>
-                <TableHead className="min-w-[100px]">Prix Appareil Total</TableHead>
-                <TableHead className="min-w-[100px]">Complément Patient</TableHead>
+                <TableHead className="min-w-[130px]">Mois & Rappel</TableHead>
+                <TableHead className="min-w-[180px]">Totaux (Auto calculé)</TableHead>
 
                 {/* Progress */}
                 <TableHead className="min-w-[200px]">Progression</TableHead>
 
                 {/* Additional */}
-                <TableHead className="min-w-[100px]">Rappel Renouvellement (jours)</TableHead>
                 <TableHead className="min-w-[200px]">Notes</TableHead>
                 <TableHead className="min-w-[150px]">Créé le</TableHead>
-                <TableHead className="min-w-[150px]">Mis à jour le</TableHead>
 
                 {/* Actions */}
                 <TableHead className="sticky right-0 bg-white z-10 min-w-[120px]">Actions</TableHead>
@@ -739,23 +736,27 @@ export default function CNAMBondsTable({ rentalId, patientId, patientCnamId, dev
             </TableHeader>
             <TableBody>
               {isAddingNew && editData && (
-                <TableRow className="bg-green-50">
-                  {/* Numéro BL - Sticky Left */}
-                  <TableCell className="sticky left-0 bg-green-50 z-10">
-                    <Badge variant="outline" className="text-xs font-mono bg-blue-50 text-blue-700 border-blue-200">
-                      {editData.bonNumber || 'Auto-généré'}
-                    </Badge>
-                  </TableCell>
-
-                  {/* Numéro Dossier */}
-                  <TableCell>
-                    <Input
-                      type="text"
-                      placeholder="DOSS-LOC-0001"
-                      value={editData.dossierNumber || ''}
-                      onChange={(e) => setEditData({ ...editData, dossierNumber: e.target.value })}
-                      className="text-xs w-32"
-                    />
+                <TableRow className="bg-blue-50">
+                  {/* Numéros (BL + Dossier combined) - Sticky Left */}
+                  <TableCell className="sticky left-0 bg-blue-50 z-10">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] text-gray-500 whitespace-nowrap">BL (Auto):</span>
+                        <Badge variant="outline" className="text-xs font-mono bg-blue-50 text-blue-700 border-blue-200">
+                          {editData.bonNumber || 'Auto'}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] text-gray-500 whitespace-nowrap">Dossier:</span>
+                        <Input
+                          type="text"
+                          placeholder="DOSS-LOC-0001"
+                          value={editData.dossierNumber || ''}
+                          onChange={(e) => setEditData({ ...editData, dossierNumber: e.target.value })}
+                          className="text-xs h-6 font-mono flex-1"
+                        />
+                      </div>
+                    </div>
                   </TableCell>
 
                   {/* Patient (only in global view) */}
@@ -805,126 +806,143 @@ export default function CNAMBondsTable({ rentalId, patientId, patientCnamId, dev
                     </TableCell>
                   )}
 
-                  {/* Type */}
+                  {/* Type & Statut (combined) */}
                   <TableCell>
-                    <Select value={editData.bonType} onValueChange={handleBondTypeChange}>
-                      <SelectTrigger className="text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(BOND_TYPE_LABELS).map(([value, label]) => (
-                          <SelectItem key={value} value={value}>{label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-
-                  {/* Catégorie */}
-                  <TableCell>
-                    <Badge variant="outline" className="text-xs bg-indigo-50 text-indigo-700 border-indigo-200">
-                      LOCATION
-                    </Badge>
-                  </TableCell>
-
-                  {/* Statut */}
-                  <TableCell>
-                    <Select value={editData.status} onValueChange={(v) => setEditData({ ...editData, status: v })}>
-                      <SelectTrigger className="text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(STATUS_LABELS).map(([value, info]) => (
-                          <SelectItem key={value} value={value}>{info.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-
-                  {/* Date Début */}
-                  <TableCell>
-                    <Input
-                      type="date"
-                      value={editData.startDate ? new Date(editData.startDate).toISOString().split('T')[0] : ''}
-                      onChange={(e) => setEditData({ ...editData, startDate: e.target.value ? new Date(e.target.value).toISOString() : null })}
-                      className="text-xs w-32"
-                    />
-                  </TableCell>
-
-                  {/* Date Fin */}
-                  <TableCell>
-                    <Input
-                      type="date"
-                      value={editData.endDate ? new Date(editData.endDate).toISOString().split('T')[0] : ''}
-                      onChange={(e) => setEditData({ ...editData, endDate: e.target.value ? new Date(e.target.value).toISOString() : null })}
-                      className="text-xs w-32"
-                    />
-                  </TableCell>
-
-                  {/* Tarif CNAM/mois (auto from bond type) */}
-                  <TableCell>
-                    <div className="text-xs font-medium text-green-700">
-                      {Number(editData.cnamMonthlyRate || 0).toFixed(2)} TND
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] text-gray-500 whitespace-nowrap">Type:</span>
+                        <Select value={editData.bonType} onValueChange={handleBondTypeChange}>
+                          <SelectTrigger className="text-xs h-6 flex-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(BOND_TYPE_LABELS).map(([value, label]) => (
+                              <SelectItem key={value} value={value}>{label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] text-gray-500 whitespace-nowrap">Statut:</span>
+                        <Select value={editData.status} onValueChange={(v) => setEditData({ ...editData, status: v })}>
+                          <SelectTrigger className="text-xs h-6 flex-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(STATUS_LABELS).map(([value, info]) => (
+                              <SelectItem key={value} value={value}>{info.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                    <div className="text-[10px] text-gray-500">Auto (Type)</div>
                   </TableCell>
 
-                  {/* Tarif Appareil/mois */}
+                  {/* Dates (Début + Fin combined) */}
                   <TableCell>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder="670.00"
-                      value={editData.deviceMonthlyRate || ''}
-                      onChange={(e) => {
-                        const rate = parseFloat(e.target.value) || 0;
-                        const devicePrice = rate * editData.coveredMonths;
-                        const bonAmount = editData.cnamMonthlyRate * editData.coveredMonths;
-                        setEditData({
-                          ...editData,
-                          deviceMonthlyRate: rate,
-                          devicePrice,
-                          complementAmount: devicePrice - bonAmount,
-                        });
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] text-gray-500 whitespace-nowrap">Début:</span>
+                        <Input
+                          type="date"
+                          value={editData.startDate ? new Date(editData.startDate).toISOString().split('T')[0] : ''}
+                          onChange={(e) => setEditData({ ...editData, startDate: e.target.value ? new Date(e.target.value).toISOString() : null })}
+                          className="text-xs h-6 flex-1"
+                        />
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] text-gray-500 whitespace-nowrap">Fin:</span>
+                        <Input
+                          type="date"
+                          value={editData.endDate ? new Date(editData.endDate).toISOString().split('T')[0] : ''}
+                          onChange={(e) => setEditData({ ...editData, endDate: e.target.value ? new Date(e.target.value).toISOString() : null })}
+                          className="text-xs h-6 flex-1"
+                        />
+                      </div>
+                    </div>
+                  </TableCell>
+
+                  {/* Mois Couverts & Rappel Renouvellement (combined) */}
+                  <TableCell>
+                    <div className="space-y-1">
+                      {/* Months with navigation arrows */}
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] text-gray-500 whitespace-nowrap">Mois:</span>
+                        <div className="flex items-center gap-0.5">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleMonthsChange(Math.max(1, (editData.coveredMonths || 1) - 1))}
+                            disabled={(editData.coveredMonths || 1) <= 1}
+                            className="h-6 w-6 p-0"
+                          >
+                            <Minus className="h-3 w-3" />
+                          </Button>
+                          <div className="h-6 px-2 flex items-center justify-center border rounded text-xs font-semibold min-w-[32px] bg-white">
+                            {editData.coveredMonths || 1}
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleMonthsChange(Math.min(12, (editData.coveredMonths || 1) + 1))}
+                            disabled={(editData.coveredMonths || 1) >= 12}
+                            className="h-6 w-6 p-0"
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                      {/* Reminder with date picker */}
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] text-gray-500 whitespace-nowrap">Rappel:</span>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-6 text-xs flex-1 justify-start font-normal"
+                            >
+                              <CalendarIcon2 className="h-3 w-3 mr-1" />
+                              {editData.renewalReminderDays ? `${editData.renewalReminderDays}j` : '30j'}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={editData.startDate ? new Date(new Date(editData.startDate).getTime() + (editData.renewalReminderDays || 30) * 24 * 60 * 60 * 1000) : new Date(Date.now() + (editData.renewalReminderDays || 30) * 24 * 60 * 60 * 1000)}
+                              onSelect={(date) => {
+                                if (date) {
+                                  const baseDate = editData.startDate ? new Date(editData.startDate) : new Date();
+                                  const diffTime = date.getTime() - baseDate.getTime();
+                                  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                                  setEditData({ ...editData, renewalReminderDays: Math.max(1, Math.min(90, diffDays)) });
+                                }
+                              }}
+                              disabled={(date) => date < new Date()}
+                              locale={fr}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
+                  </TableCell>
+
+                  {/* Totaux (button to show dialog with complement amount) */}
+                  <TableCell>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedBondFinancials(editData);
+                        setShowFinancialDialog(true);
                       }}
-                      className="text-xs w-24"
-                    />
-                  </TableCell>
-
-                  {/* Mois Couverts */}
-                  <TableCell>
-                    <Input
-                      type="number"
-                      min="1"
-                      max="12"
-                      value={editData.coveredMonths}
-                      onChange={(e) => handleMonthsChange(parseInt(e.target.value) || 1)}
-                      className="text-xs w-16"
-                    />
-                  </TableCell>
-
-                  {/* Montant Bon Total (calculated) */}
-                  <TableCell>
-                    <div className="text-xs font-semibold text-green-700">
-                      {Number(editData.bonAmount || 0).toFixed(2)} TND
-                    </div>
-                    <div className="text-[10px] text-gray-500">Auto calculé</div>
-                  </TableCell>
-
-                  {/* Prix Appareil Total (calculated) */}
-                  <TableCell>
-                    <div className="text-xs font-semibold text-blue-700">
-                      {Number(editData.devicePrice || 0).toFixed(2)} TND
-                    </div>
-                    <div className="text-[10px] text-gray-500">Auto calculé</div>
-                  </TableCell>
-
-                  {/* Complément Patient (calculated) */}
-                  <TableCell>
-                    <div className="text-xs font-semibold text-orange-700">
+                      className="flex items-center gap-1 h-7 text-xs font-semibold text-orange-700 hover:text-orange-800 border-orange-200 hover:bg-orange-50"
+                    >
+                      <span className="text-[10px]">Complément:</span>
                       {Number(editData.complementAmount || 0).toFixed(2)} TND
-                    </div>
-                    <div className="text-[10px] text-gray-500">Auto calculé</div>
+                    </Button>
                   </TableCell>
 
                   {/* Progression */}
@@ -948,26 +966,14 @@ export default function CNAMBondsTable({ rentalId, patientId, patientCnamId, dev
                     </Select>
                   </TableCell>
 
-                  {/* Rappel Renouvellement */}
-                  <TableCell>
-                    <Input
-                      type="number"
-                      min="1"
-                      max="90"
-                      value={editData.renewalReminderDays || 30}
-                      onChange={(e) => setEditData({ ...editData, renewalReminderDays: parseInt(e.target.value) || 30 })}
-                      className="text-xs w-16"
-                    />
-                  </TableCell>
-
                   {/* Notes */}
                   <TableCell>
-                    <Input
-                      type="text"
+                    <Textarea
                       placeholder="Notes..."
                       value={editData.notes || ''}
                       onChange={(e) => setEditData({ ...editData, notes: e.target.value })}
-                      className="text-xs w-40"
+                      className="text-xs min-w-[200px] resize-none"
+                      rows={2}
                     />
                   </TableCell>
 
@@ -976,13 +982,8 @@ export default function CNAMBondsTable({ rentalId, patientId, patientCnamId, dev
                     <div className="text-xs text-gray-400">-</div>
                   </TableCell>
 
-                  {/* Mis à jour le (not editable for new) */}
-                  <TableCell>
-                    <div className="text-xs text-gray-400">-</div>
-                  </TableCell>
-
                   {/* Actions - Sticky Right */}
-                  <TableCell className="sticky right-0 bg-green-50 z-10">
+                  <TableCell className="sticky right-0 bg-blue-50 z-10">
                     <div className="flex gap-1">
                       <Button size="sm" variant="outline" onClick={handleSave} className="h-7 px-2 bg-white">
                         <Save className="h-3 w-3" />
@@ -997,7 +998,7 @@ export default function CNAMBondsTable({ rentalId, patientId, patientCnamId, dev
 
               {bonds.length === 0 && !isAddingNew && (
                 <TableRow>
-                  <TableCell colSpan={showGlobalView ? 9 : 7} className="text-center text-gray-500 py-8">
+                  <TableCell colSpan={showGlobalView ? 11 : 9} className="text-center text-gray-500 py-8">
                     Aucun bond CNAM. Cliquez sur "Nouveau Bond" pour commencer.
                   </TableCell>
                 </TableRow>
@@ -1009,27 +1010,30 @@ export default function CNAMBondsTable({ rentalId, patientId, patientCnamId, dev
 
                 return (
                   <TableRow key={bond.id} className={isEditing ? 'bg-blue-50' : ''}>
-                    {/* Numéro BL - Sticky Left (Read-only, auto-generated) */}
+                    {/* Numéros (BL + Dossier combined) - Sticky Left */}
                     <TableCell className={`sticky left-0 z-10 ${isEditing ? 'bg-blue-50' : 'bg-white'}`}>
-                      <Badge variant="outline" className="text-xs font-mono bg-blue-50 text-blue-700 border-blue-200">
-                        {bond.bonNumber || 'N/A'}
-                      </Badge>
-                      {isEditing && <div className="text-[10px] text-gray-500 mt-0.5">Auto-généré</div>}
-                    </TableCell>
-
-                    {/* Numéro Dossier */}
-                    <TableCell>
-                      {isEditing ? (
-                        <Input
-                          type="text"
-                          placeholder="DOSS-LOC-0001"
-                          value={data.dossierNumber || ''}
-                          onChange={(e) => setEditData({ ...editData!, dossierNumber: e.target.value })}
-                          className="text-xs w-32 font-mono"
-                        />
-                      ) : (
-                        <div className="text-xs font-mono">{bond.dossierNumber || 'N/A'}</div>
-                      )}
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1">
+                          <span className="text-[10px] text-gray-500 whitespace-nowrap">BL (Auto):</span>
+                          <Badge variant="outline" className="text-xs font-mono bg-blue-50 text-blue-700 border-blue-200">
+                            {bond.bonNumber || 'N/A'}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-[10px] text-gray-500 whitespace-nowrap">Dossier:</span>
+                          {isEditing ? (
+                            <Input
+                              type="text"
+                              placeholder="DOSS-LOC-0001"
+                              value={data.dossierNumber || ''}
+                              onChange={(e) => setEditData({ ...editData!, dossierNumber: e.target.value })}
+                              className="text-xs h-6 font-mono flex-1"
+                            />
+                          ) : (
+                            <span className="text-xs font-mono">{bond.dossierNumber || '-'}</span>
+                          )}
+                        </div>
+                      </div>
                     </TableCell>
 
                     {/* Patient (Read-only - use dialog for selection) */}
@@ -1084,153 +1088,171 @@ export default function CNAMBondsTable({ rentalId, patientId, patientCnamId, dev
                       </TableCell>
                     )}
 
-                    {/* Type */}
+                    {/* Type & Statut (combined) */}
                     <TableCell>
-                      {isEditing ? (
-                        <Select value={data.bonType} onValueChange={handleBondTypeChange}>
-                          <SelectTrigger className="text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Object.entries(BOND_TYPE_LABELS).map(([value, label]) => (
-                              <SelectItem key={value} value={value}>{label}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <div className="text-xs font-medium">{BOND_TYPE_LABELS[bond.bonType]}</div>
-                      )}
-                    </TableCell>
-
-                    {/* Catégorie */}
-                    <TableCell>
-                      <Badge variant="outline" className="text-xs">
-                        {bond.category || (bond.rentalId ? 'LOCATION' : 'ACHAT')}
-                      </Badge>
-                    </TableCell>
-
-                    {/* Statut */}
-                    <TableCell>
-                      {isEditing ? (
-                        <Select value={data.status} onValueChange={(v) => setEditData({ ...editData!, status: v })}>
-                          <SelectTrigger className="text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Object.entries(STATUS_LABELS).map(([value, info]) => (
-                              <SelectItem key={value} value={value}>{info.label}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        getStatusBadge(bond.status)
-                      )}
-                    </TableCell>
-
-                    {/* Date Début */}
-                    <TableCell>
-                      {isEditing ? (
-                        <Input
-                          type="date"
-                          value={data.startDate ? new Date(data.startDate).toISOString().split('T')[0] : ''}
-                          onChange={(e) => setEditData({ ...editData!, startDate: e.target.value ? new Date(e.target.value).toISOString() : null })}
-                          className="text-xs w-32"
-                        />
-                      ) : (
-                        <div className="text-xs">
-                          {bond.startDate ? new Date(bond.startDate).toLocaleDateString('fr-FR') : '-'}
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1">
+                          <span className="text-[10px] text-gray-500 whitespace-nowrap">Type:</span>
+                          {isEditing ? (
+                            <Select value={data.bonType} onValueChange={handleBondTypeChange}>
+                              <SelectTrigger className="text-xs h-6 flex-1">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Object.entries(BOND_TYPE_LABELS).map(([value, label]) => (
+                                  <SelectItem key={value} value={value}>{label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <span className="text-xs font-medium">{BOND_TYPE_LABELS[bond.bonType]}</span>
+                          )}
                         </div>
-                      )}
-                    </TableCell>
-
-                    {/* Date Fin */}
-                    <TableCell>
-                      {isEditing ? (
-                        <Input
-                          type="date"
-                          value={data.endDate ? new Date(data.endDate).toISOString().split('T')[0] : ''}
-                          onChange={(e) => setEditData({ ...editData!, endDate: e.target.value ? new Date(e.target.value).toISOString() : null })}
-                          className="text-xs w-32"
-                        />
-                      ) : (
-                        <div className="text-xs">
-                          {bond.endDate ? new Date(bond.endDate).toLocaleDateString('fr-FR') : '-'}
+                        <div className="flex items-center gap-1">
+                          <span className="text-[10px] text-gray-500 whitespace-nowrap">Statut:</span>
+                          {isEditing ? (
+                            <Select value={data.status} onValueChange={(v) => setEditData({ ...editData!, status: v })}>
+                              <SelectTrigger className="text-xs h-6 flex-1">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Object.entries(STATUS_LABELS).map(([value, info]) => (
+                                  <SelectItem key={value} value={value}>{info.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            getStatusBadge(bond.status)
+                          )}
                         </div>
-                      )}
-                    </TableCell>
-
-                    {/* Tarif CNAM/mois */}
-                    <TableCell>
-                      <div className="text-xs font-medium text-green-700">
-                        {Number(data.cnamMonthlyRate).toFixed(2)} TND
                       </div>
-                      {isEditing && <div className="text-[10px] text-gray-500">Auto (Type)</div>}
                     </TableCell>
 
-                    {/* Tarif Appareil/mois */}
+                    {/* Dates (Début + Fin combined) */}
                     <TableCell>
-                      {isEditing ? (
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={data.deviceMonthlyRate || ''}
-                          onChange={(e) => {
-                            const rate = parseFloat(e.target.value) || 0;
-                            const devicePrice = rate * data.coveredMonths;
-                            const bonAmount = data.cnamMonthlyRate * data.coveredMonths;
-                            setEditData({
-                              ...editData!,
-                              deviceMonthlyRate: rate,
-                              devicePrice,
-                              complementAmount: devicePrice - bonAmount,
-                            });
-                          }}
-                          className="text-xs w-24"
-                        />
-                      ) : (
-                        <div className="text-xs font-medium">{Number(bond.deviceMonthlyRate).toFixed(2)} TND</div>
-                      )}
-                    </TableCell>
-
-                    {/* Mois Couverts */}
-                    <TableCell>
-                      {isEditing ? (
-                        <Input
-                          type="number"
-                          min="1"
-                          max="12"
-                          value={data.coveredMonths}
-                          onChange={(e) => handleMonthsChange(parseInt(e.target.value) || 1)}
-                          className="text-xs w-16"
-                        />
-                      ) : (
-                        <div className="text-xs text-center">{bond.coveredMonths}</div>
-                      )}
-                    </TableCell>
-
-                    {/* Montant Bon Total */}
-                    <TableCell>
-                      <div className="text-xs font-semibold text-green-700">
-                        {Number(data.bonAmount).toFixed(2)} TND
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1">
+                          <span className="text-[10px] text-gray-500 whitespace-nowrap">Début:</span>
+                          {isEditing ? (
+                            <Input
+                              type="date"
+                              value={data.startDate ? new Date(data.startDate).toISOString().split('T')[0] : ''}
+                              onChange={(e) => setEditData({ ...editData!, startDate: e.target.value ? new Date(e.target.value).toISOString() : null })}
+                              className="text-xs h-6 flex-1"
+                            />
+                          ) : (
+                            <span className="text-xs">
+                              {bond.startDate ? new Date(bond.startDate).toLocaleDateString('fr-FR') : '-'}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-[10px] text-gray-500 whitespace-nowrap">Fin:</span>
+                          {isEditing ? (
+                            <Input
+                              type="date"
+                              value={data.endDate ? new Date(data.endDate).toISOString().split('T')[0] : ''}
+                              onChange={(e) => setEditData({ ...editData!, endDate: e.target.value ? new Date(e.target.value).toISOString() : null })}
+                              className="text-xs h-6 flex-1"
+                            />
+                          ) : (
+                            <span className="text-xs">
+                              {bond.endDate ? new Date(bond.endDate).toLocaleDateString('fr-FR') : '-'}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      {isEditing && <div className="text-[10px] text-gray-500">Auto calculé</div>}
                     </TableCell>
 
-                    {/* Prix Appareil Total */}
+                    {/* Mois Couverts & Rappel Renouvellement (combined) */}
                     <TableCell>
-                      <div className="text-xs font-semibold text-blue-700">
-                        {Number(data.devicePrice).toFixed(2)} TND
+                      <div className="space-y-1">
+                        {/* Months */}
+                        <div className="flex items-center gap-1">
+                          <span className="text-[10px] text-gray-500 whitespace-nowrap">Mois:</span>
+                          {isEditing ? (
+                            <div className="flex items-center gap-0.5">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleMonthsChange(Math.max(1, (data.coveredMonths || 1) - 1))}
+                                disabled={(data.coveredMonths || 1) <= 1}
+                                className="h-6 w-6 p-0"
+                              >
+                                <Minus className="h-3 w-3" />
+                              </Button>
+                              <div className="h-6 px-2 flex items-center justify-center border rounded text-xs font-semibold min-w-[32px] bg-white">
+                                {data.coveredMonths || 1}
+                              </div>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleMonthsChange(Math.min(12, (data.coveredMonths || 1) + 1))}
+                                disabled={(data.coveredMonths || 1) >= 12}
+                                className="h-6 w-6 p-0"
+                              >
+                                <Plus className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <span className="text-xs">{bond.coveredMonths}</span>
+                          )}
+                        </div>
+                        {/* Reminder */}
+                        <div className="flex items-center gap-1">
+                          <span className="text-[10px] text-gray-500 whitespace-nowrap">Rappel:</span>
+                          {isEditing ? (
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-6 text-xs flex-1 justify-start font-normal"
+                                >
+                                  <CalendarIcon2 className="h-3 w-3 mr-1" />
+                                  {data.renewalReminderDays ? `${data.renewalReminderDays}j` : '30j'}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                  mode="single"
+                                  selected={data.startDate ? new Date(new Date(data.startDate).getTime() + (data.renewalReminderDays || 30) * 24 * 60 * 60 * 1000) : new Date(Date.now() + (data.renewalReminderDays || 30) * 24 * 60 * 60 * 1000)}
+                                  onSelect={(date) => {
+                                    if (date) {
+                                      const baseDate = data.startDate ? new Date(data.startDate) : new Date();
+                                      const diffTime = date.getTime() - baseDate.getTime();
+                                      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                                      setEditData({ ...editData!, renewalReminderDays: Math.max(1, Math.min(90, diffDays)) });
+                                    }
+                                  }}
+                                  disabled={(date) => date < new Date()}
+                                  locale={fr}
+                                />
+                              </PopoverContent>
+                            </Popover>
+                          ) : (
+                            <span className="text-xs">{bond.renewalReminderDays || 30}j</span>
+                          )}
+                        </div>
                       </div>
-                      {isEditing && <div className="text-[10px] text-gray-500">Auto calculé</div>}
                     </TableCell>
 
-                    {/* Complément Patient */}
+                    {/* Totaux (button to show dialog with complement amount) */}
                     <TableCell>
-                      <div className="text-xs font-semibold text-orange-700">
-                        {Number(data.complementAmount).toFixed(2)} TND
-                      </div>
-                      {isEditing && <div className="text-[10px] text-gray-500">Auto calculé</div>}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedBondFinancials(bond);
+                          setShowFinancialDialog(true);
+                        }}
+                        className="flex items-center gap-1 h-7 text-xs font-semibold text-orange-700 hover:text-orange-800 border-orange-200 hover:bg-orange-50"
+                      >
+                        <span className="text-[10px]">Complément:</span>
+                        {Number(bond.complementAmount || 0).toFixed(2)} TND
+                      </Button>
                     </TableCell>
 
                     {/* Progression */}
@@ -1258,42 +1280,25 @@ export default function CNAMBondsTable({ rentalId, patientId, patientCnamId, dev
                       )}
                     </TableCell>
 
-                    {/* Rappel Renouvellement */}
-                    <TableCell>
-                      {isEditing ? (
-                        <Input
-                          type="number"
-                          min="1"
-                          max="90"
-                          value={data.renewalReminderDays || 30}
-                          onChange={(e) => setEditData({ ...editData!, renewalReminderDays: parseInt(e.target.value) || 30 })}
-                          className="text-xs w-16"
-                        />
-                      ) : (
-                        <div className="text-xs text-center">{bond.renewalReminderDays || 30}</div>
-                      )}
-                    </TableCell>
-
                     {/* Notes */}
                     <TableCell>
                       {isEditing ? (
-                        <Input
-                          type="text"
+                        <Textarea
                           placeholder="Notes..."
                           value={data.notes || ''}
                           onChange={(e) => setEditData({ ...editData!, notes: e.target.value })}
-                          className="text-xs w-40"
+                          className="text-xs min-w-[200px] resize-none"
+                          rows={2}
                         />
                       ) : (
-                        <div className="text-xs max-w-[200px] truncate">{bond.notes || '-'}</div>
+                        <div className="text-xs min-w-[200px] max-w-[250px] whitespace-pre-wrap break-words">
+                          {bond.notes || '-'}
+                        </div>
                       )}
                     </TableCell>
 
                     {/* Créé le */}
                     <TableCell className="text-xs">{(bond as any).createdAt ? new Date((bond as any).createdAt).toLocaleString('fr-FR') : '-'}</TableCell>
-
-                    {/* Mis à jour le */}
-                    <TableCell className="text-xs">{(bond as any).updatedAt ? new Date((bond as any).updatedAt).toLocaleString('fr-FR') : '-'}</TableCell>
 
                     {/* Actions - Sticky Right */}
                     <TableCell className={`sticky right-0 z-10 ${isEditing ? 'bg-blue-50' : 'bg-white'}`}>
@@ -1329,6 +1334,84 @@ export default function CNAMBondsTable({ rentalId, patientId, patientCnamId, dev
           </Table>
         </div>
       </CardContent>
+
+      {/* Financial Details Dialog */}
+      <Dialog open={showFinancialDialog} onOpenChange={setShowFinancialDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-blue-600" />
+              Détails Financiers - Bon CNAM
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedBondFinancials && (
+            <div className="space-y-4">
+              {/* Bond Number */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-xs text-blue-600 font-medium mb-1">Numéro de Bon</p>
+                <p className="text-sm font-mono font-semibold text-blue-900">
+                  {selectedBondFinancials.bonNumber || 'N/A'}
+                </p>
+              </div>
+
+              {/* Monthly Rates */}
+              <div className="space-y-2">
+                <h4 className="text-sm font-semibold text-gray-700 border-b pb-1">Tarifs Mensuels</h4>
+                <div className="flex justify-between items-center bg-gray-50 rounded p-2">
+                  <span className="text-sm text-gray-600">Tarif CNAM/mois:</span>
+                  <span className="text-sm font-semibold text-gray-900">
+                    {Number(selectedBondFinancials.cnamMonthlyRate || 0).toFixed(2)} TND
+                  </span>
+                </div>
+                <div className="flex justify-between items-center bg-gray-50 rounded p-2">
+                  <span className="text-sm text-gray-600">Tarif Appareil/mois:</span>
+                  <span className="text-sm font-semibold text-gray-900">
+                    {Number(selectedBondFinancials.deviceMonthlyRate || 0).toFixed(2)} TND
+                  </span>
+                </div>
+                <div className="flex justify-between items-center bg-gray-50 rounded p-2">
+                  <span className="text-sm text-gray-600">Mois Couverts:</span>
+                  <span className="text-sm font-semibold text-gray-900">
+                    {selectedBondFinancials.coveredMonths} mois
+                  </span>
+                </div>
+              </div>
+
+              {/* Totals */}
+              <div className="space-y-2">
+                <h4 className="text-sm font-semibold text-gray-700 border-b pb-1">Totaux Calculés</h4>
+                <div className="flex justify-between items-center bg-blue-50 rounded p-2 border border-blue-200">
+                  <span className="text-sm text-blue-700 font-medium">Montant Bon Total:</span>
+                  <span className="text-base font-bold text-blue-700">
+                    {Number(selectedBondFinancials.bonAmount || 0).toFixed(2)} TND
+                  </span>
+                </div>
+                <div className="flex justify-between items-center bg-blue-50 rounded p-2 border border-blue-200">
+                  <span className="text-sm text-blue-700 font-medium">Prix Appareil Total:</span>
+                  <span className="text-base font-bold text-blue-700">
+                    {Number(selectedBondFinancials.devicePrice || 0).toFixed(2)} TND
+                  </span>
+                </div>
+                <div className="flex justify-between items-center bg-orange-50 rounded p-3 border-2 border-orange-300">
+                  <span className="text-sm text-orange-700 font-bold">Complément Patient:</span>
+                  <span className="text-lg font-bold text-orange-700">
+                    {Number(selectedBondFinancials.complementAmount || 0).toFixed(2)} TND
+                  </span>
+                </div>
+              </div>
+
+              {/* Calculation Formula */}
+              <div className="bg-gray-100 rounded p-3 text-xs text-gray-600">
+                <p className="font-medium mb-1">Calcul:</p>
+                <p>• Bon Total = Tarif CNAM × Mois</p>
+                <p>• Prix Total = Tarif Appareil × Mois</p>
+                <p className="font-semibold mt-1">• Complément = Prix Total - Bon Total</p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

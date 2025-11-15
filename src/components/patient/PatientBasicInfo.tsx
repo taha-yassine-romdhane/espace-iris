@@ -22,6 +22,30 @@ export const PatientBasicInfo = ({ patient }: PatientBasicInfoProps) => {
     }
   };
 
+  // Helper function to translate beneficiary type
+  const translateBeneficiaryType = (type: string | null) => {
+    if (!type) return null;
+    const translations: Record<string, string> = {
+      'ASSURE_SOCIAL': 'Assuré Social',
+      'CONJOINT': 'Conjoint(e)',
+      'ENFANT': 'Enfant',
+      'ASCENDANT': 'Ascendant',
+      'AUTRE': 'Autre'
+    };
+    return translations[type] || type;
+  };
+
+  // Helper function to translate affiliation type
+  const translateAffiliation = (affiliation: string | null) => {
+    if (!affiliation) return null;
+    const translations: Record<string, string> = {
+      'CNSS': 'CNSS (Caisse Nationale de Sécurité Sociale)',
+      'CNRPS': 'CNRPS (Caisse Nationale de Retraite et de Prévoyance Sociale)',
+      'AUTRE': 'Autre'
+    };
+    return translations[affiliation] || affiliation;
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -69,7 +93,7 @@ export const PatientBasicInfo = ({ patient }: PatientBasicInfoProps) => {
         <div>
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Bénéficiaire</p>
           <p className="text-base text-gray-900">
-            {patient.beneficiaire || <span className="text-gray-400 italic">Non spécifié</span>}
+            {translateBeneficiaryType(patient.beneficiaire) || <span className="text-gray-400 italic">Non spécifié</span>}
           </p>
         </div>
 
@@ -78,7 +102,7 @@ export const PatientBasicInfo = ({ patient }: PatientBasicInfoProps) => {
           <div className="flex items-center gap-2">
             <Building2 className="h-4 w-4 text-blue-500" />
             <p className="text-base text-gray-900">
-              {patient.caisseAffiliation || <span className="text-gray-400 italic">Non spécifiée</span>}
+              {translateAffiliation(patient.caisseAffiliation) || <span className="text-gray-400 italic">Non spécifiée</span>}
             </p>
           </div>
         </div>

@@ -44,6 +44,7 @@ import { cn } from "@/lib/utils";
 import { PatientSelectorDialog } from "@/components/dialogs/PatientSelectorDialog";
 import { EmployeeMedicalDeviceSelectorDialog } from "@/components/employee/EmployeeMedicalDeviceSelectorDialog";
 import { EmployeeSelectorDialog } from "@/components/dialogs/EmployeeSelectorDialog";
+import { RentalDeletionDialog } from "@/components/dialogs/RentalDeletionDialog";
 
 interface Rental {
   id?: string;
@@ -56,7 +57,7 @@ interface Rental {
   createdById?: string;
   assignedToId?: string;
   patient?: { id: string; firstName: string; lastName: string; patientCode?: string; cnamId?: string; telephone?: string };
-  medicalDevice?: { id: string; name: string; deviceCode: string; rentalPrice: number };
+  medicalDevice?: { id: string; name: string; deviceCode: string; serialNumber?: string; rentalPrice: number };
   createdBy?: { id: string; firstName: string; lastName: string };
   assignedTo?: { id: string; firstName: string; lastName: string };
   configuration?: {
@@ -78,6 +79,8 @@ export default function ComprehensiveRentalsTable() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newRow, setNewRow] = useState<Partial<Rental> | null>(null);
   const [editData, setEditData] = useState<Partial<Rental>>({});
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [rentalToDelete, setRentalToDelete] = useState<{ id: string; code?: string } | null>(null);
 
   // Search and Filter State
   const [searchTerm, setSearchTerm] = useState("");
@@ -333,24 +336,6 @@ export default function ComprehensiveRentalsTable() {
     },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const response = await fetch(`/api/rentals/comprehensive/${id}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) throw new Error('Failed to delete rental');
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['rentals-comprehensive'] });
-      queryClient.invalidateQueries({ queryKey: ['rental-statistics'] });
-      toast({ title: "Succès", description: "Location supprimée" });
-    },
-    onError: (error: Error) => {
-      toast({ title: "Erreur", description: error.message, variant: "destructive" });
-    },
-  });
-
   // Handlers
   const handleAddNew = () => {
     setNewRow({
@@ -362,7 +347,7 @@ export default function ComprehensiveRentalsTable() {
       assignedToId: session?.user?.id, // Set to current user
       configuration: {
         rentalRate: 0,
-        billingCycle: 'DAILY',
+        billingCycle: 'MONTHLY',
         cnamEligible: false,
         isGlobalOpenEnded: false,
       },
@@ -384,10 +369,15 @@ export default function ComprehensiveRentalsTable() {
     updateMutation.mutate({ id: editingId, data: editData });
   };
 
-  const handleDelete = (id: string) => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer cette location ?')) {
-      deleteMutation.mutate(id);
-    }
+  const handleDelete = (rental: Rental) => {
+    setRentalToDelete({ id: rental.id!, code: rental.rentalCode });
+    setShowDeleteDialog(true);
+  };
+
+  const handleDeleteComplete = () => {
+    queryClient.invalidateQueries({ queryKey: ['rentals-comprehensive'] });
+    queryClient.invalidateQueries({ queryKey: ['rental-statistics'] });
+    setRentalToDelete(null);
   };
 
   const handleSort = (field: string) => {
@@ -781,7 +771,7 @@ export default function ComprehensiveRentalsTable() {
                   key={rental.id}
                   rental={rental}
                   onEdit={() => handleEdit(rental)}
-                  onDelete={() => handleDelete(rental.id!)}
+                  onDelete={() => handleDelete(rental)}
                   getStatusBadge={getStatusBadge}
                 />
               )
@@ -797,6 +787,15 @@ export default function ComprehensiveRentalsTable() {
           </tbody>
         </table>
       </div>
+
+      {/* Deletion Dialog */}
+      <RentalDeletionDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        rentalId={rentalToDelete?.id || null}
+        rentalCode={rentalToDelete?.code}
+        onDeleteComplete={handleDeleteComplete}
+      />
     </div>
   );
 }
@@ -855,6 +854,11 @@ function ViewRowComponent({ rental, onEdit, onDelete, getStatusBadge }: any) {
         >
           {rental.medicalDevice?.deviceCode || ''}
         </div>
+        {rental.medicalDevice?.serialNumber && (
+          <div className="text-xs text-slate-500 font-mono">
+            SN: {rental.medicalDevice.serialNumber}
+          </div>
+        )}
       </td>
       <td className="px-4 py-3">
         <div className="text-xs text-slate-700">
@@ -1019,7 +1023,7 @@ function NewRowComponent({ data, onChange, onSave, onCancel, patients, devices, 
             className="text-xs"
           />
           <Select
-            value={data.configuration?.billingCycle || 'DAILY'}
+            value={data.configuration?.billingCycle || 'MONTHLY'}
             onValueChange={(value) => onChange({
               ...data,
               configuration: { ...data.configuration, billingCycle: value }
@@ -1184,7 +1188,7 @@ function EditRowComponent({ data, onChange, onSave, onCancel, patients, devices,
             className="text-xs"
           />
           <Select
-            value={data.configuration?.billingCycle || 'DAILY'}
+            value={data.configuration?.billingCycle || 'MONTHLY'}
             onValueChange={(value) => onChange({
               ...data,
               configuration: { ...data.configuration, billingCycle: value }

@@ -56,7 +56,7 @@ interface Rental {
   createdById?: string;
   assignedToId?: string;
   patient?: { id: string; firstName: string; lastName: string; patientCode?: string; cnamId?: string; telephone?: string };
-  medicalDevice?: { id: string; name: string; deviceCode: string; rentalPrice: number };
+  medicalDevice?: { id: string; name: string; deviceCode: string; serialNumber?: string; rentalPrice: number };
   createdBy?: { id: string; firstName: string; lastName: string };
   assignedTo?: { id: string; firstName: string; lastName: string };
   configuration?: {
@@ -853,6 +853,11 @@ function ViewRowComponent({ rental, onEdit, onDelete, getStatusBadge }: any) {
         >
           {rental.medicalDevice?.deviceCode || ''}
         </div>
+        {rental.medicalDevice?.serialNumber && (
+          <div className="text-xs text-slate-500 font-mono">
+            SN: {rental.medicalDevice.serialNumber}
+          </div>
+        )}
       </td>
       <td className="px-4 py-3">
         <div className="text-xs text-slate-700">

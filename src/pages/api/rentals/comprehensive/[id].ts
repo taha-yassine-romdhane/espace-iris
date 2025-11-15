@@ -317,9 +317,113 @@ export default async function handler(
     }
 
     if (req.method === 'DELETE') {
-      // Delete rental (configuration will be cascade deleted)
-      await prisma.rental.delete({
-        where: { id },
+      // Delete rental with cascade deletion and device return
+      await prisma.$transaction(async (tx) => {
+        // Fetch rental with device info
+        const rental = await tx.rental.findUnique({
+          where: { id },
+          include: {
+            medicalDevice: {
+              select: {
+                id: true,
+                stockLocationId: true,
+              },
+            },
+            assignedTo: {
+              select: {
+                stockLocation: {
+                  select: {
+                    id: true,
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        if (!rental) {
+          throw new Error('Rental not found');
+        }
+
+        // Get current user's stock location
+        const currentUser = await tx.user.findUnique({
+          where: { id: session.user.id },
+          select: {
+            role: true,
+            stockLocation: {
+              select: {
+                id: true,
+              },
+            },
+          },
+        });
+
+        // Determine where to return the device
+        let returnToLocationId: string | undefined;
+
+        if (currentUser?.role === 'EMPLOYEE' && currentUser.stockLocation?.id) {
+          returnToLocationId = currentUser.stockLocation.id;
+        } else if (rental.assignedTo?.stockLocation?.id) {
+          returnToLocationId = rental.assignedTo.stockLocation.id;
+        } else if (rental.medicalDevice.stockLocationId) {
+          returnToLocationId = rental.medicalDevice.stockLocationId;
+        } else if (currentUser?.stockLocation?.id) {
+          returnToLocationId = currentUser.stockLocation.id;
+        }
+
+        // Delete related data in correct order (respecting foreign key constraints)
+        // 1. Delete CNAM bons
+        await tx.cNAMBonRental.deleteMany({
+          where: { rentalId: id },
+        });
+
+        // 2. Delete payment details first, then payments
+        const payments = await tx.payment.findMany({
+          where: { rentalId: id },
+          select: { id: true },
+        });
+
+        for (const payment of payments) {
+          await tx.paymentDetail.deleteMany({
+            where: { paymentId: payment.id },
+          });
+        }
+
+        await tx.payment.deleteMany({
+          where: { rentalId: id },
+        });
+
+        // 3. Delete rental accessories
+        await tx.rentalAccessory.deleteMany({
+          where: { rentalId: id },
+        });
+
+        // 4. Delete rental gaps
+        await tx.rentalGap.deleteMany({
+          where: { rentalId: id },
+        });
+
+        // 5. Delete rental configuration
+        await tx.rentalConfiguration.deleteMany({
+          where: { rentalId: id },
+        });
+
+        // 6. Return device to stock and mark as ACTIVE
+        if (rental.medicalDeviceId && returnToLocationId) {
+          await tx.medicalDevice.update({
+            where: { id: rental.medicalDeviceId },
+            data: {
+              stockLocationId: returnToLocationId,
+              destination: 'FOR_RENT',
+              status: 'ACTIVE',
+            },
+          });
+        }
+
+        // 7. Finally, delete the rental itself
+        await tx.rental.delete({
+          where: { id },
+        });
       });
 
       return res.status(200).json({ message: 'Rental deleted successfully' });

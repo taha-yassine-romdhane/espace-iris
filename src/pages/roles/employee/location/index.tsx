@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   KeyRound,
   CreditCard,
@@ -9,6 +10,7 @@ import {
   BarChart3,
   Stethoscope,
   Calendar,
+  Info,
 } from "lucide-react";
 import ComprehensiveRentalsTable from './components/ComprehensiveRentalsTable';
 import PaymentsTable from './components/PaymentsTable';
@@ -27,7 +29,7 @@ function LocationPage() {
       <div className="max-w-[1800px] mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <div>
+          <div className="flex-1">
             <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
               <KeyRound className="h-8 w-8 text-green-600" />
               Mes Locations
@@ -35,6 +37,12 @@ function LocationPage() {
             <p className="text-slate-600 mt-1">
               Système de gestion complet des locations et paiements
             </p>
+            <Alert className="mt-3 bg-blue-50 border-blue-200 max-w-2xl">
+              <Info className="h-4 w-4 text-blue-600" />
+              <AlertDescription className="text-sm text-blue-800">
+                <strong>Info:</strong> Les paiements CNAM sont créés automatiquement lors de la création d'un Bon CNAM
+              </AlertDescription>
+            </Alert>
           </div>
           <RentalWorkflowGuideDialog />
         </div>
@@ -51,25 +59,18 @@ function LocationPage() {
                 <span className="hidden sm:inline">Locations</span>
               </TabsTrigger>
               <TabsTrigger
-                value="devices"
-                className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm"
-              >
-                <Stethoscope className="h-4 w-4" />
-                <span className="hidden sm:inline">Articles</span>
-              </TabsTrigger>
-              <TabsTrigger
                 value="cnam"
                 className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm"
               >
                 <Shield className="h-4 w-4" />
-                <span className="hidden sm:inline">Bons CNAM</span>
+                <span className="hidden sm:inline">Bons et Paiements CNAM</span>
               </TabsTrigger>
               <TabsTrigger
                 value="payments"
                 className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm"
               >
                 <CreditCard className="h-4 w-4" />
-                <span className="hidden sm:inline">Paiements</span>
+                <span className="hidden sm:inline">Tous les Paiements</span>
               </TabsTrigger>
               <TabsTrigger
                 value="accessories"
@@ -77,6 +78,13 @@ function LocationPage() {
               >
                 <Package className="h-4 w-4" />
                 <span className="hidden sm:inline">Accessoires</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="devices"
+                className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm"
+              >
+                <Stethoscope className="h-4 w-4" />
+                <span className="hidden sm:inline">Articles et Restauration</span>
               </TabsTrigger>
               <TabsTrigger
                 value="statistics"

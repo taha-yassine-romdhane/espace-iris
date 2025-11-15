@@ -95,9 +95,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (notes !== undefined) updateData.notes = notes;
 
       // If any pricing fields change, recalculate all amounts
-      if (cnamMonthlyRate !== undefined || deviceMonthlyRate !== undefined || coveredMonths !== undefined) {
+      if (cnamMonthlyRate !== undefined || deviceMonthlyRate !== undefined || coveredMonths !== undefined || startDate !== undefined || endDate !== undefined) {
         // Get current bond to use existing values if not provided
-        const currentBond = await prisma.cNAMBonRental.findUnique({ where: { id } });
+        const currentBond = await prisma.cNAMBonRental.findUnique({
+          where: { id },
+          include: {
+            payments: {
+              where: {
+                method: 'CNAM',
+                cnamBonId: id,
+              },
+            },
+          },
+        });
+
         if (!currentBond) {
           return res.status(404).json({ error: 'CNAM bond not found' });
         }
@@ -112,6 +123,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         updateData.bonAmount = finalCnamRate * finalMonths;
         updateData.devicePrice = finalDeviceRate * finalMonths;
         updateData.complementAmount = (finalDeviceRate * finalMonths) - (finalCnamRate * finalMonths);
+
+        // Update linked CNAM payment if exists
+        if (currentBond.payments.length > 0) {
+          const cnamPayment = currentBond.payments[0];
+          const paymentUpdateData: any = {
+            amount: updateData.bonAmount,
+          };
+
+          // Update period dates if they changed
+          if (startDate !== undefined) {
+            paymentUpdateData.periodStartDate = startDate ? new Date(startDate) : null;
+            paymentUpdateData.paymentDate = startDate ? new Date(startDate) : paymentUpdateData.paymentDate;
+          }
+          if (endDate !== undefined) {
+            paymentUpdateData.periodEndDate = endDate ? new Date(endDate) : null;
+          }
+
+          await prisma.payment.update({
+            where: { id: cnamPayment.id },
+            data: paymentUpdateData,
+          });
+
+          console.log('[CNAM-BOND-UPDATE] Updated linked CNAM payment:', cnamPayment.paymentCode);
+        }
       }
 
       const updatedBond = await prisma.cNAMBonRental.update({
@@ -144,11 +179,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'DELETE') {
     try {
-      // Check if bond has related payments
+      // Get bond with related payments
       const bond = await prisma.cNAMBonRental.findUnique({
         where: { id },
         include: {
-          payments: true,
+          payments: {
+            where: {
+              method: 'CNAM',
+              cnamBonId: id,
+            },
+          },
         },
       });
 
@@ -156,17 +196,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(404).json({ error: 'CNAM bond not found' });
       }
 
-      if (bond.payments.length > 0) {
-        return res.status(400).json({
-          error: 'Cannot delete CNAM bond with existing payments. Please remove them first.',
-        });
-      }
+      // Use transaction to delete both bond and auto-created payment
+      await prisma.$transaction(async (tx) => {
+        // Delete auto-created CNAM payment first
+        if (bond.payments.length > 0) {
+          await tx.payment.deleteMany({
+            where: {
+              method: 'CNAM',
+              cnamBonId: id,
+            },
+          });
+          console.log('[CNAM-BOND-DELETE] Deleted', bond.payments.length, 'linked CNAM payment(s)');
+        }
 
-      await prisma.cNAMBonRental.delete({
-        where: { id },
+        // Delete the bond
+        await tx.cNAMBonRental.delete({
+          where: { id },
+        });
       });
 
-      return res.status(200).json({ message: 'CNAM bond deleted successfully' });
+      return res.status(200).json({ message: 'CNAM bond and linked payment deleted successfully' });
     } catch (error) {
       console.error('Error deleting CNAM bond:', error);
       return res.status(500).json({ error: 'Failed to delete CNAM bond' });

@@ -727,7 +727,7 @@ model CNAMDossier {
   complementAmount Decimal?          @default(0) @db.Decimal(10, 2)
   currentStep      Int               @default(1)
   totalSteps       Int               @default(10)
-  status           CNAMStatus        @default(EN_ATTENTE_APPROBATION)
+  status           String            @default("CREATION")
   notes            String?
   saleId           String
   paymentDetailId  String?           @unique
@@ -786,7 +786,7 @@ model CNAMBonRental {
   bonNumber      String?         @map("bondNumber")
   bonType        CNAMBonType     @map("bondType")
   category       CNAMBonCategory @default(LOCATION) @map("bondCategory") // LOCATION (rental) or ACHAT (sale)
-  status         CNAMStatus      @default(EN_ATTENTE_APPROBATION)
+  status         String          @default("CREATION")
   dossierNumber  String?
   submissionDate DateTime?
   approvalDate   DateTime?

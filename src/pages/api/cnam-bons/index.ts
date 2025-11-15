@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]';
+import { generatePaymentCode } from '@/utils/idGenerator';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const session = await getServerSession(req, res, authOptions);
@@ -180,66 +181,94 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const devicePrice = parseFloat(deviceMonthlyRate) * parseInt(coveredMonths);
       const complementAmount = Math.max(0, devicePrice - bonAmount);
 
-      const cnamBon = await prisma.cNAMBonRental.create({
-        data: {
-          bonNumber: finalBonNumber,
-          bonType,
-          category: category || 'LOCATION', // Default to LOCATION if not specified
-          status: status || 'EN_ATTENTE_APPROBATION',
-          dossierNumber: finalDossierNumber,
-          startDate: startDate ? new Date(startDate) : null,
-          endDate: endDate ? new Date(endDate) : null,
-          cnamMonthlyRate: parseFloat(cnamMonthlyRate),
-          deviceMonthlyRate: parseFloat(deviceMonthlyRate),
-          coveredMonths: parseInt(coveredMonths),
-          bonAmount,
-          devicePrice,
-          complementAmount,
-          currentStep: currentStep ? parseInt(currentStep) : 1,
-          renewalReminderDays: renewalReminderDays || 30,
-          notes,
-          patient: {
-            connect: { id: patientId },
+      // Use transaction to create both bond and payment together
+      const result = await prisma.$transaction(async (tx) => {
+        // Create CNAM Bond
+        const cnamBon = await tx.cNAMBonRental.create({
+          data: {
+            bonNumber: finalBonNumber,
+            bonType,
+            category: category || 'LOCATION', // Default to LOCATION if not specified
+            status: status || 'CREATION',
+            dossierNumber: finalDossierNumber,
+            startDate: startDate ? new Date(startDate) : null,
+            endDate: endDate ? new Date(endDate) : null,
+            cnamMonthlyRate: parseFloat(cnamMonthlyRate),
+            deviceMonthlyRate: parseFloat(deviceMonthlyRate),
+            coveredMonths: parseInt(coveredMonths),
+            bonAmount,
+            devicePrice,
+            complementAmount,
+            currentStep: currentStep ? parseInt(currentStep) : 1,
+            renewalReminderDays: renewalReminderDays || 30,
+            notes,
+            patient: {
+              connect: { id: patientId },
+            },
+            ...(rentalId && {
+              rental: {
+                connect: { id: rentalId },
+              },
+            }),
+            ...(saleId && {
+              sale: {
+                connect: { id: saleId },
+              },
+            }),
           },
-          ...(rentalId && {
+          include: {
+            patient: {
+              select: {
+                id: true,
+                patientCode: true,
+                firstName: true,
+                lastName: true,
+                cnamId: true,
+              },
+            },
             rental: {
-              connect: { id: rentalId },
+              select: {
+                id: true,
+                rentalCode: true,
+              },
             },
-          }),
-          ...(saleId && {
             sale: {
-              connect: { id: saleId },
-            },
-          }),
-        },
-        include: {
-          patient: {
-            select: {
-              id: true,
-              patientCode: true,
-              firstName: true,
-              lastName: true,
-              cnamId: true,
+              select: {
+                id: true,
+                saleCode: true,
+                totalAmount: true,
+                invoiceNumber: true,
+              },
             },
           },
-          rental: {
-            select: {
-              id: true,
-              rentalCode: true,
-            },
+        });
+
+        // Automatically create CNAM payment
+        const paymentCode = await generatePaymentCode(tx as any);
+        const cnamPayment = await tx.payment.create({
+          data: {
+            paymentCode,
+            paymentType: 'RENTAL', // Type: Location
+            method: 'CNAM', // Method: CNAM
+            status: 'PAID', // Status: Payé
+            amount: bonAmount, // Amount CNAM covers
+            paymentDate: startDate ? new Date(startDate) : new Date(),
+            periodStartDate: startDate ? new Date(startDate) : null,
+            periodEndDate: endDate ? new Date(endDate) : null,
+            cnamBonId: cnamBon.id, // Link to CNAM bond
+            rentalId: rentalId || null,
+            patientId: patientId,
+            source: 'RENTAL',
+            notes: `Paiement CNAM automatique pour bon ${finalBonNumber}`,
           },
-          sale: {
-            select: {
-              id: true,
-              saleCode: true,
-              totalAmount: true,
-              invoiceNumber: true,
-            },
-          },
-        },
+        });
+
+        console.log('[CNAM-BOND-CREATE] Auto-created CNAM payment:', paymentCode);
+
+        return { cnamBon, cnamPayment };
       });
 
-      return res.status(201).json(cnamBon);
+      return res.status(201).json(result.cnamBon);
     } catch (error) {
       console.error('Error creating CNAM bond:', error);
       return res.status(500).json({ error: 'Failed to create CNAM bond' });

@@ -81,6 +81,7 @@ export default async function handler(
               id: true,
               name: true,
               deviceCode: true,
+              serialNumber: true,
               rentalPrice: true,
               type: true,
             },

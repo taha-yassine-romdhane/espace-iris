@@ -92,12 +92,11 @@ export default function EmployeeSimpleRenseignementTables({
   const handleConfirmDelete = () => {
     // The PatientDeletionDialog handles the actual deletion
     // This callback is called after successful deletion
-    // We call onDelete to trigger parent refresh
-    if (patientToDelete) {
-      onDelete([patientToDelete.id]);
-      setShowPatientDeletionDialog(false);
-      setPatientToDelete(null);
-    }
+    // Just close the dialog and reset state
+    setShowPatientDeletionDialog(false);
+    setPatientToDelete(null);
+    // Optionally trigger a data refresh in parent
+    window.location.reload();
   };
 
   // Handle company deletion
@@ -318,7 +317,14 @@ export default function EmployeeSimpleRenseignementTables({
                           <Badge variant="outline" className="text-xs font-medium">{patient.patientCode}</Badge>
                         ) : '-'}
                       </td>
-                      <td className="px-3 py-2.5 text-sm font-medium text-slate-900 border-r border-slate-100">{patient.nom}</td>
+                      <td className="px-3 py-2.5 text-sm font-medium border-r border-slate-100">
+                        <a
+                          href={`/roles/employee/renseignement/patient/${patient.id}`}
+                          className="text-green-700 hover:text-green-900 hover:underline cursor-pointer font-medium"
+                        >
+                          {patient.nom}
+                        </a>
+                      </td>
                       <td className="px-3 py-2.5 text-xs text-slate-600 border-r border-slate-100">{patient.telephone || '-'}</td>
                       <td className="px-3 py-2.5 text-xs text-slate-600 border-r border-slate-100">{patient.telephoneSecondaire || '-'}</td>
                       <td className="px-3 py-2.5 text-xs text-slate-600 border-r border-slate-100">{patient.cin || '-'}</td>

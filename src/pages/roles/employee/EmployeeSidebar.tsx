@@ -41,7 +41,7 @@ const Sidebar: React.FC = () => {
         { id: 'rdv', icon: <Calendar size={20} />, label: "Rendez-vous", path: "/roles/employee/appointments" },
         { id: 'manual-tasks', icon: <ListTodo size={20} />, label: "Mes Tâches", path: "/roles/employee/manual-tasks" },
         { id: 'renseignement', icon: <Users size={20} />, label: "Renseignement", path: "/roles/employee/renseignement" },
-        { id: 'diagnostics', icon: <SquareActivity size={20} />, label: "Diagnostique", path: "/roles/employee/diagnostics" },
+        { id: 'diagnostics', icon: <SquareActivity size={20} />, label: "Polygraphie", path: "/roles/employee/diagnostics" },
         { id: 'sales', icon: <ShoppingCart size={20} />, label: "Vente", path: "/roles/employee/sales" },
         { id: 'location', icon: <CalendarClock size={20} />, label: "Locations", path: "/roles/employee/location" },
         { id: 'calendar', icon: <Calendar size={20} />, label: "Calendrier", path: "/roles/employee/tasks/modern" },

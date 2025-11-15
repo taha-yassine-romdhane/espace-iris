@@ -86,22 +86,23 @@ export default function PatientDetailsPage() {
         nomComplet: patient.nom || '',
         telephonePrincipale: patient.telephone || '',
         telephoneSecondaire: patient.telephoneSecondaire || '',
-        detailedAddress: patient.adresse || '',
+        detailedAddress: patient.detailedAddress || patient.adresse || '',
         governorate: patient.governorate || '',
         delegation: patient.delegation || '',
         cin: patient.cin || '',
         identifiantCNAM: patient.identifiantCNAM || '',
-        technicienResponsable: patient.technicianId || '',
-        superviseur: patient.assignedToId || '',
+        technicienResponsable: patient.technicianId || patient.technician?.id || '',
+        superviseur: patient.supervisorId || patient.supervisor?.id || patient.assignedToId || '',
         antecedant: patient.antecedant || '',
         taille: patient.taille?.toString() || '',
         poids: patient.poids?.toString() || '',
-        medecin: patient.doctorId || '',
+        medecin: patient.doctorId || patient.doctor?.id || '',
         dateNaissance: patient.dateNaissance ? new Date(patient.dateNaissance).toISOString().split('T')[0] : '',
         beneficiaire: patient.beneficiaire || BeneficiaryType.ASSURE_SOCIAL,
         caisseAffiliation: patient.caisseAffiliation || 'CNSS',
         cnam: patient.cnam || false,
         generalNote: patient.generalNote || '',
+        addressCoordinates: patient.addressCoordinates ? JSON.stringify(patient.addressCoordinates) : '',
         nomSociete: '',
         matriculeFiscale: '',
         images: [],
@@ -345,7 +346,7 @@ export default function PatientDetailsPage() {
               className="flex items-center gap-2"
             >
               <Edit className="h-4 w-4" />
-              Modifier
+              Modifier Info Patient
             </Button>
             <Button
               variant="outline"
@@ -397,6 +398,7 @@ export default function PatientDetailsPage() {
         <PatientDiagnostics
           diagnostics={patient.diagnostics || []}
           isLoading={false}
+          patientId={patient.id}
         />
 
         {/* Manual Tasks Section */}

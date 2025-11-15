@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Activity, AlertCircle, FileText } from 'lucide-react';
-import { 
+import { Activity, AlertCircle, FileText, Plus, Edit } from 'lucide-react';
+import {
   Table,
   TableBody,
   TableCell,
@@ -16,10 +16,22 @@ import { useRouter } from 'next/router';
 interface PatientDiagnosticsProps {
   diagnostics: any[];
   isLoading?: boolean;
+  patientId?: string;
 }
 
-export const PatientDiagnostics = ({ diagnostics = [], isLoading = false }: PatientDiagnosticsProps) => {
+export const PatientDiagnostics = ({ diagnostics = [], isLoading = false, patientId }: PatientDiagnosticsProps) => {
   const router = useRouter();
+  const [selectedDiagnostic, setSelectedDiagnostic] = useState<any>(null);
+
+  const handleAddDiagnostic = () => {
+    // Navigate to diagnostics page with patient pre-selected
+    router.push(`/roles/employee/diagnostics?patientId=${patientId}`);
+  };
+
+  const handleEditDiagnostic = (diagnostic: any) => {
+    // Navigate to diagnostics page with diagnostic to edit
+    router.push(`/roles/employee/diagnostics?diagnosticId=${diagnostic.id}`);
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -105,15 +117,26 @@ export const PatientDiagnostics = ({ diagnostics = [], isLoading = false }: Pati
               Historique des polygraphies réalisées pour ce patient
             </CardDescription>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handlePrint}
-            className="flex items-center gap-2 print:hidden"
-          >
-            <FileText className="h-4 w-4" />
-            Imprimer
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleAddDiagnostic}
+              className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+            >
+              <Plus className="h-4 w-4" />
+              Ajouter
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePrint}
+              className="flex items-center gap-2 print:hidden"
+            >
+              <FileText className="h-4 w-4" />
+              Imprimer
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -210,15 +233,26 @@ export const PatientDiagnostics = ({ diagnostics = [], isLoading = false }: Pati
                       {diagnostic.performedBy ? `${diagnostic.performedBy.firstName} ${diagnostic.performedBy.lastName}` : 'Non assigné'}
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => router.push(`/roles/admin/diagnostics/${diagnostic.id}`)}
-                        className="h-8 px-2"
-                      >
-                        <FileText className="h-3 w-3 mr-1" />
-                        Voir
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditDiagnostic(diagnostic)}
+                          className="h-8 px-2 hover:bg-green-100 hover:text-green-700"
+                        >
+                          <Edit className="h-3 w-3 mr-1" />
+                          Modifier
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => router.push(`/roles/employee/diagnostics/${diagnostic.id}`)}
+                          className="h-8 px-2 hover:bg-blue-100 hover:text-blue-700"
+                        >
+                          <FileText className="h-3 w-3 mr-1" />
+                          Voir
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
