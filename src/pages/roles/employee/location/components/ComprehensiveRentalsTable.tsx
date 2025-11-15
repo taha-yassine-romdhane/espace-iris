@@ -358,6 +358,8 @@ export default function ComprehensiveRentalsTable() {
       medicalDeviceId: '',
       status: 'PENDING',
       startDate: new Date().toISOString().split('T')[0],
+      createdById: session?.user?.id, // Set to current user
+      assignedToId: session?.user?.id, // Set to current user
       configuration: {
         rentalRate: 0,
         billingCycle: 'DAILY',
@@ -1052,16 +1054,9 @@ function NewRowComponent({ data, onChange, onSave, onCancel, patients, devices, 
         </div>
       </td>
       <td className="px-4 py-3">
-        <EmployeeSelectorDialog
-          onSelect={(id, name) => {
-            onChange({ ...data, assignedToId: id || undefined });
-            setSelectedAssignedToName(name);
-          }}
-          selectedId={data.assignedToId}
-          selectedName={selectedAssignedToName}
-          placeholder="Non assigné"
-          allowNone={true}
-        />
+        <div className="text-xs text-slate-600 bg-slate-50 px-3 py-2 rounded border border-slate-200">
+          {currentUserName}
+        </div>
       </td>
       <td className="px-4 py-3 text-right">
         <div className="flex justify-end gap-2">
@@ -1106,6 +1101,13 @@ function EditRowComponent({ data, onChange, onSave, onCancel, patients, devices,
     : users.find((u: any) => u.id === data.createdById)
     ? `${users.find((u: any) => u.id === data.createdById).firstName} ${users.find((u: any) => u.id === data.createdById).lastName}`
     : 'N/A';
+
+  // Get the assigned user name from the data
+  const assignedToName = data.assignedTo
+    ? `${data.assignedTo.firstName} ${data.assignedTo.lastName}`
+    : users.find((u: any) => u.id === data.assignedToId)
+    ? `${users.find((u: any) => u.id === data.assignedToId).firstName} ${users.find((u: any) => u.id === data.assignedToId).lastName}`
+    : 'Non assigné';
 
   return (
     <tr className="bg-green-50 border-b-2 border-green-200">
@@ -1217,16 +1219,9 @@ function EditRowComponent({ data, onChange, onSave, onCancel, patients, devices,
         </div>
       </td>
       <td className="px-4 py-3">
-        <EmployeeSelectorDialog
-          onSelect={(id, name) => {
-            onChange({ ...data, assignedToId: id || undefined });
-            setSelectedAssignedToName(name);
-          }}
-          selectedId={data.assignedToId}
-          selectedName={selectedAssignedToName}
-          placeholder="Non assigné"
-          allowNone={true}
-        />
+        <div className="text-xs text-slate-600 bg-slate-50 px-3 py-2 rounded border border-slate-200">
+          {assignedToName}
+        </div>
       </td>
       <td className="px-4 py-3 text-right">
         <div className="flex justify-end gap-2">

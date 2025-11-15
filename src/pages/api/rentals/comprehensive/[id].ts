@@ -70,7 +70,6 @@ export default async function handler(
           select: {
             id: true,
             role: true,
-            stockLocationId: true,
             stockLocation: {
               select: {
                 id: true,
@@ -139,7 +138,7 @@ export default async function handler(
           let returnToLocationName: string | undefined;
 
           if (currentUser.role === 'EMPLOYEE') {
-            returnToLocationId = currentUser.stockLocationId || undefined;
+            returnToLocationId = currentUser.stockLocation?.id || undefined;
             returnToLocationName = currentUser.stockLocation?.name || undefined;
           } else {
             // For ADMIN: priority logic
@@ -150,7 +149,7 @@ export default async function handler(
               returnToLocationId = currentRental.medicalDevice.stockLocationId;
               returnToLocationName = currentRental.medicalDevice.stockLocation?.name;
             } else {
-              returnToLocationId = currentUser.stockLocationId || undefined;
+              returnToLocationId = currentUser.stockLocation?.id || undefined;
               returnToLocationName = currentUser.stockLocation?.name || undefined;
             }
           }

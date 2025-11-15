@@ -12,6 +12,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Edit2, Trash2, Check, X, Plus, Search, Stethoscope, ChevronLeft, ChevronRight } from 'lucide-react';
 import { PatientSelector } from '@/components/forms/components/PatientSelector';
 import { DiagnosticDeviceSelector } from '@/components/forms/components/DiagnosticDeviceSelector';
+import { useSession } from 'next-auth/react';
 
 interface Diagnostic {
   id?: string;
@@ -102,6 +103,11 @@ const getEquipmentStatus = (hasSale?: boolean, hasRental?: boolean): { label: st
 export default function DiagnosticsExcelTable() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { data: session } = useSession();
+
+  // Get current logged-in user info
+  const currentUserId = session?.user?.id;
+  const currentUserName = session?.user?.name || '';
 
   // State Management
   const [searchTerm, setSearchTerm] = useState('');
@@ -110,7 +116,8 @@ export default function DiagnosticsExcelTable() {
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [newDiagnostic, setNewDiagnostic] = useState<Partial<Diagnostic>>({
     status: 'PENDING',
-    diagnosticDate: new Date()
+    diagnosticDate: new Date(),
+    performedById: currentUserId // Auto-set to current employee
   });
 
   // Pagination State
@@ -146,11 +153,11 @@ export default function DiagnosticsExcelTable() {
     }
   });
 
-  // Fetch diagnostic devices
+  // Fetch diagnostic devices (filtered by employee stock location)
   const { data: devicesData } = useQuery({
-    queryKey: ['diagnostic-devices'],
+    queryKey: ['diagnostic-devices', 'assigned'],
     queryFn: async () => {
-      const response = await fetch('/api/diagnostic-devices');
+      const response = await fetch('/api/diagnostic-devices?assignedToMe=true');
       if (!response.ok) throw new Error('Failed to fetch devices');
       return response.json();
     }
@@ -205,7 +212,7 @@ export default function DiagnosticsExcelTable() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['diagnostics'] });
       setIsAddingNew(false);
-      setNewDiagnostic({ status: 'PENDING', diagnosticDate: new Date() });
+      setNewDiagnostic({ status: 'PENDING', diagnosticDate: new Date(), performedById: currentUserId });
       toast({ title: 'Succès', description: 'Diagnostic créé avec succès' });
     },
     onError: () => {
@@ -298,7 +305,7 @@ export default function DiagnosticsExcelTable() {
 
   const handleCancelNew = () => {
     setIsAddingNew(false);
-    setNewDiagnostic({ status: 'PENDING', diagnosticDate: new Date() });
+    setNewDiagnostic({ status: 'PENDING', diagnosticDate: new Date(), performedById: currentUserId });
   };
 
   const handleSaveNew = async () => {
@@ -457,23 +464,11 @@ export default function DiagnosticsExcelTable() {
           );
 
         case 'performedById':
+          // For employees, always show current user (read-only)
           return (
-            <Select
-              value={editedDiagnostic.performedById || 'none'}
-              onValueChange={(val) => updateEditedField('performedById', val === 'none' ? null : val)}
-            >
-              <SelectTrigger className="h-8 text-xs">
-                <SelectValue placeholder="Aucun" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Aucun</SelectItem>
-                {users.map((user: any) => (
-                  <SelectItem key={user.id} value={user.id}>
-                    {user.firstName} {user.lastName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <span className="text-xs font-medium text-green-700">
+              {currentUserName}
+            </span>
           );
 
         case 'status':
@@ -733,22 +728,9 @@ export default function DiagnosticsExcelTable() {
         />
       </td>
       <td className="px-2 py-2">
-        <Select
-          value={newDiagnostic.performedById || 'none'}
-          onValueChange={(val) => updateNewField('performedById', val === 'none' ? undefined : val)}
-        >
-          <SelectTrigger className="h-8 text-xs">
-            <SelectValue placeholder="Aucun" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">Aucun</SelectItem>
-            {users.map((user: any) => (
-              <SelectItem key={user.id} value={user.id}>
-                {user.firstName} {user.lastName}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <span className="text-xs font-medium text-green-700">
+          {currentUserName}
+        </span>
       </td>
       <td className="px-2 py-2">
         <Select
@@ -858,7 +840,7 @@ export default function DiagnosticsExcelTable() {
             className="pl-10"
           />
         </div>
-        <Button onClick={handleAddNew} disabled={isAddingNew} className="flex items-center gap-2">
+        <Button onClick={handleAddNew} disabled={isAddingNew} className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white">
           <Plus className="h-4 w-4" />
           Ajouter
         </Button>

@@ -89,7 +89,7 @@ export default async function handler(
         
         // Filter medical devices based on type and reservation status
         let filteredMedicalDevices = medicalDevices;
-        
+
         // Filter by device type if specified
         if (type !== 'all' && type !== '') {
           filteredMedicalDevices = filteredMedicalDevices.filter(device => device.type === type);

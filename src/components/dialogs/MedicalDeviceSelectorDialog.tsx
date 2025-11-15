@@ -107,29 +107,33 @@ export function MedicalDeviceSelectorDialog({
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'AVAILABLE':
+      case 'ACTIVE':
         return 'bg-green-100 text-green-800';
-      case 'RENTED':
-        return 'bg-blue-100 text-blue-800';
-      case 'IN_MAINTENANCE':
+      case 'MAINTENANCE':
         return 'bg-orange-100 text-orange-800';
-      case 'OUT_OF_SERVICE':
-        return 'bg-red-100 text-red-800';
-      default:
+      case 'RESERVED':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'RETIRED':
         return 'bg-gray-100 text-gray-800';
+      case 'SOLD':
+        return 'bg-blue-100 text-blue-800';
+      default:
+        return 'bg-slate-100 text-slate-800';
     }
   };
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case 'AVAILABLE':
-        return 'Disponible';
-      case 'RENTED':
-        return 'Loué';
-      case 'IN_MAINTENANCE':
-        return 'Maintenance';
-      case 'OUT_OF_SERVICE':
-        return 'Hors Service';
+      case 'ACTIVE':
+        return 'Actif';
+      case 'MAINTENANCE':
+        return 'En Maintenance';
+      case 'RESERVED':
+        return 'Réservé';
+      case 'RETIRED':
+        return 'Retiré';
+      case 'SOLD':
+        return 'Vendu';
       default:
         return status;
     }
@@ -219,9 +223,10 @@ export function MedicalDeviceSelectorDialog({
                         size="sm"
                         variant={selectedId === device.id ? 'default' : 'outline'}
                         onClick={() => handleSelect(device)}
+                        disabled={device.status === 'RESERVED'}
                         className="h-7"
                       >
-                        Sélectionner
+                        {device.status === 'RESERVED' ? 'Réservé' : 'Sélectionner'}
                       </Button>
                     </td>
                   </tr>

@@ -127,54 +127,130 @@ async function updateDiagnostic(req: NextApiRequest, res: NextApiResponse, id: s
     // Check user permissions
     const userRole = session.user.role;
     const userId = session.user.id;
-    
-    // Find the diagnostic first to check permissions
+
+    // Find the diagnostic first to check permissions and get device info
     const existingDiagnostic = await prisma.diagnostic.findUnique({
       where: { id },
-      select: { performedById: true }
+      select: {
+        performedById: true,
+        medicalDeviceId: true,
+        status: true
+      }
     });
-    
+
     if (!existingDiagnostic) {
       return res.status(404).json({ error: 'Diagnostic non trouvé' });
     }
-    
+
     // Only allow admins or the user who performed the diagnostic to update it
     if (userRole !== 'ADMIN' && existingDiagnostic.performedById !== userId) {
       return res.status(403).json({ error: 'Vous n\'avez pas la permission de modifier ce diagnostic' });
     }
-    
-    const { 
-      notes, 
-      followUpRequired, 
+
+    const {
+      notes,
+      followUpRequired,
       followUpDate,
-      result 
+      result,
+      status,
+      medicalDeviceId,
+      patientId,
+      diagnosticDate,
+      performedById
     } = req.body;
-    
+
+    // Prepare update data
+    const updateData: any = {
+      notes,
+      followUpRequired: followUpRequired ?? false,
+      followUpDate: followUpDate ? new Date(followUpDate) : null,
+    };
+
+    // Handle status update
+    if (status) {
+      updateData.status = status;
+    }
+
+    // Handle diagnostic date update
+    if (diagnosticDate) {
+      updateData.diagnosticDate = new Date(diagnosticDate);
+    }
+
+    // Handle medicalDevice change
+    if (medicalDeviceId && medicalDeviceId !== existingDiagnostic.medicalDeviceId) {
+      // Release the old device (set back to ACTIVE)
+      if (existingDiagnostic.medicalDeviceId) {
+        await prisma.medicalDevice.update({
+          where: { id: existingDiagnostic.medicalDeviceId },
+          data: { status: 'ACTIVE' }
+        });
+      }
+      // Reserve the new device
+      await prisma.medicalDevice.update({
+        where: { id: medicalDeviceId },
+        data: { status: 'RESERVED' }
+      });
+      updateData.medicalDevice = { connect: { id: medicalDeviceId } };
+    }
+
+    // Handle patient change
+    if (patientId) {
+      updateData.patient = { connect: { id: patientId } };
+    }
+
+    // Handle performedBy change
+    if (performedById) {
+      updateData.performedBy = { connect: { id: performedById } };
+    }
+
+    // Handle device status based on diagnostic status changes
+    if (status && existingDiagnostic.status !== status) {
+      const deviceId = medicalDeviceId || existingDiagnostic.medicalDeviceId;
+
+      if (deviceId) {
+        // When diagnostic is COMPLETED or CANCELLED, release the device
+        if (status === 'COMPLETED' || status === 'CANCELLED') {
+          await prisma.medicalDevice.update({
+            where: { id: deviceId },
+            data: { status: 'ACTIVE' }
+          });
+          console.log(`Device ${deviceId} status set to ACTIVE (diagnostic ${status})`);
+        }
+        // When diagnostic is back to PENDING, reserve the device again
+        else if (status === 'PENDING' && existingDiagnostic.status !== 'PENDING') {
+          await prisma.medicalDevice.update({
+            where: { id: deviceId },
+            data: { status: 'RESERVED' }
+          });
+          console.log(`Device ${deviceId} status set to RESERVED (diagnostic PENDING)`);
+        }
+      }
+    }
+
+    // Update or create the diagnostic result if provided
+    if (result) {
+      updateData.result = {
+        upsert: {
+          create: {
+            iah: result.iah,
+            idValue: result.idValue,
+            remarque: result.remarque,
+            status: result.status
+          },
+          update: {
+            iah: result.iah,
+            idValue: result.idValue,
+            remarque: result.remarque,
+            status: result.status
+          }
+        }
+      };
+    }
+
     // Update the diagnostic
     const updatedDiagnostic = await prisma.diagnostic.update({
       where: { id },
-      data: {
-        notes,
-        followUpRequired: followUpRequired ?? false,
-        followUpDate: followUpDate ? new Date(followUpDate) : null,
-        // Update or create the diagnostic result if provided
-        result: result ? {
-          upsert: {
-            create: {
-              iah: result.iah,
-              idValue: result.idValue,
-              remarque: result.remarque,
-              status: result.status
-            },
-            update: {
-              iah: result.iah,
-              idValue: result.idValue,
-              remarque: result.remarque,
-              status: result.status
-            }
-          }
-        } : undefined
-      },
+      data: updateData,
       include: {
         result: true,
         patient: true,
@@ -189,7 +265,7 @@ async function updateDiagnostic(req: NextApiRequest, res: NextApiResponse, id: s
         },
       }
     });
-    
+
     return res.status(200).json(updatedDiagnostic);
   } catch (error) {
     console.error('Error updating diagnostic:', error);
@@ -204,17 +280,36 @@ async function deleteDiagnostic(req: NextApiRequest, res: NextApiResponse, id: s
     if (session.user.role !== 'ADMIN') {
       return res.status(403).json({ error: 'Seuls les administrateurs peuvent supprimer des diagnostics' });
     }
-    
+
+    // Get diagnostic info before deleting to release the device
+    const diagnostic = await prisma.diagnostic.findUnique({
+      where: { id },
+      select: { medicalDeviceId: true }
+    });
+
+    if (!diagnostic) {
+      return res.status(404).json({ error: 'Diagnostic non trouvé' });
+    }
+
     // First delete the associated diagnostic result if it exists
     await prisma.diagnosticResult.deleteMany({
       where: { diagnosticId: id }
     });
-    
-    // Then delete the diagnostic
+
+    // Delete the diagnostic
     await prisma.diagnostic.delete({
       where: { id }
     });
-    
+
+    // Release the medical device (set back to ACTIVE)
+    if (diagnostic.medicalDeviceId) {
+      await prisma.medicalDevice.update({
+        where: { id: diagnostic.medicalDeviceId },
+        data: { status: 'ACTIVE' }
+      });
+      console.log(`Device ${diagnostic.medicalDeviceId} status set to ACTIVE (diagnostic deleted)`);
+    }
+
     return res.status(200).json({ message: 'Diagnostic supprimé avec succès' });
   } catch (error) {
     console.error('Error deleting diagnostic:', error);

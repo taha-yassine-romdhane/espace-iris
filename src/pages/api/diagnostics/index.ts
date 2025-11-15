@@ -259,6 +259,7 @@ export default async function handler(
         notes = data.notes || '';
         totalPrice = data.totalPrice || 0;
         uploadedFileUrls = data.fileUrls || [];
+        const resultData = data.result || null; // Optional result data (IAH, ID values)
         
         // Validate required fields
         if (!clientId) {
@@ -309,13 +310,13 @@ export default async function handler(
           }
         });
         
-        // Create diagnostic result
+        // Create diagnostic result (use provided values or default to null)
         await prisma.diagnosticResult.create({
           data: {
-            iah: null,
-            idValue: null,
-            remarque: null,
-            status: 'PENDING',
+            iah: resultData?.iah ?? null,
+            idValue: resultData?.idValue ?? null,
+            remarque: resultData?.remarque ?? null,
+            status: resultData?.status || 'PENDING',
             diagnostic: { connect: { id: diagnostic.id } },
           },
         });

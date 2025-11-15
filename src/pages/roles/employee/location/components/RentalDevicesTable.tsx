@@ -14,14 +14,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription
-} from '@/components/ui/dialog';
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -34,11 +26,8 @@ import {
   Search,
   MapPin,
   RotateCcw,
-  Edit,
-  Trash2,
   AlertCircle,
   Loader2,
-  Wrench,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
@@ -46,8 +35,6 @@ import {
   User,
   AlertTriangle
 } from 'lucide-react';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 
 interface RentalDevice {
   id: string;
@@ -78,22 +65,11 @@ interface RentalDevice {
   };
 }
 
-interface StockLocation {
-  id: string;
-  name: string;
-  description?: string;
-}
-
 export default function RentalDevicesTable() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [showRestoreDialog, setShowRestoreDialog] = useState(false);
-  const [showEditLocationDialog, setShowEditLocationDialog] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState<RentalDevice | null>(null);
-  const [selectedStockLocation, setSelectedStockLocation] = useState('');
-  const [restoreNotes, setRestoreNotes] = useState('');
   const [isRestoring, setIsRestoring] = useState(false);
-  const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(50);
 
@@ -109,16 +85,6 @@ export default function RentalDevicesTable() {
       if (!response.ok) throw new Error('Failed to fetch rental devices');
       const data = await response.json();
       return data.rentals || [];
-    }
-  });
-
-  // Fetch stock locations
-  const { data: stockLocations = [] } = useQuery<StockLocation[]>({
-    queryKey: ['stock-locations'],
-    queryFn: async () => {
-      const response = await fetch('/api/stock/locations');
-      if (!response.ok) throw new Error('Failed to fetch stock locations');
-      return response.json();
     }
   });
 
@@ -148,25 +114,17 @@ export default function RentalDevicesTable() {
     setCurrentPage(1);
   }, [searchTerm, statusFilter, itemsPerPage]);
 
-  const handleRestoreDevice = async () => {
-    if (!selectedDevice || !selectedStockLocation) {
-      toast({
-        title: "Erreur",
-        description: "Veuillez sélectionner un emplacement de stock",
-        variant: "destructive",
-      });
-      return;
-    }
+  const handleRestoreDevice = async (deviceId: string) => {
+    if (!deviceId) return;
 
     setIsRestoring(true);
     try {
-      const response = await fetch(`/api/medical-devices/${selectedDevice.medicalDevice.id}/restore`, {
-        method: 'POST',
+      // Simply change the device status from RESERVED to ACTIVE
+      const response = await fetch(`/api/medical-devices/${deviceId}`, {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          stockLocationId: selectedStockLocation,
-          notes: restoreNotes,
-          rentalId: selectedDevice.id,
+          status: 'ACTIVE',
         }),
       });
 
@@ -181,10 +139,7 @@ export default function RentalDevicesTable() {
       });
 
       queryClient.invalidateQueries({ queryKey: ['rental-devices'] });
-      setShowRestoreDialog(false);
       setSelectedDevice(null);
-      setSelectedStockLocation('');
-      setRestoreNotes('');
     } catch (error) {
       console.error('Error restoring device:', error);
       toast({
@@ -194,53 +149,6 @@ export default function RentalDevicesTable() {
       });
     } finally {
       setIsRestoring(false);
-    }
-  };
-
-  const handleUpdateLocation = async () => {
-    if (!selectedDevice || !selectedStockLocation) {
-      toast({
-        title: "Erreur",
-        description: "Veuillez sélectionner un emplacement",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsUpdatingLocation(true);
-    try {
-      const response = await fetch(`/api/medical-devices/${selectedDevice.medicalDevice.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          stockLocationId: selectedStockLocation,
-          location: stockLocations.find(loc => loc.id === selectedStockLocation)?.name || '',
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to update location');
-      }
-
-      toast({
-        title: "Succès",
-        description: "L'emplacement a été mis à jour avec succès",
-      });
-
-      queryClient.invalidateQueries({ queryKey: ['rental-devices'] });
-      setShowEditLocationDialog(false);
-      setSelectedDevice(null);
-      setSelectedStockLocation('');
-    } catch (error) {
-      console.error('Error updating location:', error);
-      toast({
-        title: "Erreur",
-        description: error instanceof Error ? error.message : "Erreur lors de la mise à jour",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUpdatingLocation(false);
     }
   };
 
@@ -510,34 +418,26 @@ export default function RentalDevicesTable() {
                             <User className="h-3 w-3 mr-1" />
                             En cours
                           </Badge>
-                        ) : device.medicalDevice.stockLocation ? (
-                          // Device already restored, can change location
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedDevice(device);
-                              setSelectedStockLocation(device.medicalDevice.stockLocationId || '');
-                              setShowEditLocationDialog(true);
-                            }}
-                            className="h-8"
-                          >
-                            <MapPin className="h-3 w-3 mr-1" />
-                            Changer Emplacement
-                          </Button>
                         ) : (
-                          // Rental ended (COMPLETED/EXPIRED/CANCELLED), device needs to be restored to stock
+                          // Show Restaurer button to change status from RESERVED to ACTIVE
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => {
-                              setSelectedDevice(device);
-                              setShowRestoreDialog(true);
-                            }}
-                            className="h-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+                            onClick={() => handleRestoreDevice(device.medicalDevice.id)}
+                            disabled={isRestoring}
+                            className="h-8 border-green-200 text-green-700 hover:bg-green-50 hover:text-green-800"
                           >
-                            <RotateCcw className="h-3 w-3 mr-1" />
-                            Restaurer au Stock
+                            {isRestoring ? (
+                              <>
+                                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                Restauration...
+                              </>
+                            ) : (
+                              <>
+                                <RotateCcw className="h-3 w-3 mr-1" />
+                                Restaurer
+                              </>
+                            )}
                           </Button>
                         )}
                       </div>
@@ -549,179 +449,6 @@ export default function RentalDevicesTable() {
           </div>
         </div>
       )}
-
-      {/* Restore Device Dialog */}
-      <Dialog open={showRestoreDialog} onOpenChange={setShowRestoreDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <RotateCcw className="h-5 w-5 text-green-600" />
-              Restaurer l'appareil au stock
-            </DialogTitle>
-            <DialogDescription>
-              Sélectionnez l'emplacement de stock où l'appareil sera restauré
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            {selectedDevice && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                <p className="text-sm font-medium text-green-900">
-                  {selectedDevice.medicalDevice.name}
-                </p>
-                <p className="text-xs text-green-700 font-mono mt-1">
-                  {selectedDevice.medicalDevice.deviceCode}
-                </p>
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="stock-location">Emplacement de Stock *</Label>
-              <Select
-                value={selectedStockLocation}
-                onValueChange={setSelectedStockLocation}
-              >
-                <SelectTrigger id="stock-location">
-                  <SelectValue placeholder="Sélectionner un emplacement" />
-                </SelectTrigger>
-                <SelectContent>
-                  {stockLocations.map((location) => (
-                    <SelectItem key={location.id} value={location.id}>
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-green-500" />
-                        <span>{location.name}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="restore-notes">Notes (Optionnel)</Label>
-              <Textarea
-                id="restore-notes"
-                value={restoreNotes}
-                onChange={(e) => setRestoreNotes(e.target.value)}
-                placeholder="Ajouter des notes sur la restauration..."
-                rows={3}
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowRestoreDialog(false);
-                setSelectedDevice(null);
-                setSelectedStockLocation('');
-                setRestoreNotes('');
-              }}
-              disabled={isRestoring}
-            >
-              Annuler
-            </Button>
-            <Button
-              onClick={handleRestoreDevice}
-              disabled={isRestoring || !selectedStockLocation}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              {isRestoring ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Restauration...
-                </>
-              ) : (
-                <>
-                  <RotateCcw className="h-4 w-4 mr-2" />
-                  Restaurer
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Location Dialog */}
-      <Dialog open={showEditLocationDialog} onOpenChange={setShowEditLocationDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <MapPin className="h-5 w-5 text-green-600" />
-              Modifier l'emplacement
-            </DialogTitle>
-            <DialogDescription>
-              Changer l'emplacement de stock de l'appareil
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            {selectedDevice && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                <p className="text-sm font-medium text-green-900">
-                  {selectedDevice.medicalDevice.name}
-                </p>
-                <p className="text-xs text-green-700 font-mono mt-1">
-                  {selectedDevice.medicalDevice.deviceCode}
-                </p>
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="new-location">Nouvel Emplacement *</Label>
-              <Select
-                value={selectedStockLocation}
-                onValueChange={setSelectedStockLocation}
-              >
-                <SelectTrigger id="new-location">
-                  <SelectValue placeholder="Sélectionner un emplacement" />
-                </SelectTrigger>
-                <SelectContent>
-                  {stockLocations.map((location) => (
-                    <SelectItem key={location.id} value={location.id}>
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-green-500" />
-                        <span>{location.name}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowEditLocationDialog(false);
-                setSelectedDevice(null);
-                setSelectedStockLocation('');
-              }}
-              disabled={isUpdatingLocation}
-            >
-              Annuler
-            </Button>
-            <Button
-              onClick={handleUpdateLocation}
-              disabled={isUpdatingLocation || !selectedStockLocation}
-            >
-              {isUpdatingLocation ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Mise à jour...
-                </>
-              ) : (
-                <>
-                  <MapPin className="h-4 w-4 mr-2" />
-                  Mettre à jour
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
