@@ -43,10 +43,17 @@ interface Stock {
     brand: string;
     type: string;
     serialNumber?: string;
+    deviceCode?: string;
   };
   quantity: number;
   status: string;
   isDevice?: boolean;
+  reservedPatient?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    patientCode: string;
+  };
 }
 
 interface MyStockResponse {
@@ -73,42 +80,45 @@ interface MyStockResponse {
 
 export default function MyStockInventory() {
   const { data: session } = useSession();
-  
+
   // State for filters and pagination
   const [selectedType, setSelectedType] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [confirmedSearchQuery, setConfirmedSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
-
-  // Debounce search query to avoid too many API calls
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
 
   // Reset pagination when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedType, debouncedSearchQuery]);
+  }, [selectedType, confirmedSearchQuery]);
+
+  // Handle search confirmation
+  const handleSearchConfirm = () => {
+    setConfirmedSearchQuery(searchQuery);
+  };
+
+  // Handle Enter key press
+  const handleSearchKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearchConfirm();
+    }
+  };
 
   // Fetch my stock inventory
   const { data: myStockData, isLoading } = useQuery<MyStockResponse>({
-    queryKey: ['myStockInventory', selectedType, debouncedSearchQuery, currentPage, itemsPerPage],
+    queryKey: ['myStockInventory', selectedType, confirmedSearchQuery, currentPage, itemsPerPage],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (selectedType !== 'all') {
         params.append('productType', selectedType);
       }
-      if (debouncedSearchQuery) {
-        params.append('search', debouncedSearchQuery);
+      if (confirmedSearchQuery) {
+        params.append('search', confirmedSearchQuery);
       }
       params.append('page', currentPage.toString());
       params.append('limit', itemsPerPage.toString());
-      
+
       const response = await fetch(`/api/stock/my-inventory?${params}`);
       if (!response.ok) throw new Error('Failed to fetch my inventory');
       return response.json();
@@ -147,7 +157,7 @@ export default function MyStockInventory() {
   };
 
   // Get badge for stock status
-  const getStatusBadge = (status: string, isDevice: boolean = false) => {
+  const getStatusBadge = (status: string, isDevice: boolean = false, reservedPatient?: any) => {
     if (isDevice) {
       switch (status) {
         case 'ACTIVE':
@@ -155,6 +165,19 @@ export default function MyStockInventory() {
             <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">
               Actif
             </Badge>
+          );
+        case 'RESERVED':
+          return (
+            <div className="flex flex-col gap-1">
+              <Badge variant="default" className="bg-yellow-100 text-yellow-800 border-yellow-200">
+                Réservé
+              </Badge>
+              {reservedPatient && (
+                <span className="text-xs text-gray-600">
+                  Patient: {reservedPatient.firstName} {reservedPatient.lastName}
+                </span>
+              )}
+            </div>
           );
         case 'MAINTENANCE':
           return (
@@ -301,14 +324,23 @@ export default function MyStockInventory() {
           </Select>
         </div>
 
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-          <Input
-            className="pl-8 border-green-200 focus:ring-green-500"
-            placeholder="Rechercher par nom, marque ou modèle..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+        <div className="relative flex-1 flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+            <Input
+              className="pl-8 border-green-200 focus:ring-green-500"
+              placeholder="Rechercher par nom, marque ou modèle..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyPress={handleSearchKeyPress}
+            />
+          </div>
+          <Button
+            onClick={handleSearchConfirm}
+            className="bg-green-600 hover:bg-green-700 text-white"
+          >
+            Rechercher
+          </Button>
         </div>
 
         <div className="w-full md:w-auto">
@@ -337,27 +369,38 @@ export default function MyStockInventory() {
               <TableHead>Produit</TableHead>
               <TableHead>Marque</TableHead>
               <TableHead>Modèle</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Quantité</TableHead>
+              <TableHead>N° Série / Quantité</TableHead>
               <TableHead>Statut</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {myStockData.items.map((item) => (
               <TableRow key={item.id}>
-                <TableCell className="font-medium">{item.product.name}</TableCell>
+                <TableCell className="font-medium">
+                  <div className="flex flex-col">
+                    <span>{item.product.name}</span>
+                    {item.product.deviceCode && (
+                      <span className="text-xs text-gray-500">{item.product.deviceCode}</span>
+                    )}
+                  </div>
+                </TableCell>
                 <TableCell>{item.product.brand || '-'}</TableCell>
                 <TableCell>{item.product.model || '-'}</TableCell>
-                <TableCell>{getTypeBadge(item.product.type)}</TableCell>
-                <TableCell className="font-semibold">{item.quantity}</TableCell>
+                <TableCell className="font-semibold">
+                  {item.isDevice ? (
+                    <span className="text-blue-700">{item.product.serialNumber || '-'}</span>
+                  ) : (
+                    <span className="text-green-700">Qté: {item.quantity}</span>
+                  )}
+                </TableCell>
                 <TableCell>
-                  {getStatusBadge(item.status, item.isDevice)}
+                  {getStatusBadge(item.status, item.isDevice, item.reservedPatient)}
                 </TableCell>
               </TableRow>
             ))}
             {(!myStockData.items || myStockData.items.length === 0) && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
+                <TableCell colSpan={5} className="text-center py-8">
                   <div className="flex flex-col items-center">
                     <Package className="h-12 w-12 text-gray-400 mb-2" />
                     <span className="text-gray-500">Aucun produit trouvé dans votre stock</span>

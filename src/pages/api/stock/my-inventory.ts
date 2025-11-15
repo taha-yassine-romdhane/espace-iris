@@ -116,11 +116,48 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               name: true
             }
           },
-          // Include diagnostic information to find the patient
-          Diagnostic: {
-            where: {
-              followUpRequired: true
+          // Include sales to find patient
+          saleItems: {
+            select: {
+              sale: {
+                select: {
+                  patient: {
+                    select: {
+                      id: true,
+                      firstName: true,
+                      lastName: true,
+                      patientCode: true,
+                      telephone: true
+                    }
+                  }
+                }
+              }
             },
+            orderBy: {
+              createdAt: 'desc'
+            },
+            take: 1
+          },
+          // Include rentals to find patient
+          Rental: {
+            select: {
+              patient: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  patientCode: true,
+                  telephone: true
+                }
+              }
+            },
+            orderBy: {
+              startDate: 'desc'
+            },
+            take: 1
+          },
+          // Include diagnostic information
+          Diagnostic: {
             select: {
               id: true,
               patient: {
@@ -128,13 +165,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                   id: true,
                   firstName: true,
                   lastName: true,
-                  telephone: true
-                }
-              },
-              Company: {
-                select: {
-                  id: true,
-                  companyName: true,
+                  patientCode: true,
                   telephone: true
                 }
               },
@@ -158,19 +189,40 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // 4. Transform medical devices to match the stock format
       const medicalDeviceItems = medicalDevices.map(device => {
         const latestDiagnostic = device.Diagnostic && device.Diagnostic.length > 0 ? device.Diagnostic[0] : null;
-        
-        const isReserved = device.status === 'RESERVED';
-        const reservedFor = isReserved && latestDiagnostic ? {
-          id: latestDiagnostic.patient?.id || latestDiagnostic.Company?.id || '',
-          name: latestDiagnostic.patient 
-            ? `${latestDiagnostic.patient.firstName} ${latestDiagnostic.patient.lastName}` 
-            : latestDiagnostic.Company?.companyName || '',
-          telephone: latestDiagnostic.patient?.telephone || latestDiagnostic.Company?.telephone || '',
-          isCompany: !!latestDiagnostic.Company,
-          diagnosticId: latestDiagnostic.id,
-          diagnosticDate: latestDiagnostic.diagnosticDate,
-          resultDueDate: latestDiagnostic.followUpDate
-        } : null;
+        const latestSale = (device as any).saleItems && (device as any).saleItems.length > 0 ? (device as any).saleItems[0] : null;
+        const latestRental = (device as any).Rental && (device as any).Rental.length > 0 ? (device as any).Rental[0] : null;
+
+        // Get patient info from sales, rentals, or diagnostics
+        let reservedPatient = null;
+        if (device.status === 'RESERVED') {
+          // Check sale first
+          if (latestSale?.sale?.patient) {
+            reservedPatient = {
+              id: latestSale.sale.patient.id,
+              firstName: latestSale.sale.patient.firstName,
+              lastName: latestSale.sale.patient.lastName,
+              patientCode: latestSale.sale.patient.patientCode
+            };
+          }
+          // Check rental
+          else if (latestRental?.patient) {
+            reservedPatient = {
+              id: latestRental.patient.id,
+              firstName: latestRental.patient.firstName,
+              lastName: latestRental.patient.lastName,
+              patientCode: latestRental.patient.patientCode
+            };
+          }
+          // Check diagnostic
+          else if (latestDiagnostic?.patient) {
+            reservedPatient = {
+              id: latestDiagnostic.patient.id,
+              firstName: latestDiagnostic.patient.firstName,
+              lastName: latestDiagnostic.patient.lastName,
+              patientCode: latestDiagnostic.patient.patientCode
+            };
+          }
+        }
 
         return {
           id: device.id,
@@ -187,10 +239,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             model: device.model || '',
             type: device.type === 'DIAGNOSTIC_DEVICE' ? 'DIAGNOSTIC_DEVICE' : 'MEDICAL_DEVICE',
             originalType: device.type,
-            serialNumber: device.serialNumber
+            serialNumber: device.serialNumber,
+            deviceCode: device.deviceCode
           },
           isDevice: true,
-          reservedFor: reservedFor
+          reservedPatient: reservedPatient
         };
       });
       
