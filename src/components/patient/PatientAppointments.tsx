@@ -77,20 +77,31 @@ export const PatientAppointments = ({ manualTasks = [], isLoading = false, patie
 
   const getTaskTypeLabel = (taskType: string) => {
     switch (taskType) {
+      // Current AppointmentType enum values
+      case 'POLYGRAPHIE':
+        return 'Polygraphie';
+      case 'CONSULTATION':
+        return 'Consultation';
+      case 'LOCATION':
+        return 'Location';
+      case 'VENTE':
+        return 'Vente';
+      case 'MAINTENANCE':
+        return 'Maintenance';
+      case 'RECUPERATION':
+        return 'Récupération';
+
+      // Legacy values for backward compatibility
       case 'DIAGNOSTIC':
         return 'Diagnostic';
       case 'INSTALLATION':
         return 'Installation';
-      case 'MAINTENANCE':
-        return 'Maintenance';
       case 'PICKUP':
         return 'Récupération';
       case 'DELIVERY':
         return 'Livraison';
       case 'FOLLOW_UP':
         return 'Suivi';
-      case 'CONSULTATION':
-        return 'Consultation';
       case 'OTHER':
         return 'Autre';
       default:

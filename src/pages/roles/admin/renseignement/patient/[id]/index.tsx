@@ -24,6 +24,7 @@ import {
   PatientSales,
   PatientAppointments,
   PatientCNAMBonds,
+  PatientRDV,
   PatientPrintDialog
 } from '@/components/patient';
 
@@ -91,8 +92,8 @@ export default function PatientDetailsPage() {
         delegation: patient.delegation || '',
         cin: patient.cin || '',
         identifiantCNAM: patient.identifiantCNAM || '',
-        technicienResponsable: patient.technicianId || '',
-        superviseur: patient.assignedToId || '',
+        technicienResponsable: patient.technicianId || patient.technician?.id || '',
+        superviseur: patient.supervisorId || patient.supervisor?.id || patient.assignedToId || '',
         antecedant: patient.antecedant || '',
         taille: patient.taille?.toString() || '',
         poids: patient.poids?.toString() || '',
@@ -397,12 +398,16 @@ export default function PatientDetailsPage() {
         <PatientDiagnostics
           diagnostics={patient.diagnostics || []}
           isLoading={false}
+          patientId={patient.id}
+          patientName={patient.nom}
         />
 
         {/* Manual Tasks Section */}
         <PatientAppointments
           manualTasks={patient.manualTasks || []}
           isLoading={false}
+          patientId={patient.id}
+          patientName={patient.nom}
         />
 
         {/* Sales Section */}
@@ -410,12 +415,14 @@ export default function PatientDetailsPage() {
           sales={patient.sales || []}
           saleItems={patient.saleItems || []}
           isLoading={false}
+          patientId={patient.id}
         />
 
         {/* Rentals Section */}
         <PatientRentals
           rentals={patient.rentals || []}
           isLoading={false}
+          patientId={patient.id}
         />
 
         {/* CNAM Bonds Section */}
@@ -437,12 +444,21 @@ export default function PatientDetailsPage() {
             ) || [])
           ]}
           isLoading={false}
+          patientId={patient.id}
         />
 
         {/* Payments Section */}
         <PatientPayments
           payments={patient.payments || []}
           isLoading={false}
+          patientId={patient.id}
+        />
+
+        {/* RDV Section */}
+        <PatientRDV
+          appointments={patient.appointments || []}
+          isLoading={false}
+          patientId={patient.id}
         />
 
         {/* History Section */}

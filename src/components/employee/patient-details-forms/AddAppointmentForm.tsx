@@ -45,11 +45,11 @@ export const AddAppointmentForm: React.FC<AddAppointmentFormProps> = ({
   // Check if user is admin
   const isAdmin = session?.user?.role === 'ADMIN';
 
-  // Fetch employees for assignment
+  // Fetch employees and admins for task assignment (exclude doctors)
   const { data: employeesData } = useQuery({
-    queryKey: ['employees'],
+    queryKey: ['employees-and-admins'],
     queryFn: async () => {
-      const response = await fetch('/api/users?role=EMPLOYEE');
+      const response = await fetch('/api/users?role=EMPLOYEE_AND_ADMIN');
       if (!response.ok) throw new Error('Failed to fetch employees');
       return response.json();
     },
@@ -58,14 +58,12 @@ export const AddAppointmentForm: React.FC<AddAppointmentFormProps> = ({
   const employees = employeesData?.users || [];
 
   const taskTypes = [
-    { value: 'DIAGNOSTIC', label: 'Diagnostic' },
-    { value: 'INSTALLATION', label: 'Installation' },
-    { value: 'MAINTENANCE', label: 'Maintenance' },
-    { value: 'PICKUP', label: 'Récupération' },
-    { value: 'DELIVERY', label: 'Livraison' },
-    { value: 'FOLLOW_UP', label: 'Suivi' },
+    { value: 'POLYGRAPHIE', label: 'Polygraphie' },
     { value: 'CONSULTATION', label: 'Consultation' },
-    { value: 'OTHER', label: 'Autre' },
+    { value: 'LOCATION', label: 'Location' },
+    { value: 'VENTE', label: 'Vente' },
+    { value: 'MAINTENANCE', label: 'Maintenance' },
+    { value: 'RECUPERATION', label: 'Récupération' },
   ];
 
   const getTaskTypeLabel = (type: string) => {

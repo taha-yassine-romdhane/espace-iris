@@ -1,1128 +1,755 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import {
-  Trash2,
-  ChevronLeft,
-  ChevronRight,
-  Search,
-  User,
-  FileText,
-  Calendar,
-  TrendingUp,
-  CheckCircle,
-  Clock,
-  AlertCircle,
-  XCircle,
-  Plus,
-  Save,
-  X,
-  Edit2,
-  Building2,
-} from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Shield, Plus, Save, X, Edit2, Trash2, FileText, AlertCircle } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import { Progress } from '@/components/ui/progress';
 import { formatCurrency } from '@/utils/priceUtils';
-import { useRouter } from 'next/router';
-import { PatientSelectorDialog } from '@/components/dialogs/PatientSelectorDialog';
 
-interface CNAMDossier {
-  id: string;
-  dossierNumber: string;
-  bonType: string;
-  bondAmount: number;
-  devicePrice: number;
-  complementAmount: number;
-  currentStep: number;
-  totalSteps: number;
-  status: string;
-  notes?: string;
-  saleId: string;
-  patientId: string;
-  createdAt: string;
-  updatedAt: string;
-  patient?: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    patientCode: string;
-    telephone: string;
-  };
-  sale?: {
-    id: string;
-    saleCode: string;
-    invoiceNumber: string;
-  };
-}
+const BOND_TYPE_LABELS: Record<string, string> = {
+  CONCENTRATEUR_OXYGENE: 'Concentrateur Oxygène',
+  VNI: 'VNI',
+  CPAP: 'CPAP',
+  MASQUE: 'Masque',
+  AUTRE: 'Autre',
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  CREATION: 'Création',
+  RENOUVELLEMENT: 'Renouvellement',
+};
+
+const STEP_LABELS: Record<number, string> = {
+  1: 'En attente approbation CNAM',
+  2: 'Accord avec patient',
+  3: 'Documents reçus de CNAM',
+  4: 'Préparation appareil',
+  5: 'Livraison au Technicien',
+  6: 'Signature Médecin',
+  7: 'Livraison finale Admin',
+};
 
 export default function CNAMBonsExcelTable() {
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(50);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [bonTypeFilter, setBonTypeFilter] = useState<string>('all');
-  const [isAddingNew, setIsAddingNew] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editedData, setEditedData] = useState<any>({});
-  const [selectedClient, setSelectedClient] = useState<{type: 'patient' | 'company', id: string, name: string} | null>(null);
-  const [clientSales, setClientSales] = useState<any[]>([]);
-  const [newBon, setNewBon] = useState({
-    saleId: '',
-    bonType: '',
-    status: 'EN_ATTENTE_APPROBATION',
-    cnamMonthlyRate: 0,
-    deviceMonthlyRate: 0,
-    coveredMonths: 1, // For ACHAT, default to 1 (one-time purchase, not rental)
-    dossierNumber: '',
-    submissionDate: new Date().toISOString().split('T')[0],
-    approvalDate: '',
-    startDate: '',
-    endDate: '',
-    renewalReminderDays: 30,
-    notes: '',
-  });
-
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const router = useRouter();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [isAddingNew, setIsAddingNew] = useState(false);
+  const [editData, setEditData] = useState<any>(null);
 
-  // Fetch CNAM dossiers from sales
-  const { data: salesData, isLoading: salesLoading } = useQuery({
-    queryKey: ['sales'],
+  // Fetch all sales with CNAM bonds (details=true to include cnamBons with category ACHAT)
+  const { data: salesData = [], isLoading } = useQuery({
+    queryKey: ['sales-with-cnam'],
     queryFn: async () => {
-      const response = await fetch('/api/sales');
+      const response = await fetch('/api/sales?details=true');
       if (!response.ok) throw new Error('Failed to fetch sales');
       const data = await response.json();
       return data.sales || [];
     },
   });
 
-  // Fetch CNAM bons for SALES only (category: ACHAT)
-  const { data: saleBonsData, isLoading: saleBonsLoading } = useQuery({
-    queryKey: ['sale-cnam-bons'],
-    queryFn: async () => {
-      const response = await fetch('/api/cnam-bons?category=ACHAT');
-      if (!response.ok) throw new Error('Failed to fetch sale CNAM bons');
-      const data = await response.json();
-      return data;
-    },
-  });
-
-  // Fetch CNAM nomenclature (fixed rates)
-  const { data: cnamNomenclature } = useQuery({
+  // Fetch CNAM nomenclature for rates
+  const { data: nomenclature = [] } = useQuery({
     queryKey: ['cnam-nomenclature'],
     queryFn: async () => {
-      const response = await fetch('/api/cnam-nomenclature');
-      if (!response.ok) throw new Error('Failed to fetch CNAM nomenclature');
+      const response = await fetch('/api/cnam-nomenclature?isActive=true');
+      if (!response.ok) throw new Error('Failed to fetch nomenclature');
       return response.json();
     },
   });
 
-  const isLoading = salesLoading || saleBonsLoading;
-
-  // Combine CNAM dossiers from sales and sale CNAM bons
-  const dossiers = useMemo(() => {
-    const combined: any[] = [];
-
-    // Ensure salesData is an array
-    const salesArray = Array.isArray(salesData) ? salesData : (salesData?.sales || []);
-
-
-    // Extract CNAM dossiers from sales (CNAMDossier model)
-    if (salesArray && Array.isArray(salesArray)) {
-      salesArray.forEach((sale: any) => {
-        if (sale.cnamDossiers && Array.isArray(sale.cnamDossiers)) {
-          sale.cnamDossiers.forEach((dossier: any) => {
-            combined.push({
-              ...dossier,
-              sale: {
-                id: sale.id,
-                saleCode: sale.saleCode,
-                invoiceNumber: sale.invoiceNumber,
-              },
-              source: 'cnam-dossier',
-            });
-          });
-        }
-
-        // Also extract CNAM bons from sales (CNAMBonRental with category ACHAT)
-        if (sale.cnamBons && Array.isArray(sale.cnamBons)) {
-          sale.cnamBons.forEach((bon: any) => {
-            // Only include ACHAT (sale) bonds, not LOCATION (rental) bonds
-            if (bon.category === 'ACHAT') {
-              combined.push({
-                id: bon.id,
-                dossierNumber: bon.bonNumber || bon.dossierNumber || 'N/A',
-                bonType: bon.bonType,
-                bondAmount: bon.bonAmount,
-                devicePrice: bon.devicePrice,
-                complementAmount: bon.complementAmount,
-                currentStep: bon.currentStep || (bon.status === 'TERMINE' ? 7 : bon.status === 'APPROUVE' ? 5 : 3),
-                totalSteps: 7,
-                status: bon.status,
-                notes: bon.notes,
-                patientId: bon.patientId,
-                patient: bon.patient,
-                saleId: bon.saleId,
-                sale: {
-                  id: sale.id,
-                  saleCode: sale.saleCode,
-                  invoiceNumber: sale.invoiceNumber,
-                },
-                createdAt: bon.createdAt,
-                updatedAt: bon.updatedAt,
-                source: 'cnam-bon-sale',
-              });
-            }
-          });
-        }
-      });
-    }
-
-    // Add standalone sale CNAM bons (category: ACHAT) if not already included
-    if (saleBonsData && Array.isArray(saleBonsData)) {
-      saleBonsData.forEach((bon: any) => {
-        // Only add if category is ACHAT (sale) not LOCATION (rental)
-        if (bon.category === 'ACHAT' || bon.bondCategory === 'ACHAT') {
-          // Check if this bond was already added from sale.cnamBons to avoid duplicates
-          const alreadyExists = combined.some(item => item.id === bon.id);
-          if (!alreadyExists) {
-            combined.push({
-              id: bon.id,
-              dossierNumber: bon.bonNumber || bon.dossierNumber || 'N/A',
-              bonType: bon.bonType,
-              bondAmount: bon.bonAmount,
-              devicePrice: bon.devicePrice,
-              complementAmount: bon.complementAmount,
-              currentStep: bon.currentStep || (bon.status === 'TERMINE' ? 7 : bon.status === 'APPROUVE' ? 5 : 3),
-              totalSteps: 7,
-              status: bon.status,
-              notes: bon.notes,
-              patientId: bon.patientId,
-              patient: bon.patient,
-              saleId: bon.saleId,
-              sale: bon.sale, // Include sale object from API response
-              createdAt: bon.createdAt,
-              updatedAt: bon.updatedAt,
-              source: 'cnam-bon-sale',
-            });
-          }
-        }
-      });
-    }
-
-    return combined;
-  }, [salesData, saleBonsData]);
-
-  // Filter and search dossiers
-  const filteredDossiers = useMemo(() => {
-    if (!Array.isArray(dossiers)) return [];
-    return dossiers.filter((dossier: CNAMDossier) => {
-      // Search filter
-      const searchLower = searchTerm.toLowerCase();
-      const patientName = dossier.patient
-        ? `${dossier.patient.firstName} ${dossier.patient.lastName}`
-        : '';
-
-      const matchesSearch =
-        dossier.dossierNumber?.toLowerCase().includes(searchLower) ||
-        patientName.toLowerCase().includes(searchLower) ||
-        dossier.patient?.patientCode?.toLowerCase().includes(searchLower) ||
-        dossier.sale?.saleCode?.toLowerCase().includes(searchLower);
-
-      // Status filter
-      const matchesStatus = statusFilter === 'all' || dossier.status === statusFilter;
-
-      // Bond type filter
-      const matchesBonType = bonTypeFilter === 'all' || dossier.bonType === bonTypeFilter;
-
-      return matchesSearch && matchesStatus && matchesBonType;
-    });
-  }, [dossiers, searchTerm, statusFilter, bonTypeFilter]);
-
-  // Pagination
-  const totalPages = Math.ceil(filteredDossiers.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedDossiers = filteredDossiers.slice(startIndex, endIndex);
+  // Extract all CNAM bonds from sales
+  const allBonds = salesData.flatMap((sale: any) =>
+    (sale.cnamBons || []).map((bon: any) => ({
+      ...bon,
+      sale: {
+        id: sale.id,
+        saleCode: sale.saleCode,
+        invoiceNumber: sale.invoiceNumber,
+        totalAmount: sale.totalAmount,
+        items: sale.items,
+      },
+      patient: sale.patient,
+    }))
+  );
 
   // Create mutation
   const createMutation = useMutation({
-    mutationFn: async (bonData: any) => {
+    mutationFn: async (bond: any) => {
       const response = await fetch('/api/cnam-bons', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...bonData,
-          category: 'ACHAT', // Sales category
-        }),
+        body: JSON.stringify(bond),
       });
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create CNAM bon');
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to create CNAM bond');
       }
       return response.json();
     },
-    onSuccess: async (data) => {
-      // Refetch both queries to get the latest data
-      await queryClient.refetchQueries({ queryKey: ['sales'] });
-      await queryClient.refetchQueries({ queryKey: ['sale-cnam-bons'] });
+    onSuccess: () => {
       toast({ title: 'Succès', description: 'Bon CNAM créé avec succès' });
+      queryClient.invalidateQueries({ queryKey: ['sales-with-cnam'] });
       setIsAddingNew(false);
-      setSelectedClient(null);
-      setClientSales([]);
-      setNewBon({
-        saleId: '',
-        bonType: '',
-        status: 'EN_ATTENTE_APPROBATION',
-        cnamMonthlyRate: 0,
-        deviceMonthlyRate: 0,
-        coveredMonths: 1,
-        dossierNumber: '',
-        submissionDate: new Date().toISOString().split('T')[0],
-        approvalDate: '',
-        startDate: '',
-        endDate: '',
-        renewalReminderDays: 30,
-        notes: '',
-      });
+      setEditData(null);
     },
     onError: (error: Error) => {
-      toast({
-        title: 'Erreur',
-        description: error.message || 'Impossible de créer le bon CNAM',
-        variant: 'destructive'
-      });
+      toast({ title: 'Erreur', description: error.message, variant: 'destructive' });
     },
   });
 
   // Update mutation
   const updateMutation = useMutation({
-    mutationFn: async (updatedBon: Partial<CNAMDossier>) => {
-      const response = await fetch(`/api/cnam-bons/${updatedBon.id}`, {
+    mutationFn: async ({ id, ...bond }: any) => {
+      const response = await fetch(`/api/cnam-bons/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedBon),
+        body: JSON.stringify(bond),
       });
-      if (!response.ok) throw new Error('Failed to update CNAM bon');
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to update CNAM bond');
+      }
       return response.json();
     },
-    onSuccess: (updatedBon) => {
-      queryClient.invalidateQueries({ queryKey: ['sales'] });
-      queryClient.invalidateQueries({ queryKey: ['sale-cnam-bons'] });
+    onSuccess: () => {
       toast({ title: 'Succès', description: 'Bon CNAM mis à jour avec succès' });
+      queryClient.invalidateQueries({ queryKey: ['sales-with-cnam'] });
       setEditingId(null);
-      setEditedData({});
+      setEditData(null);
     },
-    onError: () => {
-      toast({
-        title: 'Erreur',
-        description: 'Impossible de mettre à jour le bon CNAM',
-        variant: 'destructive'
-      });
+    onError: (error: Error) => {
+      toast({ title: 'Erreur', description: error.message, variant: 'destructive' });
     },
   });
 
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetch(`/api/cnam-bons/${id}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) throw new Error('Failed to delete CNAM dossier');
+      const response = await fetch(`/api/cnam-bons/${id}`, { method: 'DELETE' });
+      if (!response.ok) throw new Error('Failed to delete CNAM bond');
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['cnam-dossiers'] });
-      toast({ title: 'Succès', description: 'Dossier CNAM supprimé avec succès' });
+      toast({ title: 'Succès', description: 'Bon CNAM supprimé avec succès' });
+      queryClient.invalidateQueries({ queryKey: ['sales-with-cnam'] });
     },
-    onError: () => {
-      toast({
-        title: 'Erreur',
-        description: 'Impossible de supprimer le dossier CNAM',
-        variant: 'destructive'
-      });
+    onError: (error: Error) => {
+      toast({ title: 'Erreur', description: error.message, variant: 'destructive' });
     },
   });
 
+  const handleAddNew = () => {
+    setEditData({
+      bonType: 'CONCENTRATEUR_OXYGENE',
+      status: 'CREATION',
+      category: 'ACHAT',
+      cnamMonthlyRate: 0,
+      deviceMonthlyRate: 0,
+      coveredMonths: 1,
+      bonAmount: 0,
+      devicePrice: 0,
+      complementAmount: 0,
+      currentStep: 1,
+      renewalReminderDays: 30,
+      saleId: '',
+      patientId: '',
+    });
+    setIsAddingNew(true);
+  };
+
+  const handleEdit = (bond: any) => {
+    setEditingId(bond.id);
+    setEditData({ ...bond });
+  };
+
+  const handleSaveNew = () => {
+    if (!editData) return;
+    if (!editData.saleId) {
+      toast({ title: 'Erreur', description: 'Veuillez sélectionner une vente', variant: 'destructive' });
+      return;
+    }
+    createMutation.mutate(editData);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingId || !editData) return;
+    updateMutation.mutate({ id: editingId, ...editData });
+  };
+
   const handleDelete = (id: string) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer ce dossier CNAM ?')) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer ce bon CNAM ?')) {
       deleteMutation.mutate(id);
     }
   };
 
-  const handleViewDetails = (dossier: CNAMDossier) => {
-    if (dossier.saleId) {
-      router.push(`/roles/employee/sales/${dossier.saleId}`);
-    }
-  };
-
-  const handleSaveNew = () => {
-    if (!selectedClient || !newBon.saleId) {
-      toast({
-        title: 'Erreur',
-        description: 'Veuillez sélectionner un client et une vente',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    createMutation.mutate({
-      ...newBon,
-      patientId: selectedClient.type === 'patient' ? selectedClient.id : null,
-    });
-  };
-
-  const handleCancelNew = () => {
-    setIsAddingNew(false);
-    setSelectedClient(null);
-    setClientSales([]);
-    setNewBon({
-      saleId: '',
-      bonType: '',
-      status: 'EN_ATTENTE_APPROBATION',
-      cnamMonthlyRate: 0,
-      deviceMonthlyRate: 0,
-      coveredMonths: 1,
-      dossierNumber: '',
-      submissionDate: new Date().toISOString().split('T')[0],
-      approvalDate: '',
-      startDate: '',
-      endDate: '',
-      renewalReminderDays: 30,
-      notes: '',
-    });
-  };
-
-  const handleEdit = (dossier: CNAMDossier) => {
-    setEditingId(dossier.id);
-    setEditedData(dossier);
-  };
-
-  const handleSave = () => {
-    if (editingId && editedData) {
-      updateMutation.mutate({
-        id: editingId,
-        bonType: editedData.bonType,
-        status: editedData.status,
-        currentStep: editedData.currentStep,
-        bondAmount: editedData.bondAmount,
-        devicePrice: editedData.devicePrice,
-        complementAmount: editedData.complementAmount,
-        dossierNumber: editedData.dossierNumber,
-        notes: editedData.notes,
-      });
-    }
-  };
-
   const handleCancel = () => {
+    setIsAddingNew(false);
     setEditingId(null);
-    setEditedData({});
+    setEditData(null);
   };
 
-  const handleFieldChange = (field: string, value: any) => {
-    setEditedData({ ...editedData, [field]: value });
-  };
+  const handleBondTypeChange = (selectedBondType: string) => {
+    if (!editData) return;
+    const nomenclatureItem = nomenclature.find((n: any) => n.bonType === selectedBondType);
+    const cnamRate = nomenclatureItem?.monthlyRate || 0;
 
-  const handleSelectClient = (type: 'patient' | 'company', id: string, name: string) => {
-    const client = { type, id, name };
-    setSelectedClient(client);
+    const bonAmount = cnamRate * 1; // Sales are always 1 month
+    const devicePrice = editData.deviceMonthlyRate || 0;
+    const complementAmount = devicePrice - bonAmount;
 
-
-    // Fetch sales for this client - ensure salesData is an array
-    // Handle both array format and { sales: [...] } object format
-    const salesArray = Array.isArray(salesData) ? salesData : (salesData?.sales || []);
-
-    const clientSales = salesArray.filter((sale: any) => {
-      if (type === 'patient') {
-        const matches = sale.patientId === id;
-        return matches;
-      } else {
-        const matches = sale.companyId === id;
-        return matches;
-      }
+    setEditData({
+      ...editData,
+      bonType: selectedBondType,
+      cnamMonthlyRate: cnamRate,
+      bonAmount,
+      complementAmount,
     });
-
-    setClientSales(clientSales);
-  };
-
-  const handleBonTypeChange = (bonType: string) => {
-    // Get CNAM fixed rate from nomenclature based on bon type
-    const nomenclatureEntry = cnamNomenclature?.find(
-      (entry: any) => entry.bonType === bonType && entry.category === 'ACHAT'
-    );
-
-    // Use the fixed CNAM rate from nomenclature
-    const cnamMonthlyRate = nomenclatureEntry?.amount || nomenclatureEntry?.monthlyRate || 0;
-
-    setNewBon(prev => ({
-      ...prev,
-      bonType,
-      cnamMonthlyRate: parseFloat(cnamMonthlyRate.toString()),
-    }));
   };
 
   const handleSaleChange = (saleId: string) => {
-    // Find the selected sale and auto-calculate amounts from items
-    const selectedSale = clientSales.find((sale: any) => sale.id === saleId);
-    if (selectedSale && selectedSale.items && selectedSale.items.length > 0) {
-      // For ACHAT (purchase), calculate the TOTAL device price, not monthly
-      // The sale total already includes all items (e.g., CPAP 1475 + Masque 200 = 1675)
-      const totalDevicePrice = selectedSale.items.reduce((sum: number, item: any) => {
-        return sum + (parseFloat(item.itemTotal) || 0);
-      }, 0);
+    if (!editData) return;
 
-      // For ACHAT, we set coveredMonths to 1 (one-time purchase)
-      // So deviceMonthlyRate is actually the total device price
-      setNewBon(prev => ({
-        ...prev,
-        saleId,
-        deviceMonthlyRate: parseFloat(totalDevicePrice.toFixed(2)),
-        coveredMonths: 1, // One-time purchase
-      }));
-    } else {
-      setNewBon({ ...newBon, saleId });
-    }
+    const selectedSale = salesData.find((s: any) => s.id === saleId);
+    if (!selectedSale) return;
+
+    // Calculate device price from sale items
+    const totalDevicePrice = (selectedSale.items || []).reduce((sum: number, item: any) => {
+      return sum + (parseFloat(item.itemTotal) || 0);
+    }, 0);
+
+    const cnamRate = editData.cnamMonthlyRate || 0;
+    const bonAmount = cnamRate * 1;
+    const complementAmount = totalDevicePrice - bonAmount;
+
+    setEditData({
+      ...editData,
+      saleId,
+      patientId: selectedSale.patientId,
+      deviceMonthlyRate: totalDevicePrice,
+      devicePrice: totalDevicePrice,
+      complementAmount,
+      coveredMonths: 1,
+    });
   };
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { label: string; className: string; icon: any }> = {
-      EN_ATTENTE_APPROBATION: { label: 'En attente', className: 'bg-yellow-100 text-yellow-700 border-yellow-200', icon: Clock },
-      APPROUVE: { label: 'Approuvé', className: 'bg-green-100 text-green-700 border-green-200', icon: CheckCircle },
-      EN_COURS: { label: 'En cours', className: 'bg-green-100 text-green-700 border-green-200', icon: TrendingUp },
-      TERMINE: { label: 'Terminé', className: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: CheckCircle },
-      REFUSE: { label: 'Refusé', className: 'bg-red-100 text-red-700 border-red-200', icon: XCircle },
-    };
-    const config = statusConfig[status] || { label: status, className: 'bg-gray-100 text-gray-700', icon: AlertCircle };
-    const Icon = config.icon;
-
-    return (
-      <Badge variant="outline" className={`${config.className} text-xs flex items-center gap-1`}>
-        <Icon className="h-3 w-3" />
-        {config.label}
-      </Badge>
-    );
-  };
-
-  const getBonTypeBadge = (bonType: string) => {
-    const typeConfig: Record<string, { label: string; className: string }> = {
-      CPAP: { label: 'CPAP', className: 'bg-green-100 text-green-700' },
-      MASQUE: { label: 'Masque', className: 'bg-purple-100 text-purple-700' },
-      AUTRE: { label: 'Autre', className: 'bg-gray-100 text-gray-700' },
-    };
-    const config = typeConfig[bonType] || typeConfig.AUTRE;
-    return <Badge variant="outline" className={`${config.className} text-xs font-semibold`}>{config.label}</Badge>;
-  };
-
-  const getProgressBar = (currentStep: number, totalSteps: number) => {
+  const getProgressBar = (currentStep: number, totalSteps: number = 7) => {
     const percentage = (currentStep / totalSteps) * 100;
-
-    // CNAM step names
-    const stepNames: { [key: number]: string } = {
-      1: 'En attente approbation CNAM',
-      2: 'Accord avec patient',
-      3: 'Tech récupère Bon CNAM',
-      4: 'Livraison Bon à Admin',
-      5: 'Livraison au Technicien',
-      6: 'Signature Médecin',
-      7: 'Livraison finale Admin',
-    };
-
-    const stepName = stepNames[currentStep] || `Étape ${currentStep}`;
+    const stepName = STEP_LABELS[currentStep] || `Étape ${currentStep}`;
 
     return (
       <div className="w-full">
         <div className="flex items-center justify-between mb-1">
           <span className="text-xs text-slate-600 truncate" title={stepName}>
-            Étape {currentStep}/{totalSteps} - {stepName}
+            Étape {currentStep}/{totalSteps}
           </span>
           <span className="text-xs font-semibold text-green-700 ml-2">{Math.round(percentage)}%</span>
         </div>
         <div className="w-full bg-slate-200 rounded-full h-2">
           <div
-            className="bg-green-600 h-2 rounded-full transition-all duration-300"
+            className="h-2 rounded-full transition-all duration-300 bg-gradient-to-r from-green-500 to-green-600"
             style={{ width: `${percentage}%` }}
           />
         </div>
+        <div className="text-xs text-slate-500 mt-0.5 truncate">{stepName}</div>
       </div>
     );
   };
 
+  const formatAmount = (amount: any) => {
+    if (!amount) return '0.00';
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+    return num.toFixed(2);
+  };
+
+  const sortedBonds = [...allBonds].sort((a, b) => {
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-slate-500">Chargement des dossiers CNAM...</div>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5 text-blue-500" />
+            Bons CNAM - Ventes
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700"></div>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="space-y-4">
-      {/* Filters and Search */}
-      <div className="flex items-center gap-4 mb-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <Input
-            placeholder="Rechercher par dossier, patient, code patient..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Filtrer par statut" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tous les statuts</SelectItem>
-            <SelectItem value="EN_ATTENTE_APPROBATION">En attente</SelectItem>
-            <SelectItem value="APPROUVE">Approuvé</SelectItem>
-            <SelectItem value="EN_COURS">En cours</SelectItem>
-            <SelectItem value="TERMINE">Terminé</SelectItem>
-            <SelectItem value="REFUSE">Refusé</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={bonTypeFilter} onValueChange={setBonTypeFilter} defaultValue="all">
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Type de bon" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tous les types</SelectItem>
-            <SelectItem value="CPAP">CPAP</SelectItem>
-            <SelectItem value="MASQUE">Masque</SelectItem>
-            <SelectItem value="AUTRE">Autre</SelectItem>
-          </SelectContent>
-        </Select>
-        <Button
-          onClick={() => setIsAddingNew(true)}
-          className="bg-green-600 hover:bg-green-700 text-white gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          Ajouter Bon CNAM
-        </Button>
-      </div>
-
-      {/* Pagination - Top */}
-      <div className="flex items-center justify-between px-4 py-3 bg-white border border-slate-200 rounded-lg mb-3">
-        <div className="flex items-center space-x-4">
-          <div className="text-sm text-slate-600">
-            <span className="font-semibold text-slate-900">{filteredDossiers.length}</span> dossier(s) CNAM au total
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-blue-500" />
+              Bons CNAM - Ventes
+            </CardTitle>
+            <p className="text-sm text-gray-500 mt-1">
+              Gérer les bons CNAM pour les ventes (catégorie ACHAT)
+            </p>
           </div>
-          <Select value={itemsPerPage.toString()} onValueChange={(value) => setItemsPerPage(Number(value))}>
-            <SelectTrigger className="w-[140px] h-9 text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="25">25 par page</SelectItem>
-              <SelectItem value="50">50 par page</SelectItem>
-              <SelectItem value="100">100 par page</SelectItem>
-            </SelectContent>
-          </Select>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={handleAddNew}
+            disabled={isAddingNew || editingId !== null}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+          >
+            <Plus className="h-4 w-4" />
+            Ajouter
+          </Button>
         </div>
-
-        <div className="flex items-center space-x-3">
-          {/* First Page Button */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage(1)}
-            disabled={currentPage === 1}
-            className="h-9 px-2"
-            title="Première page"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            <ChevronLeft className="h-4 w-4 -ml-2" />
-          </Button>
-
-          {/* Previous Page Button */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-            disabled={currentPage === 1}
-            className="h-9 px-3"
-          >
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            Précédent
-          </Button>
-
-          {/* Page Numbers */}
-          <div className="flex items-center space-x-1">
-            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-              let pageNum;
-              if (totalPages <= 5) {
-                pageNum = i + 1;
-              } else if (currentPage <= 3) {
-                pageNum = i + 1;
-              } else if (currentPage >= totalPages - 2) {
-                pageNum = totalPages - 4 + i;
-              } else {
-                pageNum = currentPage - 2 + i;
-              }
-
-              return (
-                <Button
-                  key={pageNum}
-                  variant={currentPage === pageNum ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setCurrentPage(pageNum)}
-                  className="h-9 w-9 p-0"
-                >
-                  {pageNum}
-                </Button>
-              );
-            })}
-          </div>
-
-          {/* Next Page Button */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-            disabled={currentPage === totalPages || totalPages === 0}
-            className="h-9 px-3"
-          >
-            Suivant
-            <ChevronRight className="h-4 w-4 ml-1" />
-          </Button>
-
-          {/* Last Page Button */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage(totalPages)}
-            disabled={currentPage === totalPages || totalPages === 0}
-            className="h-9 px-2"
-            title="Dernière page"
-          >
-            <ChevronRight className="h-4 w-4" />
-            <ChevronRight className="h-4 w-4 -ml-2" />
-          </Button>
-
-          {/* Page Jump Input */}
-          <div className="flex items-center space-x-2 ml-2 pl-2 border-l border-slate-300">
-            <span className="text-sm text-slate-600">Aller à:</span>
-            <Input
-              type="number"
-              min="1"
-              max={totalPages}
-              value={currentPage}
-              onChange={(e) => {
-                const page = parseInt(e.target.value);
-                if (page >= 1 && page <= totalPages) {
-                  setCurrentPage(page);
-                }
-              }}
-              className="h-9 w-16 text-sm text-center"
-            />
-            <span className="text-sm text-slate-600">/ {totalPages || 1}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Excel-like Table */}
-      <div className="border rounded-lg overflow-hidden bg-white">
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead className="bg-slate-50 sticky top-0 z-10">
-              <tr className="border-b border-slate-200">
-                <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[140px]">N° Dossier</th>
-                <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[200px]">Patient</th>
-                <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[120px]">Vente</th>
-                <th className="px-3 py-3 text-center text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[100px]">Type Bon</th>
-                <th className="px-3 py-3 text-right text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[120px]">Montant Bon</th>
-                <th className="px-3 py-3 text-right text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[120px]">Prix Appareil</th>
-                <th className="px-3 py-3 text-right text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[120px]">Complément</th>
-                <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[180px]">Progression</th>
-                <th className="px-3 py-3 text-center text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[140px]">Statut</th>
-                <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[120px]">Date Création</th>
-                <th className="px-3 py-3 text-center text-xs font-semibold text-slate-700 sticky right-0 bg-slate-50 shadow-[-2px_0_4px_rgba(0,0,0,0.05)] min-w-[120px]">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {/* New Bon Row */}
-              {isAddingNew && (
-                <tr className="bg-green-50/50 border-b-2 border-green-200">
-                  {/* Dossier Number */}
-                  <td className="px-3 py-2.5 text-xs border-r border-slate-100">
-                    <Input
-                      value={newBon.dossierNumber}
-                      onChange={(e) => setNewBon({ ...newBon, dossierNumber: e.target.value })}
-                      className="h-8 text-xs"
-                      placeholder="N° Dossier"
-                    />
-                  </td>
-
-                  {/* Patient/Client */}
-                  <td className="px-3 py-2.5 border-r border-slate-100">
-                    {selectedClient ? (
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs">
-                          {selectedClient.name}
-                        </Badge>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setSelectedClient(null)}
-                          className="h-6 w-6 p-0"
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <PatientSelectorDialog
-                        onSelect={handleSelectClient}
-                        selectedId={undefined}
-                        selectedName={undefined}
-                        trigger={
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 text-xs w-full"
-                          >
-                            <User className="h-3 w-3 mr-1" />
-                            Sélectionner client
-                          </Button>
-                        }
+      </CardHeader>
+      <CardContent>
+        <div className="overflow-x-auto border rounded-lg">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="min-w-[140px]">Numéros</TableHead>
+                <TableHead className="min-w-[150px]">Vente</TableHead>
+                <TableHead className="min-w-[150px]">Patient</TableHead>
+                <TableHead className="min-w-[120px]">Type</TableHead>
+                <TableHead className="min-w-[160px]">Montants (Auto)</TableHead>
+                <TableHead className="min-w-[180px]">Progression</TableHead>
+                <TableHead className="min-w-[100px]">Statut</TableHead>
+                <TableHead className="min-w-[150px]">Notes</TableHead>
+                <TableHead className="min-w-[120px]">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {/* Add New Row */}
+              {isAddingNew && editData && (
+                <TableRow className="bg-green-50">
+                  {/* Numéros */}
+                  <TableCell>
+                    <div className="space-y-1">
+                      <div className="text-[10px] text-gray-500">BL: Auto</div>
+                      <Input
+                        type="text"
+                        placeholder="N° Dossier"
+                        value={editData.dossierNumber || ''}
+                        onChange={(e) => setEditData({ ...editData, dossierNumber: e.target.value })}
+                        className="text-xs h-7"
                       />
-                    )}
-                  </td>
+                    </div>
+                  </TableCell>
 
-                  {/* Sale */}
-                  <td className="px-3 py-2.5 border-r border-slate-100">
-                    <Select
-                      value={newBon.saleId}
-                      onValueChange={handleSaleChange}
-                      disabled={!selectedClient}
-                    >
-                      <SelectTrigger className="h-8 text-xs">
+                  {/* Vente */}
+                  <TableCell>
+                    <Select value={editData.saleId || ''} onValueChange={handleSaleChange}>
+                      <SelectTrigger className="text-xs h-7">
                         <SelectValue placeholder="Sélectionner vente" />
                       </SelectTrigger>
                       <SelectContent>
-                        {clientSales.map((sale: any) => (
+                        {salesData.map((sale: any) => (
                           <SelectItem key={sale.id} value={sale.id}>
                             {sale.saleCode} - {formatCurrency(sale.totalAmount || 0)}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                  </td>
+                  </TableCell>
 
-                  {/* Bon Type */}
-                  <td className="px-3 py-2.5 border-r border-slate-100">
-                    <Select
-                      value={newBon.bonType}
-                      onValueChange={handleBonTypeChange}
-                    >
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="CPAP">CPAP ({cnamNomenclature?.find((e:any) => e.bonType === 'CPAP' && e.category === 'ACHAT')?.amount || 0} DT)</SelectItem>
-                        <SelectItem value="MASQUE">Masque ({cnamNomenclature?.find((e:any) => e.bonType === 'MASQUE' && e.category === 'ACHAT')?.amount || 0} DT)</SelectItem>
-                        <SelectItem value="VNI">VNI ({cnamNomenclature?.find((e:any) => e.bonType === 'VNI' && e.category === 'ACHAT')?.amount || 0} DT)</SelectItem>
-                        <SelectItem value="CONCENTRATEUR_OXYGENE">Concentrateur ({cnamNomenclature?.find((e:any) => e.bonType === 'CONCENTRATEUR_OXYGENE' && e.category === 'ACHAT')?.amount || 0} DT)</SelectItem>
-                        <SelectItem value="AUTRE">Autre ({cnamNomenclature?.find((e:any) => e.bonType === 'AUTRE' && e.category === 'ACHAT')?.amount || 0} DT)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </td>
-
-                  {/* CNAM Monthly Rate */}
-                  <td className="px-3 py-2.5 border-r border-slate-100">
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={newBon.cnamMonthlyRate || ''}
-                      onChange={(e) => setNewBon({ ...newBon, cnamMonthlyRate: parseFloat(e.target.value) || 0 })}
-                      className="h-8 text-xs text-right bg-green-50"
-                      placeholder="Auto-calculé"
-                      title="Auto-calculé depuis la vente (modifiable)"
-                    />
-                  </td>
-
-                  {/* Device Monthly Rate */}
-                  <td className="px-3 py-2.5 border-r border-slate-100">
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={newBon.deviceMonthlyRate || ''}
-                      onChange={(e) => setNewBon({ ...newBon, deviceMonthlyRate: parseFloat(e.target.value) || 0 })}
-                      className="h-8 text-xs text-right bg-green-50"
-                      placeholder="Auto-calculé"
-                      title="Auto-calculé depuis la vente (modifiable)"
-                    />
-                  </td>
-
-                  {/* Complément - Display calculated (devicePrice - bonAmount) */}
-                  <td className="px-3 py-2.5 border-r border-slate-100">
-                    <div className="text-xs text-right font-semibold text-slate-700">
-                      {formatCurrency((newBon.deviceMonthlyRate * newBon.coveredMonths) - (newBon.cnamMonthlyRate * newBon.coveredMonths))}
-                    </div>
-                  </td>
-
-                  {/* Progression - Display calculated */}
-                  <td className="px-3 py-2.5 border-r border-slate-100">
-                    <div className="text-xs text-slate-600">Auto-calculé</div>
-                  </td>
-
-                  {/* Status */}
-                  <td className="px-3 py-2.5 border-r border-slate-100">
-                    <Select
-                      value={newBon.status}
-                      onValueChange={(value) => setNewBon({ ...newBon, status: value })}
-                    >
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="EN_ATTENTE_APPROBATION">En attente</SelectItem>
-                        <SelectItem value="APPROUVE">Approuvé</SelectItem>
-                        <SelectItem value="EN_COURS">En cours</SelectItem>
-                        <SelectItem value="TERMINE">Terminé</SelectItem>
-                        <SelectItem value="REFUSE">Refusé</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </td>
-
-                  {/* Created Date */}
-                  <td className="px-3 py-2.5 border-r border-slate-100">
-                    <Input
-                      type="date"
-                      value={newBon.submissionDate}
-                      onChange={(e) => setNewBon({ ...newBon, submissionDate: e.target.value })}
-                      className="h-8 text-xs"
-                    />
-                  </td>
-
-                  {/* Actions */}
-                  <td className="px-3 py-2.5 sticky right-0 bg-green-50/50 shadow-[-2px_0_4px_rgba(0,0,0,0.05)]">
-                    <div className="flex items-center justify-center gap-1">
-                      <Button
-                        size="sm"
-                        onClick={handleSaveNew}
-                        disabled={createMutation.isPending}
-                        className="h-8 w-8 p-0 bg-green-600 hover:bg-green-700 text-white"
-                        title="Enregistrer"
-                      >
-                        <Save className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleCancelNew}
-                        disabled={createMutation.isPending}
-                        className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-700"
-                        title="Annuler"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              )}
-
-              {paginatedDossiers.map((dossier: CNAMDossier, index: number) => {
-                const patientName = dossier.patient
-                  ? `${dossier.patient.firstName} ${dossier.patient.lastName}`
-                  : 'N/A';
-
-                const isEditing = editingId === dossier.id;
-                const currentData = isEditing ? editedData : dossier;
-
-                return (
-                  <tr
-                    key={dossier.id}
-                    className={`border-b border-slate-100 hover:bg-green-50/50 transition-colors ${
-                      index % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'
-                    } ${isEditing ? 'bg-green-50' : ''}`}
-                  >
-                    {/* Dossier Number */}
-                    <td className="px-3 py-2.5 text-xs border-r border-slate-100">
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-3 w-3 text-red-600" />
-                        <Badge variant="outline" className="text-xs font-mono font-semibold">
-                          {dossier.dossierNumber}
-                        </Badge>
-                      </div>
-                    </td>
-
-                    {/* Patient */}
-                    <td className="px-3 py-2.5 text-sm font-medium text-slate-900 border-r border-slate-100">
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-green-600" />
-                        <div className="flex flex-col gap-1">
-                          <div
-                            className="text-green-600 hover:text-green-800 hover:underline cursor-pointer transition-colors"
-                            onClick={() => router.push(`/roles/employee/renseignement/patient/${dossier.patient?.id}`)}
-                          >
-                            {patientName}
-                          </div>
-                          {dossier.patient?.patientCode && (
-                            <div
-                              className="text-xs text-slate-500 font-mono cursor-pointer hover:text-green-600 transition-colors"
-                              onClick={() => router.push(`/roles/employee/renseignement/patient/${dossier.patient?.id}`)}
-                            >
-                              {dossier.patient.patientCode}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Sale */}
-                    <td className="px-3 py-2.5 text-xs border-r border-slate-100">
-                      {dossier.sale ? (
-                        <Badge variant="outline" className="text-xs">
-                          {dossier.sale.saleCode}
-                        </Badge>
+                  {/* Patient */}
+                  <TableCell>
+                    <div className="text-xs text-gray-600">
+                      {editData.saleId ? (
+                        <>
+                          {salesData.find((s: any) => s.id === editData.saleId)?.patient?.firstName}{' '}
+                          {salesData.find((s: any) => s.id === editData.saleId)?.patient?.lastName}
+                        </>
                       ) : (
                         '-'
                       )}
-                    </td>
+                    </div>
+                  </TableCell>
 
-                    {/* Bon Type */}
-                    <td className="px-3 py-2.5 text-center border-r border-slate-100">
-                      {getBonTypeBadge(dossier.bonType)}
-                    </td>
+                  {/* Type */}
+                  <TableCell>
+                    <Select value={editData.bonType || 'CONCENTRATEUR_OXYGENE'} onValueChange={handleBondTypeChange}>
+                      <SelectTrigger className="text-xs h-7">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(BOND_TYPE_LABELS).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>{label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
 
-                    {/* Bond Amount */}
-                    <td className="px-3 py-2.5 text-right text-sm font-semibold text-red-700 border-r border-slate-100">
-                      {formatCurrency(Number(dossier.bondAmount))}
-                    </td>
+                  {/* Montants */}
+                  <TableCell>
+                    <div className="space-y-1 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">CNAM:</span>
+                        <span className="font-semibold text-blue-600">{formatAmount(editData.bonAmount)} DT</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Prix:</span>
+                        <span className="font-semibold">{formatAmount(editData.devicePrice)} DT</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Compl:</span>
+                        <span className="font-semibold text-amber-600">{formatAmount(editData.complementAmount)} DT</span>
+                      </div>
+                    </div>
+                  </TableCell>
 
-                    {/* Device Price */}
-                    <td className="px-3 py-2.5 text-right text-sm font-medium text-slate-900 border-r border-slate-100">
-                      {formatCurrency(Number(dossier.devicePrice))}
-                    </td>
+                  {/* Progression */}
+                  <TableCell>
+                    <div className="space-y-1">
+                      <Select
+                        value={String(editData.currentStep || 1)}
+                        onValueChange={(v) => setEditData({ ...editData, currentStep: parseInt(v) })}
+                      >
+                        <SelectTrigger className="text-xs h-7">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {[1, 2, 3, 4, 5, 6, 7].map((step) => (
+                            <SelectItem key={step} value={String(step)}>
+                              {step}. {STEP_LABELS[step]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Progress value={(editData.currentStep / 7) * 100} className="h-2" />
+                      <div className="text-[10px] text-slate-500 truncate">
+                        {STEP_LABELS[editData.currentStep || 1]}
+                      </div>
+                    </div>
+                  </TableCell>
 
-                    {/* Complement Amount */}
-                    <td className="px-3 py-2.5 text-right text-sm font-semibold text-orange-700 border-r border-slate-100">
-                      {formatCurrency(Number(dossier.complementAmount))}
-                    </td>
+                  {/* Statut */}
+                  <TableCell>
+                    <Select value={editData.status} onValueChange={(v) => setEditData({ ...editData, status: v })}>
+                      <SelectTrigger className="text-xs h-7">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>{label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
 
-                    {/* Progress - Editable current step */}
-                    <td className="px-3 py-2.5 border-r border-slate-100">
-                      {isEditing ? (
-                        <div className="flex items-center gap-2">
-                          <Select
-                            value={currentData.currentStep?.toString() || '1'}
-                            onValueChange={(value) => handleFieldChange('currentStep', parseInt(value))}
-                          >
-                            <SelectTrigger className="h-8 text-xs w-full">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="1">Étape 1 - En attente approbation CNAM</SelectItem>
-                              <SelectItem value="2">Étape 2 - Accord avec patient</SelectItem>
-                              <SelectItem value="3">Étape 3 - Tech récupère Bon CNAM</SelectItem>
-                              <SelectItem value="4">Étape 4 - Livraison Bon à Admin</SelectItem>
-                              <SelectItem value="5">Étape 5 - Livraison au Technicien</SelectItem>
-                              <SelectItem value="6">Étape 6 - Signature Médecin</SelectItem>
-                              <SelectItem value="7">Étape 7 - Livraison finale Admin</SelectItem>
-                            </SelectContent>
-                          </Select>
+                  {/* Notes */}
+                  <TableCell>
+                    <Textarea
+                      value={editData.notes || ''}
+                      onChange={(e) => setEditData({ ...editData, notes: e.target.value })}
+                      className="text-xs min-h-[60px]"
+                      placeholder="Notes..."
+                    />
+                  </TableCell>
+
+                  {/* Actions */}
+                  <TableCell>
+                    <div className="flex gap-1">
+                      <Button size="sm" onClick={handleSaveNew} className="h-7 bg-green-600 hover:bg-green-700">
+                        <Save className="h-3 w-3" />
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={handleCancel} className="h-7">
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
+
+              {/* Existing Rows */}
+              {sortedBonds.map((bond) => {
+                const isEditing = editingId === bond.id;
+
+                if (isEditing && editData) {
+                  return (
+                    <TableRow key={bond.id} className="bg-blue-50">
+                      {/* Numéros */}
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="text-[10px] text-gray-500">BL: {bond.bonNumber || 'Auto'}</div>
+                          <Input
+                            type="text"
+                            placeholder="N° Dossier"
+                            value={editData.dossierNumber || ''}
+                            onChange={(e) => setEditData({ ...editData, dossierNumber: e.target.value })}
+                            className="text-xs h-7"
+                          />
                         </div>
-                      ) : (
-                        getProgressBar(dossier.currentStep, 7)
-                      )}
-                    </td>
+                      </TableCell>
 
-                    {/* Status - Editable */}
-                    <td className="px-3 py-2.5 text-center border-r border-slate-100">
-                      {isEditing ? (
-                        <Select
-                          value={currentData.status || 'EN_ATTENTE_APPROBATION'}
-                          onValueChange={(value) => handleFieldChange('status', value)}
-                        >
-                          <SelectTrigger className="h-8 text-xs">
+                      {/* Vente */}
+                      <TableCell>
+                        <div className="text-xs">
+                          <Badge variant="outline">{bond.sale?.saleCode}</Badge>
+                          <div className="text-[10px] text-gray-500 mt-0.5">
+                            {formatCurrency(bond.sale?.totalAmount || 0)}
+                          </div>
+                        </div>
+                      </TableCell>
+
+                      {/* Patient */}
+                      <TableCell>
+                        <div className="text-xs text-gray-600">
+                          {bond.patient?.firstName} {bond.patient?.lastName}
+                        </div>
+                      </TableCell>
+
+                      {/* Type */}
+                      <TableCell>
+                        <Select value={editData.bonType || 'CONCENTRATEUR_OXYGENE'} onValueChange={handleBondTypeChange}>
+                          <SelectTrigger className="text-xs h-7">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="EN_ATTENTE_APPROBATION">En attente</SelectItem>
-                            <SelectItem value="APPROUVE">Approuvé</SelectItem>
-                            <SelectItem value="TERMINE">Terminé</SelectItem>
-                            <SelectItem value="REFUSE">Refusé</SelectItem>
+                            {Object.entries(BOND_TYPE_LABELS).map(([value, label]) => (
+                              <SelectItem key={value} value={value}>{label}</SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
-                      ) : (
-                        getStatusBadge(dossier.status)
-                      )}
-                    </td>
+                      </TableCell>
 
-                    {/* Created At */}
-                    <td className="px-3 py-2.5 text-xs text-slate-600 border-r border-slate-100">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-3 w-3 text-slate-400" />
-                        {new Date(dossier.createdAt).toLocaleDateString('fr-FR')}
-                      </div>
-                    </td>
+                      {/* Montants */}
+                      <TableCell>
+                        <div className="space-y-1 text-xs">
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">CNAM:</span>
+                            <span className="font-semibold text-blue-600">{formatAmount(editData.bonAmount)} DT</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Prix:</span>
+                            <span className="font-semibold">{formatAmount(editData.devicePrice)} DT</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Compl:</span>
+                            <span className="font-semibold text-amber-600">{formatAmount(editData.complementAmount)} DT</span>
+                          </div>
+                        </div>
+                      </TableCell>
 
-                    {/* Actions */}
-                    <td className="px-3 py-2.5 sticky right-0 bg-inherit shadow-[-2px_0_4px_rgba(0,0,0,0.05)]">
-                      <div className="flex items-center justify-center gap-1">
-                        {isEditing ? (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={handleSave}
-                              className="h-8 w-8 p-0 bg-green-600 hover:bg-green-700 text-white"
-                              title="Enregistrer"
-                            >
-                              <Save className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={handleCancel}
-                              className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-700"
-                              title="Annuler"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </>
-                        ) : (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleViewDetails(dossier)}
-                              className="h-8 w-8 p-0 hover:bg-green-100 hover:text-green-700"
-                              title="Voir détails"
-                            >
-                              <FileText className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEdit(dossier)}
-                              className="h-8 w-8 p-0 hover:bg-orange-100 hover:text-orange-700"
-                              title="Modifier"
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDelete(dossier.id)}
-                              className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-700"
-                              title="Supprimer"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </>
+                      {/* Progression */}
+                      <TableCell>
+                        <div className="space-y-1">
+                          <Select
+                            value={String(editData.currentStep || 1)}
+                            onValueChange={(v) => setEditData({ ...editData, currentStep: parseInt(v) })}
+                          >
+                            <SelectTrigger className="text-xs h-7">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {[1, 2, 3, 4, 5, 6, 7].map((step) => (
+                                <SelectItem key={step} value={String(step)}>
+                                  {step}. {STEP_LABELS[step]}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Progress value={(editData.currentStep / 7) * 100} className="h-2" />
+                          <div className="text-[10px] text-slate-500 truncate">
+                            {STEP_LABELS[editData.currentStep || 1]}
+                          </div>
+                        </div>
+                      </TableCell>
+
+                      {/* Statut */}
+                      <TableCell>
+                        <Select value={editData.status} onValueChange={(v) => setEditData({ ...editData, status: v })}>
+                          <SelectTrigger className="text-xs h-7">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                              <SelectItem key={value} value={value}>{label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+
+                      {/* Notes */}
+                      <TableCell>
+                        <Textarea
+                          value={editData.notes || ''}
+                          onChange={(e) => setEditData({ ...editData, notes: e.target.value })}
+                          className="text-xs min-h-[60px]"
+                          placeholder="Notes..."
+                        />
+                      </TableCell>
+
+                      {/* Actions */}
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button size="sm" onClick={handleSaveEdit} className="h-7 bg-blue-600 hover:bg-blue-700">
+                            <Save className="h-3 w-3" />
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={handleCancel} className="h-7">
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                }
+
+                // Display Row
+                return (
+                  <TableRow key={bond.id} className="hover:bg-gray-50">
+                    {/* Numéros */}
+                    <TableCell>
+                      <div className="space-y-0.5">
+                        <Badge variant="outline" className="text-xs font-mono">
+                          {bond.bonNumber || bond.dossierNumber || 'N/A'}
+                        </Badge>
+                        {bond.dossierNumber && bond.bonNumber && (
+                          <div className="text-[10px] text-gray-500">{bond.dossierNumber}</div>
                         )}
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+
+                    {/* Vente */}
+                    <TableCell>
+                      <div className="text-xs">
+                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                          {bond.sale?.saleCode}
+                        </Badge>
+                        <div className="text-[10px] text-gray-500 mt-0.5">
+                          {formatCurrency(bond.sale?.totalAmount || 0)}
+                        </div>
+                      </div>
+                    </TableCell>
+
+                    {/* Patient */}
+                    <TableCell>
+                      <div className="text-xs text-gray-600">
+                        {bond.patient?.firstName} {bond.patient?.lastName}
+                      </div>
+                    </TableCell>
+
+                    {/* Type */}
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs">
+                        {BOND_TYPE_LABELS[bond.bonType] || bond.bonType}
+                      </Badge>
+                    </TableCell>
+
+                    {/* Montants */}
+                    <TableCell>
+                      <div className="space-y-0.5 text-xs">
+                        <div className="flex justify-between gap-2">
+                          <span className="text-gray-500">CNAM:</span>
+                          <span className="font-semibold text-blue-600">{formatAmount(bond.bonAmount)} DT</span>
+                        </div>
+                        <div className="flex justify-between gap-2">
+                          <span className="text-gray-500">Prix:</span>
+                          <span className="font-semibold">{formatAmount(bond.devicePrice)} DT</span>
+                        </div>
+                        <div className="flex justify-between gap-2">
+                          <span className="text-gray-500">Compl:</span>
+                          <span className="font-semibold text-amber-600">{formatAmount(bond.complementAmount)} DT</span>
+                        </div>
+                      </div>
+                    </TableCell>
+
+                    {/* Progression */}
+                    <TableCell>
+                      {getProgressBar(bond.currentStep || 1, 7)}
+                    </TableCell>
+
+                    {/* Statut */}
+                    <TableCell>
+                      <Badge className={bond.status === 'CREATION' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}>
+                        {STATUS_LABELS[bond.status] || bond.status}
+                      </Badge>
+                    </TableCell>
+
+                    {/* Notes */}
+                    <TableCell>
+                      <div className="text-xs text-gray-600 max-w-[150px] truncate" title={bond.notes || ''}>
+                        {bond.notes || '-'}
+                      </div>
+                    </TableCell>
+
+                    {/* Actions */}
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleEdit(bond)}
+                          disabled={isAddingNew || editingId !== null}
+                          className="h-7"
+                        >
+                          <Edit2 className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDelete(bond.id)}
+                          disabled={isAddingNew || editingId !== null}
+                          className="h-7 text-red-600 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
+
+              {!isAddingNew && sortedBonds.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center py-8 text-gray-500">
+                    <AlertCircle className="h-10 w-10 mx-auto mb-2 text-gray-300" />
+                    <p>Aucun bon CNAM pour les ventes</p>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </div>
-      </div>
-    </div>
+
+        {/* Summary */}
+        {sortedBonds.length > 0 && (
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
+            <div className="text-center">
+              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Total Bons</p>
+              <p className="text-2xl font-bold text-gray-900">{sortedBonds.length}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Montant Total CNAM</p>
+              <p className="text-2xl font-bold text-blue-600">
+                {formatAmount(
+                  sortedBonds.reduce((sum, bond) => sum + (Number(bond.bonAmount) || 0), 0)
+                )} DT
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Complément Total</p>
+              <p className="text-2xl font-bold text-amber-600">
+                {formatAmount(
+                  sortedBonds.reduce((sum, bond) => sum + (Number(bond.complementAmount) || 0), 0)
+                )} DT
+              </p>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

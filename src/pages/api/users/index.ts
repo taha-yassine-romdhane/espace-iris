@@ -44,7 +44,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // GET users
   else if (req.method === 'GET') {
     try {
+      // Check if role filter is provided in query params
+      const { role } = req.query;
+
+      // Build where clause for role filtering
+      const whereClause: Prisma.UserWhereInput = {};
+      if (role) {
+        if (role === 'EMPLOYEE') {
+          // Only EMPLOYEE role
+          whereClause.role = 'EMPLOYEE';
+        } else if (role === 'ADMIN') {
+          // Only ADMIN role
+          whereClause.role = 'ADMIN';
+        } else if (role === 'EMPLOYEE_AND_ADMIN') {
+          // EMPLOYEE or ADMIN roles (exclude DOCTOR)
+          whereClause.role = { in: ['EMPLOYEE', 'ADMIN'] };
+        } else {
+          // Specific role filter
+          whereClause.role = role as Role;
+        }
+      }
+
       const users = await prisma.user.findMany({
+        where: whereClause,
         orderBy: { createdAt: 'desc' },
         select: {
           id: true, firstName: true, lastName: true, email: true, telephone: true,

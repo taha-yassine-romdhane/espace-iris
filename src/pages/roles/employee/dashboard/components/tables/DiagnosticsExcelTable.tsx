@@ -272,6 +272,16 @@ export default function EmployeeDiagnosticsExcelTable() {
         const patientName = diagnostic.patient
           ? `${diagnostic.patient.firstName} ${diagnostic.patient.lastName}`
           : '-';
+        if (diagnostic.patient?.id) {
+          return (
+            <span
+              className="text-xs text-green-600 hover:text-green-800 hover:underline cursor-pointer transition-colors"
+              onClick={() => router.push(`/roles/employee/renseignement/patient/${diagnostic.patient?.id}`)}
+            >
+              {patientName}
+            </span>
+          );
+        }
         return <span className="text-xs">{patientName}</span>;
 
       case 'device':

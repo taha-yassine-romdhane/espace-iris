@@ -12,7 +12,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const employees = await prisma.user.findMany({
       where: {
         role: {
-          in: ['EMPLOYEE', 'MANAGER']
+          in: ['EMPLOYEE', 'ADMIN']
         }
       },
       select: {

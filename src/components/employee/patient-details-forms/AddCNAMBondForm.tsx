@@ -71,11 +71,6 @@ const BOND_TYPE_LABELS: Record<string, string> = {
 const STATUS_LABELS: Record<string, string> = {
   CREATION: 'Création',
   RENOUVELLEMENT: 'Renouvellement',
-  EN_ATTENTE: 'En attente',
-  EN_COURS: 'En cours',
-  TERMINE: 'Terminé',
-  APPROUVE: 'Approuvé',
-  REFUSE: 'Refusé',
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -469,22 +464,30 @@ const CNAMBondFormRow: React.FC<{
   sales: any[];
 }> = ({ data, onChange, onSave, onCancel, isNew, nomenclature, rentals, sales }) => {
   // Auto-calculate amounts when relevant fields change
+  const cnamRate = data.cnamMonthlyRate || 0;
+  const deviceRate = data.deviceMonthlyRate || 0;
+  const months = data.coveredMonths || 1;
+
+  const calculatedBonAmount = cnamRate * months;
+  const calculatedDevicePrice = deviceRate * months;
+  const calculatedComplementAmount = calculatedDevicePrice - calculatedBonAmount;
+
   useEffect(() => {
-    const cnamRate = data.cnamMonthlyRate || 0;
-    const deviceRate = data.deviceMonthlyRate || 0;
-    const months = data.coveredMonths || 1;
-
-    const bonAmount = cnamRate * months;
-    const devicePrice = deviceRate * months;
-    const complementAmount = devicePrice - bonAmount;
-
-    onChange({
-      ...data,
-      bonAmount,
-      devicePrice,
-      complementAmount,
-    });
-  }, [data.cnamMonthlyRate, data.deviceMonthlyRate, data.coveredMonths]);
+    // Only update if calculated values differ from stored values
+    if (
+      data.bonAmount !== calculatedBonAmount ||
+      data.devicePrice !== calculatedDevicePrice ||
+      data.complementAmount !== calculatedComplementAmount
+    ) {
+      onChange({
+        ...data,
+        bonAmount: calculatedBonAmount,
+        devicePrice: calculatedDevicePrice,
+        complementAmount: calculatedComplementAmount,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cnamRate, deviceRate, months]);
 
   // Update CNAM rate when bond type changes
   const handleBondTypeChange = (bondType: string) => {
@@ -515,7 +518,7 @@ const CNAMBondFormRow: React.FC<{
           onValueChange={handleBondTypeChange}
         >
           <SelectTrigger className="w-[150px]">
-            <SelectValue />
+            <SelectValue placeholder="Type de bon" />
           </SelectTrigger>
           <SelectContent>
             {Object.entries(BOND_TYPE_LABELS).map(([value, label]) => (
@@ -602,17 +605,17 @@ const CNAMBondFormRow: React.FC<{
 
       {/* Bon Amount (Read-only, auto-calculated) */}
       <TableCell className="text-sm font-bold text-blue-600">
-        {(data.bonAmount || 0).toFixed(2)} DT
+        {calculatedBonAmount.toFixed(2)} DT
       </TableCell>
 
       {/* Device Price (Read-only, auto-calculated) */}
       <TableCell className="text-sm font-bold">
-        {(data.devicePrice || 0).toFixed(2)} DT
+        {calculatedDevicePrice.toFixed(2)} DT
       </TableCell>
 
       {/* Complement Amount (Read-only, auto-calculated) */}
       <TableCell className="text-sm font-bold text-amber-600">
-        {(data.complementAmount || 0).toFixed(2)} DT
+        {calculatedComplementAmount.toFixed(2)} DT
       </TableCell>
 
       {/* Current Step */}

@@ -11,6 +11,7 @@ import { PatientRentals } from './PatientRentals';
 import { PatientSales } from './PatientSales';
 import { PatientAppointments } from './PatientAppointments';
 import { PatientCNAMBonds } from './PatientCNAMBonds';
+import { PatientRDV } from './PatientRDV';
 import { PatientPrintDialog } from './PatientPrintDialog';
 
 export {
@@ -27,5 +28,6 @@ export {
   PatientSales,
   PatientAppointments,
   PatientCNAMBonds,
+  PatientRDV,
   PatientPrintDialog
 };

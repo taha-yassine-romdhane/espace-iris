@@ -23,6 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const {
         rentalId,
+        saleId,
         amount,
         paymentDate,
         periodStartDate,
@@ -39,7 +40,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         cnamCardNumber,
         cnamBonId,
         notes,
-        dueDate
+        dueDate,
+        source
       } = req.body;
 
       // Get the existing payment
@@ -58,6 +60,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         saleId: existingPayment.saleId,
       });
 
+      // Prevent changing method to CNAM - CNAM payments are auto-created from bonds only
+      const newMethodValue = paymentMethod || method;
+      if (newMethodValue === 'CNAM' && existingPayment.method !== 'CNAM') {
+        return res.status(400).json({
+          error: 'Cannot change payment method to CNAM. CNAM payments are automatically created when creating a CNAM bond.'
+        });
+      }
+
       // Build update data object conditionally to avoid undefined issues
       const updateData: any = {};
 
@@ -69,6 +79,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (paymentDate !== undefined) updateData.paymentDate = new Date(paymentDate);
       if (periodStartDate !== undefined) updateData.periodStartDate = periodStartDate ? new Date(periodStartDate) : null;
       if (periodEndDate !== undefined) updateData.periodEndDate = periodEndDate ? new Date(periodEndDate) : null;
+      if (periodNumber !== undefined) updateData.periodNumber = periodNumber;
+      if (gapDays !== undefined) updateData.gapDays = gapDays;
       if (referenceNumber !== undefined) updateData.referenceNumber = referenceNumber;
       if (chequeNumber !== undefined) updateData.chequeNumber = chequeNumber;
       if (bankName !== undefined) updateData.bankName = bankName;
@@ -77,8 +89,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (notes !== undefined) updateData.notes = notes;
       if (dueDate !== undefined) updateData.dueDate = dueDate ? new Date(dueDate) : null;
 
-      // IMPORTANT: Preserve paymentCode and source - never change these on update
-      // They should remain as they were when the payment was created
+      // Update source if provided
+      if (source !== undefined) updateData.source = source;
+
+      // Update rental/sale links
+      if (rentalId !== undefined) {
+        if (rentalId) {
+          updateData.rental = { connect: { id: rentalId } };
+        } else {
+          updateData.rental = { disconnect: true };
+        }
+      }
+
+      if (saleId !== undefined) {
+        if (saleId) {
+          updateData.sale = { connect: { id: saleId } };
+        } else {
+          updateData.sale = { disconnect: true };
+        }
+      }
+
+      // IMPORTANT: Preserve paymentCode - never change this on update
+      // It should remain as it was when the payment was created
 
       console.log('[PAYMENT UPDATE] Update data:', updateData);
 

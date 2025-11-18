@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { useSession } from 'next-auth/react';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -25,13 +25,7 @@ import {
   Save,
   X,
   Edit,
-  Receipt,
   CreditCard,
-  Calendar,
-  FileText,
-  Banknote,
-  Building2,
-  Hash,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -44,14 +38,13 @@ interface Payment {
   method: string;
   status: string;
   source?: string;
-  notes?: string;
   rentalId?: string;
   saleId?: string;
-  chequeNumber?: string;
-  bankName?: string;
-  referenceNumber?: string;
+  rental?: any;
+  sale?: any;
   periodStartDate?: string;
   periodEndDate?: string;
+  notes?: string;
 }
 
 interface AddPaymentFormProps {
@@ -65,11 +58,11 @@ const METHOD_LABELS: Record<string, string> = {
   CREDIT_CARD: 'Carte bancaire',
   BANK_TRANSFER: 'Virement',
   CHEQUE: 'Chèque',
-  CNAM: 'CNAM',
   TRAITE: 'Traite',
   MANDAT: 'Mandat',
   VIREMENT: 'Virement',
   MIXED: 'Mixte',
+  // CNAM removed - auto-created from bonds only
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -79,6 +72,7 @@ const STATUS_LABELS: Record<string, string> = {
   CANCELLED: 'Annulé',
   FAILED: 'Échoué',
   PARTIAL: 'Partiel',
+  GUARANTEE: 'Garantie',
 };
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -95,6 +89,7 @@ export const AddPaymentForm: React.FC<AddPaymentFormProps> = ({
 }) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { data: session } = useSession();
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newRow, setNewRow] = useState<Partial<Payment> | null>(null);
@@ -220,14 +215,11 @@ export const AddPaymentForm: React.FC<AddPaymentFormProps> = ({
       method: payment.method,
       status: payment.status,
       source: payment.source || 'AUTRE',
-      notes: payment.notes || '',
       rentalId: payment.rentalId,
       saleId: payment.saleId,
-      chequeNumber: payment.chequeNumber || '',
-      bankName: payment.bankName || '',
-      referenceNumber: payment.referenceNumber || '',
       periodStartDate: payment.periodStartDate?.split('T')[0] || '',
       periodEndDate: payment.periodEndDate?.split('T')[0] || '',
+      notes: payment.notes || '',
     });
   };
 
@@ -266,6 +258,7 @@ export const AddPaymentForm: React.FC<AddPaymentFormProps> = ({
       CANCELLED: 'bg-red-100 text-red-800 border-red-200',
       FAILED: 'bg-red-100 text-red-800 border-red-200',
       PARTIAL: 'bg-blue-100 text-blue-800 border-blue-200',
+      GUARANTEE: 'bg-green-100 text-green-800 border-green-200',
     };
     return colors[status] || 'bg-gray-100 text-gray-800 border-gray-200';
   };
@@ -301,15 +294,13 @@ export const AddPaymentForm: React.FC<AddPaymentFormProps> = ({
           <TableHeader>
             <TableRow>
               <TableHead>Code</TableHead>
-              <TableHead>Date Paiement</TableHead>
+              <TableHead>Source</TableHead>
+              <TableHead>Référence</TableHead>
               <TableHead>Montant</TableHead>
+              <TableHead>Date Paiement</TableHead>
+              <TableHead>Période</TableHead>
               <TableHead>Méthode</TableHead>
               <TableHead>Statut</TableHead>
-              <TableHead>Source</TableHead>
-              <TableHead>Lien Source</TableHead>
-              <TableHead>N° Chèque</TableHead>
-              <TableHead>Banque</TableHead>
-              <TableHead>Référence</TableHead>
               <TableHead>Notes</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -345,57 +336,88 @@ export const AddPaymentForm: React.FC<AddPaymentFormProps> = ({
                 />
               ) : (
                 <TableRow key={payment.id} className="hover:bg-gray-50">
-                  <TableCell className="font-mono text-xs">
-                    {payment.paymentCode || '-'}
+                  {/* Code */}
+                  <TableCell>
+                    <Badge variant="outline" className="font-mono text-xs">
+                      {payment.paymentCode || 'N/A'}
+                    </Badge>
                   </TableCell>
-                  <TableCell className="text-sm">
-                    {payment.paymentDate
-                      ? format(new Date(payment.paymentDate), 'dd/MM/yyyy', { locale: fr })
-                      : '-'}
+
+                  {/* Source */}
+                  <TableCell>
+                    <Badge variant="outline" className={getSourceColor(payment.source || 'AUTRE')}>
+                      {SOURCE_LABELS[payment.source || 'AUTRE'] || 'Autre'}
+                    </Badge>
                   </TableCell>
-                  <TableCell className="text-sm font-bold text-green-700">
-                    {formatAmount(payment.amount)} DT
+
+                  {/* Reference (Sale or Rental Code) */}
+                  <TableCell>
+                    {payment.rental && (
+                      <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                        {payment.rental.rentalCode}
+                      </Badge>
+                    )}
+                    {payment.sale && (
+                      <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                        {payment.sale.saleCode}
+                      </Badge>
+                    )}
+                    {!payment.rental && !payment.sale && (
+                      <span className="text-xs text-gray-400">-</span>
+                    )}
                   </TableCell>
+
+                  {/* Montant */}
+                  <TableCell>
+                    <div className="text-sm font-bold text-green-700">
+                      {formatAmount(payment.amount)} DT
+                    </div>
+                  </TableCell>
+
+                  {/* Date Paiement */}
+                  <TableCell>
+                    <div className="text-xs text-slate-700">
+                      {payment.paymentDate
+                        ? format(new Date(payment.paymentDate), 'dd/MM/yyyy', { locale: fr })
+                        : '-'}
+                    </div>
+                  </TableCell>
+
+                  {/* Période (only for RENTAL) */}
+                  <TableCell>
+                    {payment.source === 'RENTAL' && payment.periodStartDate && payment.periodEndDate ? (
+                      <div className="text-xs text-slate-700">
+                        <div>{format(new Date(payment.periodStartDate), 'dd/MM/yyyy', { locale: fr })}</div>
+                        <div className="text-slate-500">{format(new Date(payment.periodEndDate), 'dd/MM/yyyy', { locale: fr })}</div>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-400">-</span>
+                    )}
+                  </TableCell>
+
+                  {/* Méthode */}
                   <TableCell>
                     <Badge variant="outline" className="text-xs">
+                      <CreditCard className="h-3 w-3 mr-1" />
                       {METHOD_LABELS[payment.method] || payment.method}
                     </Badge>
                   </TableCell>
+
+                  {/* Statut */}
                   <TableCell>
                     <Badge variant="outline" className={getStatusColor(payment.status)}>
                       {STATUS_LABELS[payment.status] || payment.status}
                     </Badge>
                   </TableCell>
+
+                  {/* Notes */}
                   <TableCell>
-                    <Badge variant="outline" className={getSourceColor(payment.source || 'AUTRE')}>
-                      {SOURCE_LABELS[payment.source || 'AUTRE'] || payment.source || 'Autre'}
-                    </Badge>
+                    <div className="text-xs text-slate-600 max-w-[150px] truncate" title={payment.notes || ''}>
+                      {payment.notes || '-'}
+                    </div>
                   </TableCell>
-                  <TableCell className="text-xs">
-                    {payment.rental && (
-                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                        Location: {payment.rental.rentalCode}
-                      </Badge>
-                    )}
-                    {payment.sale && (
-                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                        Vente: {payment.sale.saleCode}
-                      </Badge>
-                    )}
-                    {!payment.rental && !payment.sale && '-'}
-                  </TableCell>
-                  <TableCell className="text-xs font-mono">
-                    {payment.chequeNumber || '-'}
-                  </TableCell>
-                  <TableCell className="text-xs">
-                    {payment.bankName || '-'}
-                  </TableCell>
-                  <TableCell className="text-xs font-mono">
-                    {payment.referenceNumber || '-'}
-                  </TableCell>
-                  <TableCell className="text-xs text-gray-600 max-w-[150px] truncate">
-                    {payment.notes || '-'}
-                  </TableCell>
+
+                  {/* Actions */}
                   <TableCell className="text-right">
                     <Button
                       variant="ghost"
@@ -414,7 +436,7 @@ export const AddPaymentForm: React.FC<AddPaymentFormProps> = ({
 
             {!newRow && payments.length === 0 && (
               <TableRow>
-                <TableCell colSpan={12} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={10} className="text-center py-8 text-gray-500">
                   Aucun paiement pour ce patient. Cliquez sur "Ajouter" pour commencer.
                 </TableCell>
               </TableRow>
@@ -436,45 +458,52 @@ const PaymentFormRow: React.FC<{
   rentals: any[];
   sales: any[];
 }> = ({ data, onChange, onSave, onCancel, isNew, rentals, sales }) => {
+  // Filter rentals and sales based on selected source
+  const getFilteredOptions = () => {
+    if (data.source === 'RENTAL') {
+      return rentals;
+    } else if (data.source === 'SALE') {
+      return sales;
+    }
+    return [];
+  };
+
+  const filteredOptions = getFilteredOptions();
+
   return (
-    <TableRow className={isNew ? 'bg-green-50' : 'bg-blue-50'}>
-      {/* Payment Code (auto-generated) */}
-      <TableCell className="font-mono text-xs text-gray-500">
-        Auto
-      </TableCell>
-
-      {/* Payment Date */}
+    <TableRow className="bg-green-50 border-b-2 border-green-200">
+      {/* Code (auto-generated) */}
       <TableCell>
-        <Input
-          type="date"
-          value={data.paymentDate || ''}
-          onChange={(e) => onChange({ ...data, paymentDate: e.target.value })}
-          className="w-[140px]"
-        />
+        <span className="text-xs text-slate-500">Auto</span>
       </TableCell>
 
-      {/* Amount */}
-      <TableCell>
-        <Input
-          type="number"
-          step="0.01"
-          value={data.amount || 0}
-          onChange={(e) => onChange({ ...data, amount: parseFloat(e.target.value) || 0 })}
-          className="w-[100px]"
-        />
-      </TableCell>
-
-      {/* Method */}
+      {/* Source */}
       <TableCell>
         <Select
-          value={data.method || 'CASH'}
-          onValueChange={(value) => onChange({ ...data, method: value })}
+          value={data.source || 'AUTRE'}
+          onValueChange={(value) => {
+            // Clear rental/sale link and period dates when changing source
+            const updatedData: any = {
+              ...data,
+              source: value,
+              rentalId: undefined,
+              saleId: undefined
+            };
+
+            // Clear period dates if switching away from RENTAL
+            if (value !== 'RENTAL') {
+              updatedData.periodStartDate = undefined;
+              updatedData.periodEndDate = undefined;
+            }
+
+            onChange(updatedData);
+          }}
         >
-          <SelectTrigger className="w-[130px]">
+          <SelectTrigger className="w-[110px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {Object.entries(METHOD_LABELS).map(([value, label]) => (
+            {Object.entries(SOURCE_LABELS).map(([value, label]) => (
               <SelectItem key={value} value={value}>
                 {label}
               </SelectItem>
@@ -483,7 +512,108 @@ const PaymentFormRow: React.FC<{
         </Select>
       </TableCell>
 
-      {/* Status */}
+      {/* Reference (conditional selector based on source) */}
+      <TableCell>
+        {(data.source === 'RENTAL' || data.source === 'SALE') && filteredOptions.length > 0 ? (
+          <Select
+            value={data.rentalId || data.saleId || ''}
+            onValueChange={(value) => {
+              if (data.source === 'RENTAL') {
+                onChange({ ...data, rentalId: value, saleId: undefined });
+              } else if (data.source === 'SALE') {
+                onChange({ ...data, saleId: value, rentalId: undefined });
+              }
+            }}
+          >
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Sélectionner" />
+            </SelectTrigger>
+            <SelectContent>
+              {filteredOptions.map((item: any) => (
+                <SelectItem key={item.id} value={item.id}>
+                  {data.source === 'RENTAL' ? item.rentalCode : item.saleCode}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <span className="text-xs text-slate-400">-</span>
+        )}
+      </TableCell>
+
+      {/* Montant */}
+      <TableCell>
+        <Input
+          type="number"
+          step="0.01"
+          value={data.amount || 0}
+          onChange={(e) => onChange({ ...data, amount: parseFloat(e.target.value) || 0 })}
+          className="w-[100px]"
+          placeholder="0.00"
+        />
+      </TableCell>
+
+      {/* Date Paiement */}
+      <TableCell>
+        <Input
+          type="date"
+          value={data.paymentDate || ''}
+          onChange={(e) => onChange({ ...data, paymentDate: e.target.value })}
+          className="text-xs"
+        />
+      </TableCell>
+
+      {/* Période (only for RENTAL) */}
+      <TableCell>
+        {data.source === 'RENTAL' ? (
+          <div className="space-y-1">
+            <Input
+              type="date"
+              value={data.periodStartDate || ''}
+              onChange={(e) => onChange({ ...data, periodStartDate: e.target.value })}
+              className="text-xs"
+              placeholder="Début"
+            />
+            <Input
+              type="date"
+              value={data.periodEndDate || ''}
+              onChange={(e) => onChange({ ...data, periodEndDate: e.target.value })}
+              className="text-xs"
+              placeholder="Fin"
+            />
+          </div>
+        ) : (
+          <span className="text-xs text-slate-400">-</span>
+        )}
+      </TableCell>
+
+      {/* Méthode */}
+      <TableCell>
+        {data.method === 'CNAM' ? (
+          <Badge variant="outline" className="text-xs">
+            <CreditCard className="h-3 w-3 mr-1" />
+            CNAM
+          </Badge>
+        ) : (
+          <Select
+            value={data.method || 'CASH'}
+            onValueChange={(value) => onChange({ ...data, method: value })}
+          >
+            <SelectTrigger className="w-[130px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(METHOD_LABELS).map(([value, label]) => (
+                <SelectItem key={value} value={value}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </TableCell>
+
+      {/* Statut */}
       <TableCell>
         <Select
           value={data.status || 'PENDING'}
@@ -502,96 +632,13 @@ const PaymentFormRow: React.FC<{
         </Select>
       </TableCell>
 
-      {/* Source */}
-      <TableCell>
-        <Select
-          value={data.source || 'AUTRE'}
-          onValueChange={(value) => onChange({ ...data, source: value })}
-        >
-          <SelectTrigger className="w-[110px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {Object.entries(SOURCE_LABELS).map(([value, label]) => (
-              <SelectItem key={value} value={value}>
-                {label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </TableCell>
-
-      {/* Source Link (Rental or Sale) */}
-      <TableCell>
-        <Select
-          value={data.rentalId || data.saleId || 'none'}
-          onValueChange={(value) => {
-            if (value === 'none') {
-              onChange({ ...data, rentalId: undefined, saleId: undefined });
-            } else if (value.startsWith('rental-')) {
-              onChange({ ...data, rentalId: value.replace('rental-', ''), saleId: undefined });
-            } else if (value.startsWith('sale-')) {
-              onChange({ ...data, saleId: value.replace('sale-', ''), rentalId: undefined });
-            }
-          }}
-        >
-          <SelectTrigger className="w-[150px]">
-            <SelectValue placeholder="Source" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">Aucune</SelectItem>
-            {rentals.map((rental: any) => (
-              <SelectItem key={rental.id} value={`rental-${rental.id}`}>
-                Location: {rental.rentalCode}
-              </SelectItem>
-            ))}
-            {sales.map((sale: any) => (
-              <SelectItem key={sale.id} value={`sale-${sale.id}`}>
-                Vente: {sale.saleCode}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </TableCell>
-
-      {/* Cheque Number */}
-      <TableCell>
-        <Input
-          value={data.chequeNumber || ''}
-          onChange={(e) => onChange({ ...data, chequeNumber: e.target.value })}
-          placeholder="N° Chèque"
-          className="w-[100px]"
-          disabled={data.method !== 'CHEQUE'}
-        />
-      </TableCell>
-
-      {/* Bank Name */}
-      <TableCell>
-        <Input
-          value={data.bankName || ''}
-          onChange={(e) => onChange({ ...data, bankName: e.target.value })}
-          placeholder="Banque"
-          className="w-[100px]"
-        />
-      </TableCell>
-
-      {/* Reference Number */}
-      <TableCell>
-        <Input
-          value={data.referenceNumber || ''}
-          onChange={(e) => onChange({ ...data, referenceNumber: e.target.value })}
-          placeholder="Référence"
-          className="w-[100px]"
-        />
-      </TableCell>
-
       {/* Notes */}
       <TableCell>
-        <Textarea
+        <Input
           value={data.notes || ''}
           onChange={(e) => onChange({ ...data, notes: e.target.value })}
-          placeholder="Notes"
-          className="w-[150px] min-h-[60px]"
+          placeholder="Notes..."
+          className="w-[150px] text-xs"
         />
       </TableCell>
 

@@ -249,21 +249,39 @@ export const PatientSales = ({ sales = [], saleItems = [], isLoading = false, pa
 
                       {/* Payment */}
                       <td className="px-3 py-2.5 text-center border-r border-slate-100">
-                        {sale.payment ? (
+                        {sale.payments && sale.payments.length > 0 ? (
                           <div className="flex flex-col gap-1 items-center">
-                            <div className="flex items-center gap-1">
-                              <CreditCard className="h-3 w-3 text-green-600" />
-                              <span className="text-xs font-medium text-green-700">
-                                {formatAmount(sale.payment.amount)} DT
-                              </span>
-                            </div>
-                            <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
-                              {getMethodLabel(sale.payment.method)}
-                            </Badge>
-                            {sale.payment.status && (
-                              <Badge variant="outline" className={`text-xs ${getPaymentStatusColor(sale.payment.status)}`}>
-                                {getPaymentStatusLabel(sale.payment.status)}
-                              </Badge>
+                            {sale.payments.length === 1 ? (
+                              // Single payment - show full details
+                              <>
+                                <div className="flex items-center gap-1">
+                                  <CreditCard className="h-3 w-3 text-green-600" />
+                                  <span className="text-xs font-medium text-green-700">
+                                    {formatAmount(sale.payments[0].amount)} DT
+                                  </span>
+                                </div>
+                                <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                                  {getMethodLabel(sale.payments[0].method)}
+                                </Badge>
+                                {sale.payments[0].status && (
+                                  <Badge variant="outline" className={`text-xs ${getPaymentStatusColor(sale.payments[0].status)}`}>
+                                    {getPaymentStatusLabel(sale.payments[0].status)}
+                                  </Badge>
+                                )}
+                              </>
+                            ) : (
+                              // Multiple payments - show aggregate
+                              <>
+                                <div className="flex items-center gap-1">
+                                  <CreditCard className="h-3 w-3 text-green-600" />
+                                  <span className="text-xs font-medium text-green-700">
+                                    {formatAmount(sale.payments.reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0))} DT
+                                  </span>
+                                </div>
+                                <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                                  {sale.payments.length} paiement(s)
+                                </Badge>
+                              </>
                             )}
                           </div>
                         ) : (

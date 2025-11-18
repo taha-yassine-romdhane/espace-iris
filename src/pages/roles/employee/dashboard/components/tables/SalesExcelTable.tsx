@@ -140,7 +140,12 @@ export default function EmployeeSalesExcelTable() {
       return (
         <div className="flex items-center gap-2">
           <User className="h-3 w-3 text-blue-600" />
-          <span className="text-xs">{`${sale.patient.firstName} ${sale.patient.lastName}`}</span>
+          <span
+            className="text-xs text-green-600 hover:text-green-800 hover:underline cursor-pointer transition-colors"
+            onClick={() => router.push(`/roles/employee/renseignement/patient/${sale.patient?.id}`)}
+          >
+            {`${sale.patient.firstName} ${sale.patient.lastName}`}
+          </span>
         </div>
       );
     }

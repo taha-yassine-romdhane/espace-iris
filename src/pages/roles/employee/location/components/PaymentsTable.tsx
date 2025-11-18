@@ -707,7 +707,6 @@ export default function PaymentsTable() {
                       <SelectItem value="CASH">Espèces</SelectItem>
                       <SelectItem value="CHEQUE">Chèque</SelectItem>
                       <SelectItem value="VIREMENT">Virement</SelectItem>
-                      <SelectItem value="CNAM">CNAM</SelectItem>
                     </SelectContent>
                   </Select>
                 </td>
@@ -843,20 +842,26 @@ export default function PaymentsTable() {
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <Select
-                        value={editData.paymentMethod}
-                        onValueChange={(value) => setEditData({ ...editData, paymentMethod: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="CASH">Espèces</SelectItem>
-                          <SelectItem value="CHEQUE">Chèque</SelectItem>
-                          <SelectItem value="VIREMENT">Virement</SelectItem>
-                          <SelectItem value="CNAM">CNAM</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      {payment.paymentMethod === 'CNAM' ? (
+                        <Badge variant="outline" className="text-xs">
+                          <CreditCard className="h-3 w-3 mr-1" />
+                          {getMethodLabel(payment.paymentMethod)}
+                        </Badge>
+                      ) : (
+                        <Select
+                          value={editData.paymentMethod}
+                          onValueChange={(value) => setEditData({ ...editData, paymentMethod: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="CASH">Espèces</SelectItem>
+                            <SelectItem value="CHEQUE">Chèque</SelectItem>
+                            <SelectItem value="VIREMENT">Virement</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <Select

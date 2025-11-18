@@ -245,25 +245,44 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         // Automatically create CNAM payment
         const paymentCode = await generatePaymentCode(tx as any);
+
+        // Determine payment source based on category
+        // Map: LOCATION → RENTAL, ACHAT → SALE
+        const bondCategory = category || 'LOCATION';
+        const paymentSource = bondCategory === 'ACHAT' ? 'SALE' : 'RENTAL';
+
+        // Build payment data conditionally
+        const paymentData: any = {
+          paymentCode,
+          paymentType: 'RENTAL', // Required field - no SALE/ACHAT value in enum, use source field instead
+          method: 'CNAM', // Method: CNAM
+          status: 'PAID', // Status: Payé
+          amount: bonAmount, // Amount CNAM covers
+          paymentDate: startDate ? new Date(startDate) : new Date(),
+          cnamBonId: cnamBon.id, // Link to CNAM bond
+          patientId: patientId,
+          source: paymentSource, // 'RENTAL' or 'SALE' for Payment model
+          notes: `Paiement CNAM automatique pour bon ${finalBonNumber}`,
+        };
+
+        // Only set period dates for rental (LOCATION category) payments
+        if (bondCategory === 'LOCATION') {
+          paymentData.periodStartDate = startDate ? new Date(startDate) : null;
+          paymentData.periodEndDate = endDate ? new Date(endDate) : null;
+        }
+
+        // Link to rental or sale based on category
+        if (rentalId) {
+          paymentData.rentalId = rentalId;
+        } else if (saleId) {
+          paymentData.saleId = saleId;
+        }
+
         const cnamPayment = await tx.payment.create({
-          data: {
-            paymentCode,
-            paymentType: 'RENTAL', // Type: Location
-            method: 'CNAM', // Method: CNAM
-            status: 'PAID', // Status: Payé
-            amount: bonAmount, // Amount CNAM covers
-            paymentDate: startDate ? new Date(startDate) : new Date(),
-            periodStartDate: startDate ? new Date(startDate) : null,
-            periodEndDate: endDate ? new Date(endDate) : null,
-            cnamBonId: cnamBon.id, // Link to CNAM bond
-            rentalId: rentalId || null,
-            patientId: patientId,
-            source: 'RENTAL',
-            notes: `Paiement CNAM automatique pour bon ${finalBonNumber}`,
-          },
+          data: paymentData,
         });
 
-        console.log('[CNAM-BOND-CREATE] Auto-created CNAM payment:', paymentCode);
+        console.log('[CNAM-BOND-CREATE] Auto-created CNAM payment:', paymentCode, 'Source:', paymentSource);
 
         return { cnamBon, cnamPayment };
       });

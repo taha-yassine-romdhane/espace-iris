@@ -38,8 +38,6 @@ interface Payment {
   referenceNumber?: string;
   chequeNumber?: string;
   bankName?: string;
-  cnamCardNumber?: string;
-  cnamBonId?: string;
   dueDate?: string;
   notes?: string;
   saleId?: string;
@@ -96,8 +94,6 @@ export default function PaymentsExcelTable() {
     referenceNumber: '',
     chequeNumber: '',
     bankName: '',
-    cnamCardNumber: '',
-    cnamBonId: '',
     dueDate: '',
     notes: '',
   });
@@ -130,15 +126,7 @@ export default function PaymentsExcelTable() {
     },
   });
 
-  // Fetch CNAM bons for sales (ACHAT category)
-  const { data: cnamBonsData } = useQuery({
-    queryKey: ['sale-cnam-bons'],
-    queryFn: async () => {
-      const response = await fetch('/api/cnam-bons?category=ACHAT');
-      if (!response.ok) throw new Error('Failed to fetch CNAM bons');
-      return response.json();
-    },
-  });
+  // CNAM payments are auto-created from CNAM bonds - no manual creation needed
 
   // Fetch patients for client selector
   const { data: patients } = useQuery({
@@ -299,8 +287,7 @@ export default function PaymentsExcelTable() {
         payment.paymentCode?.toLowerCase().includes(searchLower) ||
         clientName.toLowerCase().includes(searchLower) ||
         payment.referenceNumber?.toLowerCase().includes(searchLower) ||
-        payment.chequeNumber?.toLowerCase().includes(searchLower) ||
-        payment.cnamCardNumber?.toLowerCase().includes(searchLower);
+        payment.chequeNumber?.toLowerCase().includes(searchLower);
 
       // Status filter
       const matchesStatus = statusFilter === 'all' || payment.status === statusFilter;
@@ -462,13 +449,8 @@ export default function PaymentsExcelTable() {
           ...(paymentData.method === 'MANDAT' && {
             mandatNumber: paymentData.referenceNumber,
           }),
-          ...(paymentData.method === 'CNAM' && {
-            dossierNumber: paymentData.referenceNumber,
-            cnamCardNumber: paymentData.cnamCardNumber,
-            cnamBonId: paymentData.cnamBonId,
-          }),
           // For CASH or any other method, add reference if provided
-          ...(paymentData.referenceNumber && !['CHEQUE', 'VIREMENT', 'BANK_TRANSFER', 'TRAITE', 'MANDAT', 'CNAM'].includes(paymentData.method) && {
+          ...(paymentData.referenceNumber && !['CHEQUE', 'VIREMENT', 'BANK_TRANSFER', 'TRAITE', 'MANDAT'].includes(paymentData.method) && {
             reference: paymentData.referenceNumber,
           }),
         }),
@@ -496,8 +478,6 @@ export default function PaymentsExcelTable() {
         referenceNumber: '',
         chequeNumber: '',
         bankName: '',
-        cnamCardNumber: '',
-        cnamBonId: '',
         dueDate: '',
         notes: '',
       });
@@ -552,8 +532,6 @@ export default function PaymentsExcelTable() {
       referenceNumber: '',
       chequeNumber: '',
       bankName: '',
-      cnamCardNumber: '',
-      cnamBonId: '',
       dueDate: '',
       notes: '',
     });
@@ -576,8 +554,6 @@ export default function PaymentsExcelTable() {
         referenceNumber: editedData.referenceNumber,
         chequeNumber: editedData.chequeNumber,
         bankName: editedData.bankName,
-        cnamCardNumber: editedData.cnamCardNumber,
-        cnamBonId: editedData.cnamBonId,
         dueDate: editedData.dueDate,
         notes: editedData.notes,
       };
@@ -619,10 +595,10 @@ export default function PaymentsExcelTable() {
       CHEQUE: { label: 'Chèque', className: 'bg-green-100 text-green-700' },
       VIREMENT: { label: 'Virement', className: 'bg-purple-100 text-purple-700' },
       BANK_TRANSFER: { label: 'Virement Bancaire', className: 'bg-cyan-100 text-cyan-700' },
-      CNAM: { label: 'CNAM', className: 'bg-red-100 text-red-700' },
       TRAITE: { label: 'Traite', className: 'bg-amber-100 text-amber-700' },
       MANDAT: { label: 'Mandat', className: 'bg-indigo-100 text-indigo-700' },
       MIXED: { label: 'Mixte', className: 'bg-gray-100 text-gray-700' },
+      CNAM: { label: 'CNAM (Auto)', className: 'bg-red-100 text-red-700' }, // Display only, can't be manually created
     };
     const config = methodConfig[method] || { label: method, className: 'bg-gray-100 text-gray-700' };
     return <Badge variant="outline" className={`${config.className} text-xs`}>{config.label}</Badge>;
@@ -784,9 +760,9 @@ export default function PaymentsExcelTable() {
                 <SelectItem value="CHEQUE">Chèque</SelectItem>
                 <SelectItem value="VIREMENT">Virement</SelectItem>
                 <SelectItem value="BANK_TRANSFER">Virement Bancaire</SelectItem>
-                <SelectItem value="CNAM">CNAM</SelectItem>
                 <SelectItem value="TRAITE">Traite</SelectItem>
                 <SelectItem value="MANDAT">Mandat</SelectItem>
+                <SelectItem value="CNAM">CNAM (Auto-créé uniquement)</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -984,7 +960,7 @@ export default function PaymentsExcelTable() {
                 <th className="px-3 py-3 text-center text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[120px]">Méthode</th>
                 <th className="px-3 py-3 text-right text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[120px]">Montant</th>
                 <th className="px-3 py-3 text-center text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[100px]">Statut</th>
-                <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[120px]">N° CNAM</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[120px]">Référence</th>
                 <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[120px]">Échéance</th>
                 <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200 min-w-[200px]">Notes</th>
                 <th className="px-3 py-3 text-center text-xs font-semibold text-slate-700 sticky right-0 bg-slate-50 shadow-[-2px_0_4px_rgba(0,0,0,0.05)] min-w-[120px]">Actions</th>
@@ -1081,51 +1057,22 @@ export default function PaymentsExcelTable() {
                         <SelectItem value="CHEQUE">Chèque</SelectItem>
                         <SelectItem value="VIREMENT">Virement</SelectItem>
                         <SelectItem value="BANK_TRANSFER">Virement Bancaire</SelectItem>
-                        <SelectItem value="CNAM">CNAM</SelectItem>
                         <SelectItem value="TRAITE">Traite</SelectItem>
                         <SelectItem value="MANDAT">Mandat</SelectItem>
                       </SelectContent>
                     </Select>
                   </td>
 
-                  {/* Amount - or CNAM Bon Selector if method is CNAM */}
+                  {/* Amount */}
                   <td className="px-3 py-2.5 border-r border-slate-100">
-                    {newPayment.method === 'CNAM' ? (
-                      <Select
-                        value={newPayment.cnamBonId}
-                        onValueChange={(value) => {
-                          const selectedBon = cnamBonsData?.find((bon: any) => bon.id === value);
-                          setNewPayment({
-                            ...newPayment,
-                            cnamBonId: value,
-                            amount: selectedBon ? parseFloat(selectedBon.bonAmount || selectedBon.bondAmount || 0) : 0,
-                            // Also update the cnamCardNumber with the dossierNumber from the bon
-                            cnamCardNumber: selectedBon?.dossierNumber || newPayment.cnamCardNumber
-                          });
-                        }}
-                        disabled={!newPayment.saleId}
-                      >
-                        <SelectTrigger className="h-8 text-xs">
-                          <SelectValue placeholder="Sélectionner bon CNAM" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {cnamBonsData?.filter((bon: any) => bon.saleId === newPayment.saleId).map((bon: any) => (
-                            <SelectItem key={bon.id} value={bon.id}>
-                              {bon.bonType} - {formatCurrency(bon.bonAmount || bon.bondAmount || 0)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={newPayment.amount || ''}
-                        onChange={(e) => setNewPayment({ ...newPayment, amount: parseFloat(e.target.value) || 0 })}
-                        className="h-8 text-xs text-right"
-                        placeholder="0.00"
-                      />
-                    )}
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={newPayment.amount || ''}
+                      onChange={(e) => setNewPayment({ ...newPayment, amount: parseFloat(e.target.value) || 0 })}
+                      className="h-8 text-xs text-right"
+                      placeholder="0.00"
+                    />
                   </td>
 
                   {/* Status */}
@@ -1145,29 +1092,15 @@ export default function PaymentsExcelTable() {
                     </Select>
                   </td>
 
-                  {/* Reference / CNAM Number */}
+                  {/* Reference Number */}
                   <td className="px-3 py-2.5 border-r border-slate-100">
-                    {newPayment.method === 'CNAM' ? (
-                      <div className="flex flex-col gap-2">
-                        {newPayment.cnamBonId && (
-                          <Badge variant="outline" className="text-xs font-mono bg-green-50 text-green-700 border-green-200 whitespace-nowrap">
-                            {(() => {
-                              const bon = cnamBonsData?.find((b: any) => b.id === newPayment.cnamBonId);
-                              return bon?.bonNumber || bon?.dossierNumber || 'N/A';
-                            })()}
-                          </Badge>
-                        )}
-                        <Input
-                          type="text"
-                          placeholder="N° Dossier CNAM"
-                          value={newPayment.cnamCardNumber || ''}
-                          onChange={(e) => setNewPayment({ ...newPayment, cnamCardNumber: e.target.value })}
-                          className="h-8 text-xs font-mono"
-                        />
-                      </div>
-                    ) : (
-                      <div className="text-xs text-slate-400">-</div>
-                    )}
+                    <Input
+                      type="text"
+                      placeholder="Référence"
+                      value={newPayment.referenceNumber || ''}
+                      onChange={(e) => setNewPayment({ ...newPayment, referenceNumber: e.target.value })}
+                      className="h-8 text-xs"
+                    />
                   </td>
 
                   {/* Due Date */}
@@ -1307,7 +1240,7 @@ export default function PaymentsExcelTable() {
 
                     {/* Method */}
                     <td className="px-3 py-2.5 text-center border-r border-slate-100">
-                      {isEditing ? (
+                      {isEditing && payment.method !== 'CNAM' ? (
                         <Select
                           value={currentData.method || payment.method}
                           onValueChange={(value) => handleFieldChange('method', value)}
@@ -1320,7 +1253,6 @@ export default function PaymentsExcelTable() {
                             <SelectItem value="CHEQUE">Chèque</SelectItem>
                             <SelectItem value="VIREMENT">Virement</SelectItem>
                             <SelectItem value="BANK_TRANSFER">Virement Bancaire</SelectItem>
-                            <SelectItem value="CNAM">CNAM</SelectItem>
                             <SelectItem value="TRAITE">Traite</SelectItem>
                             <SelectItem value="MANDAT">Mandat</SelectItem>
                           </SelectContent>
@@ -1376,61 +1308,18 @@ export default function PaymentsExcelTable() {
                       )}
                     </td>
 
-                    {/* CNAM Number */}
+                    {/* Reference Number */}
                     <td className="px-3 py-2.5 text-xs text-slate-600 border-r border-slate-100">
-                      {isEditing && payment.method === 'CNAM' ? (
-                        <div className="flex flex-col gap-2">
-                          <Select
-                            value={currentData.cnamBonId || payment.cnamBonId || ''}
-                            onValueChange={(value) => {
-                              const selectedBon = cnamBonsData?.find((bon: any) => bon.id === value);
-                              handleFieldChange('cnamBonId', value);
-                              if (selectedBon) {
-                                handleFieldChange('amount', parseFloat(selectedBon.bonAmount || selectedBon.bondAmount || 0));
-                                // Also update the cnamCardNumber with the dossierNumber from the bon
-                                if (selectedBon.dossierNumber) {
-                                  handleFieldChange('cnamCardNumber', selectedBon.dossierNumber);
-                                }
-                              }
-                            }}
-                            disabled={!payment.saleId}
-                          >
-                            <SelectTrigger className="h-8 text-xs">
-                              <SelectValue placeholder="Sélectionner bon" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {cnamBonsData?.filter((bon: any) => bon.saleId === payment.saleId).map((bon: any) => (
-                                <SelectItem key={bon.id} value={bon.id}>
-                                  {bon.bonNumber || bon.dossierNumber} - {bon.bonType}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Input
-                            type="text"
-                            placeholder="N° Dossier CNAM"
-                            value={currentData.cnamCardNumber || payment.cnamCardNumber || ''}
-                            onChange={(e) => handleFieldChange('cnamCardNumber', e.target.value)}
-                            className="h-8 text-xs font-mono"
-                          />
-                        </div>
-                      ) : payment.method === 'CNAM' ? (
-                        <div className="flex flex-col gap-1">
-                          {payment.cnamBonId ? (
-                            <Badge variant="outline" className="text-xs font-mono bg-green-50 text-green-700 border-green-200 whitespace-nowrap">
-                              {(() => {
-                                const bon = cnamBonsData?.find((b: any) => b.id === payment.cnamBonId);
-                                return bon?.bonNumber || bon?.dossierNumber || 'N/A';
-                              })()}
-                            </Badge>
-                          ) : payment.cnamCardNumber ? (
-                            <span className="text-xs font-mono text-green-700">{payment.cnamCardNumber}</span>
-                          ) : (
-                            <div className="text-slate-400">-</div>
-                          )}
-                        </div>
+                      {isEditing ? (
+                        <Input
+                          type="text"
+                          placeholder="Référence"
+                          value={currentData.referenceNumber || payment.referenceNumber || ''}
+                          onChange={(e) => handleFieldChange('referenceNumber', e.target.value)}
+                          className="h-8 text-xs"
+                        />
                       ) : (
-                        <div className="text-slate-400">-</div>
+                        <div className="text-xs">{payment.referenceNumber || (payment as any).cnamCardNumber || '-'}</div>
                       )}
                     </td>
 

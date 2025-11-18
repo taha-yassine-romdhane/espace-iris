@@ -357,6 +357,16 @@ export default function EmployeeAppointmentsExcelTable() {
         const patientFullName = appointment.patient
           ? `${appointment.patient.firstName || ''} ${appointment.patient.lastName || ''}`.trim()
           : '-';
+        if (appointment.patient?.id) {
+          return (
+            <span
+              className="text-xs text-green-600 hover:text-green-800 hover:underline cursor-pointer transition-colors"
+              onClick={() => router.push(`/roles/employee/renseignement/patient/${appointment.patient?.id}`)}
+            >
+              {patientFullName}
+            </span>
+          );
+        }
         return <span className="text-xs">{patientFullName || '-'}</span>;
 
       case 'appointmentType':

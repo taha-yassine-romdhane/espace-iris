@@ -23,7 +23,8 @@ import {
   PatientRentals,
   PatientSales,
   PatientAppointments,
-  PatientCNAMBonds
+  PatientCNAMBonds,
+  PatientRDV
 } from '@/components/patient';
 import { EmployeePatientPrintDialog } from '@/components/employee/EmployeePatientPrintDialog';
 
@@ -450,6 +451,13 @@ export default function PatientDetailsPage() {
         {/* Payments Section */}
         <PatientPayments
           payments={patient.payments || []}
+          isLoading={false}
+          patientId={patient.id}
+        />
+
+        {/* RDV Section */}
+        <PatientRDV
+          appointments={patient.appointments || []}
           isLoading={false}
           patientId={patient.id}
         />

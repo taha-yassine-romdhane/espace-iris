@@ -315,6 +315,9 @@ export default async function handler(
             }
           },
           manualTasks: {
+            where: session.user.role === 'EMPLOYEE'
+              ? { assignedToId: session.user.id }
+              : undefined,
             include: {
               assignedTo: {
                 select: {
@@ -333,6 +336,30 @@ export default async function handler(
             },
             orderBy: {
               createdAt: 'desc'
+            }
+          },
+          appointments: {
+            where: session.user.role === 'EMPLOYEE'
+              ? { assignedToId: session.user.id }
+              : undefined,
+            include: {
+              assignedTo: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                }
+              },
+              createdBy: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                }
+              }
+            },
+            orderBy: {
+              scheduledDate: 'desc'
             }
           }
         },
@@ -495,6 +522,7 @@ export default async function handler(
               };
             })),
             manualTasks: patient.manualTasks || [],
+            appointments: patient.appointments || [],
             createdAt: patient.createdAt,
             updatedAt: patient.updatedAt,
           };
