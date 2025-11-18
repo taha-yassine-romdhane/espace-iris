@@ -1,16 +1,27 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Receipt, AlertCircle, CreditCard, Calendar, FileText, Banknote, Building2, Hash } from 'lucide-react';
+import { Receipt, AlertCircle, CreditCard, Calendar, FileText, Banknote, Building2, Hash, Edit2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { AddPaymentForm } from '@/components/employee/patient-details-forms/AddPaymentForm';
 
 interface PatientPaymentsProps {
   payments: any[];
   isLoading?: boolean;
+  patientId?: string;
 }
 
-export const PatientPayments = ({ payments = [], isLoading = false }: PatientPaymentsProps) => {
+export const PatientPayments = ({ payments = [], isLoading = false, patientId }: PatientPaymentsProps) => {
+  const [showManageDialog, setShowManageDialog] = useState(false);
+
+  const handleManageSuccess = () => {
+    setShowManageDialog(false);
+    // Data will be automatically refreshed by React Query invalidation
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'PAID':
@@ -117,13 +128,26 @@ export const PatientPayments = ({ payments = [], isLoading = false }: PatientPay
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Receipt className="h-5 w-5 text-blue-500" />
-          Historique des paiements
-        </CardTitle>
-        <CardDescription>
-          Tous les paiements effectués par ce patient
-        </CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Receipt className="h-5 w-5 text-blue-500" />
+              Historique des paiements
+            </CardTitle>
+            <CardDescription>
+              Tous les paiements effectués par ce patient
+            </CardDescription>
+          </div>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => setShowManageDialog(true)}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+          >
+            <Edit2 className="h-4 w-4" />
+            Gérer
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -347,6 +371,25 @@ export const PatientPayments = ({ payments = [], isLoading = false }: PatientPay
           </div>
         )}
       </CardContent>
+
+      {/* Manage Payments Dialog */}
+      <Dialog open={showManageDialog} onOpenChange={setShowManageDialog}>
+        <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-green-700">
+              <Receipt className="h-5 w-5 text-green-600" />
+              Gérer les Paiements
+            </DialogTitle>
+          </DialogHeader>
+          {patientId && (
+            <AddPaymentForm
+              patientId={patientId}
+              payments={payments}
+              onSuccess={handleManageSuccess}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };

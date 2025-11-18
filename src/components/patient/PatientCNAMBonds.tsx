@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, AlertCircle, Calendar, DollarSign } from 'lucide-react';
+import { FileText, AlertCircle, Calendar, DollarSign, Edit2 } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -10,7 +10,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
+import { AddCNAMBondForm } from '@/components/employee/patient-details-forms/AddCNAMBondForm';
 
 interface CNAMBond {
   id: string;
@@ -32,9 +35,17 @@ interface CNAMBond {
 interface PatientCNAMBondsProps {
   cnamBonds: CNAMBond[];
   isLoading?: boolean;
+  patientId?: string;
 }
 
-export const PatientCNAMBonds = ({ cnamBonds = [], isLoading = false }: PatientCNAMBondsProps) => {
+export const PatientCNAMBonds = ({ cnamBonds = [], isLoading = false, patientId }: PatientCNAMBondsProps) => {
+  const [showManageDialog, setShowManageDialog] = useState(false);
+
+  const handleManageSuccess = () => {
+    setShowManageDialog(false);
+    // Data will be automatically refreshed by React Query invalidation
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'APPROVED':
@@ -135,13 +146,26 @@ export const PatientCNAMBonds = ({ cnamBonds = [], isLoading = false }: PatientC
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <FileText className="h-5 w-5 text-blue-500" />
-          Bons CNAM
-        </CardTitle>
-        <CardDescription>
-          Tous les bons CNAM associés à ce patient
-        </CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-blue-500" />
+              Bons CNAM
+            </CardTitle>
+            <CardDescription>
+              Tous les bons CNAM associés à ce patient
+            </CardDescription>
+          </div>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => setShowManageDialog(true)}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+          >
+            <Edit2 className="h-4 w-4" />
+            Gérer
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -282,6 +306,25 @@ export const PatientCNAMBonds = ({ cnamBonds = [], isLoading = false }: PatientC
           </div>
         )}
       </CardContent>
+
+      {/* Manage CNAM Bonds Dialog */}
+      <Dialog open={showManageDialog} onOpenChange={setShowManageDialog}>
+        <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-green-700">
+              <FileText className="h-5 w-5 text-green-600" />
+              Gérer les Bons CNAM
+            </DialogTitle>
+          </DialogHeader>
+          {patientId && (
+            <AddCNAMBondForm
+              patientId={patientId}
+              cnamBonds={cnamBonds}
+              onSuccess={handleManageSuccess}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };

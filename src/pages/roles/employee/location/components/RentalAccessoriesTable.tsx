@@ -30,6 +30,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { RentalSelectorDialog } from '@/components/dialogs/RentalSelectorDialog';
 
 interface RentalAccessory {
   id?: string;
@@ -46,7 +47,7 @@ interface RentalAccessory {
       firstName: string;
       lastName: string;
     };
-    medicalDevice?: { name: string; deviceCode: string };
+    medicalDevice?: { name: string; deviceCode: string; serialNumber?: string };
   };
   product?: {
     id: string;
@@ -81,6 +82,9 @@ export default function RentalAccessoriesTable() {
   const [dialogMode, setDialogMode] = useState<'new' | 'edit'>('new');
   const [productSearchTerm, setProductSearchTerm] = useState("");
   const [selectedProductType, setSelectedProductType] = useState<'all' | 'ACCESSORY' | 'SPARE_PART'>('all');
+  const [isRentalDialogOpen, setIsRentalDialogOpen] = useState(false);
+  const [rentalDialogMode, setRentalDialogMode] = useState<'new' | 'edit'>('new');
+  const [selectedRentalCode, setSelectedRentalCode] = useState<string>('');
 
   // Fetch rental accessories
   const { data: accessoriesData, isLoading } = useQuery({
@@ -290,21 +294,16 @@ export default function RentalAccessoriesTable() {
             {newRow && (
               <tr className="bg-green-50 border-b-2 border-green-200">
                 <td className="px-4 py-3">
-                  <Select
-                    value={newRow.rentalId}
-                    onValueChange={(value) => setNewRow({ ...newRow, rentalId: value })}
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      setRentalDialogMode('new');
+                      setIsRentalDialogOpen(true);
+                    }}
                   >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Sélectionner location" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {rentals.map((rental: any) => (
-                        <SelectItem key={rental.id} value={rental.id}>
-                          {rental.rentalCode}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    {selectedRentalCode || 'Sélectionner location'}
+                  </Button>
                 </td>
                 <td className="px-4 py-3">
                   <span className="text-xs text-slate-500">Auto</span>
@@ -392,21 +391,18 @@ export default function RentalAccessoriesTable() {
                 return (
                   <tr key={accessory.id} className="bg-green-50 border-b-2 border-green-200">
                     <td className="px-4 py-3">
-                      <Select
-                        value={editData.rentalId}
-                        onValueChange={(value) => setEditData({ ...editData, rentalId: value })}
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start"
+                        onClick={() => {
+                          setRentalDialogMode('edit');
+                          const rental = rentals.find((r: any) => r.id === editData.rentalId);
+                          setSelectedRentalCode(rental?.rentalCode || '');
+                          setIsRentalDialogOpen(true);
+                        }}
                       >
-                        <SelectTrigger className="w-full">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {rentals.map((rental: any) => (
-                            <SelectItem key={rental.id} value={rental.id}>
-                              {rental.rentalCode}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        {rentals.find((r: any) => r.id === editData.rentalId)?.rentalCode || 'Sélectionner location'}
+                      </Button>
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-xs text-slate-500">Auto</span>
@@ -501,7 +497,7 @@ export default function RentalAccessoriesTable() {
                   <td className="px-4 py-3">
                     {accessory.rental?.patient ? (
                       <Link
-                        href={`/roles/admin/renseignements?patientId=${accessory.rental.patient.id}`}
+                        href={`/roles/employee/renseignement/patient/${accessory.rental.patient.id}`}
                         className="flex flex-col hover:underline cursor-pointer"
                       >
                         <span className="text-sm font-medium text-green-600">
@@ -522,6 +518,11 @@ export default function RentalAccessoriesTable() {
                     <div className="text-xs text-slate-500">
                       {accessory.rental?.medicalDevice?.deviceCode}
                     </div>
+                    {accessory.rental?.medicalDevice?.serialNumber && (
+                      <div className="text-xs text-slate-500 font-mono">
+                        SN: {accessory.rental.medicalDevice.serialNumber}
+                      </div>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
@@ -759,6 +760,21 @@ export default function RentalAccessoriesTable() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Rental Selection Dialog */}
+      <RentalSelectorDialog
+        open={isRentalDialogOpen}
+        onOpenChange={setIsRentalDialogOpen}
+        onSelect={(rentalId, rentalCode) => {
+          setSelectedRentalCode(rentalCode);
+          if (rentalDialogMode === 'new') {
+            setNewRow({ ...newRow!, rentalId });
+          } else {
+            setEditData({ ...editData, rentalId });
+          }
+        }}
+        selectedRentalId={rentalDialogMode === 'new' ? newRow?.rentalId : editData.rentalId}
+      />
     </div>
   );
 }

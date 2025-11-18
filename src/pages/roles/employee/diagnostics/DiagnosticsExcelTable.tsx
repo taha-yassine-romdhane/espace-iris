@@ -582,7 +582,7 @@ export default function DiagnosticsExcelTable() {
         }
         return (
           <Link
-            href={`/roles/admin/renseignement/patient/${diagnostic.patient.id}`}
+            href={`/roles/employee/renseignement/patient/${diagnostic.patient.id}`}
             className="inline-block hover:opacity-80 transition-opacity"
           >
             <Badge variant="outline" className="text-xs font-mono bg-blue-50 text-blue-700 border-blue-200 cursor-pointer hover:bg-blue-100">
@@ -600,7 +600,7 @@ export default function DiagnosticsExcelTable() {
         }
         return (
           <Link
-            href={`/roles/admin/renseignement/patient/${diagnostic.patient.id}`}
+            href={`/roles/employee/renseignement/patient/${diagnostic.patient.id}`}
             className="text-xs whitespace-nowrap text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
           >
             {patientName}
@@ -614,7 +614,7 @@ export default function DiagnosticsExcelTable() {
         }
         return (
           <Link
-            href={`/roles/admin/renseignement/patient/${diagnostic.patient.id}`}
+            href={`/roles/employee/renseignement/patient/${diagnostic.patient.id}`}
             className="inline-block hover:opacity-80 transition-opacity"
           >
             <Badge variant="outline" className="text-xs font-mono bg-purple-50 text-purple-700 border-purple-200 whitespace-nowrap cursor-pointer hover:bg-purple-100">

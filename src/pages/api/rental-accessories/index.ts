@@ -45,6 +45,7 @@ export default async function handler(
                 select: {
                   name: true,
                   deviceCode: true,
+                  serialNumber: true,
                 },
               },
             },

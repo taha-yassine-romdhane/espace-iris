@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ClipboardCheck, AlertCircle, Clock, User, UserCheck } from 'lucide-react';
+import { ClipboardCheck, AlertCircle, Clock, User, UserCheck, Edit2 } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -10,6 +10,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AddAppointmentForm } from '@/components/employee/patient-details-forms/AddAppointmentForm';
 
 interface ManualTask {
   id: string;
@@ -35,9 +38,17 @@ interface ManualTask {
 interface PatientAppointmentsProps {
   manualTasks?: ManualTask[];
   isLoading?: boolean;
+  patientId?: string;
+  patientName?: string;
 }
 
-export const PatientAppointments = ({ manualTasks = [], isLoading = false }: PatientAppointmentsProps) => {
+export const PatientAppointments = ({ manualTasks = [], isLoading = false, patientId, patientName }: PatientAppointmentsProps) => {
+  const [showAddDialog, setShowAddDialog] = useState(false);
+
+  const handleAddSuccess = () => {
+    setShowAddDialog(false);
+    // Data will be automatically refreshed by React Query invalidation
+  };
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'PENDING':
@@ -100,13 +111,26 @@ export const PatientAppointments = ({ manualTasks = [], isLoading = false }: Pat
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <ClipboardCheck className="h-5 w-5 text-blue-500" />
-          Tâches manuelles
-        </CardTitle>
-        <CardDescription>
-          Toutes les tâches assignées pour ce patient
-        </CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <ClipboardCheck className="h-5 w-5 text-blue-500" />
+              Tâches manuelles
+            </CardTitle>
+            <CardDescription>
+              Toutes les tâches assignées pour ce patient
+            </CardDescription>
+          </div>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => setShowAddDialog(true)}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+          >
+            <Edit2 className="h-4 w-4" />
+            Gérer
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -329,6 +353,25 @@ export const PatientAppointments = ({ manualTasks = [], isLoading = false }: Pat
           </div>
         )}
       </CardContent>
+
+      {/* Manage Appointments Dialog */}
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-green-700">
+              <ClipboardCheck className="h-5 w-5 text-green-600" />
+              Gérer les Tâches Manuelles
+            </DialogTitle>
+          </DialogHeader>
+          {patientId && (
+            <AddAppointmentForm
+              patientId={patientId}
+              manualTasks={manualTasks}
+              onSuccess={handleAddSuccess}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };

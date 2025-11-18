@@ -144,7 +144,7 @@ const Navbar: React.FC<NavbarProps> = ({ onSidebarToggle, sidebarExpanded = true
         if (path.includes('/notifications')) return 'Notifications';
         if (path.includes('/history')) return 'Historique';
         
-        return 'Elite Medicale Services';
+        return 'Iris Medical';
     };
     
     // Get notification icon based on type

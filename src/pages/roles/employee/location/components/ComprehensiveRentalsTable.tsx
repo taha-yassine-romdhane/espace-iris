@@ -820,14 +820,14 @@ function ViewRowComponent({ rental, onEdit, onDelete, getStatusBadge }: any) {
           <div>
             <div
               className="text-sm font-medium text-green-600 hover:text-green-800 hover:underline cursor-pointer transition-colors"
-              onClick={() => router.push(`/roles/admin/renseignement/patient/${rental.patient.id}`)}
+              onClick={() => router.push(`/roles/employee/renseignement/patient/${rental.patient.id}`)}
             >
               {patientName}
             </div>
             {rental.patient?.patientCode && (
               <div
                 className="text-xs text-slate-500 font-mono cursor-pointer hover:text-green-600 transition-colors"
-                onClick={() => router.push(`/roles/admin/renseignement/patient/${rental.patient.id}`)}
+                onClick={() => router.push(`/roles/employee/renseignement/patient/${rental.patient.id}`)}
               >
                 {rental.patient.patientCode}
               </div>

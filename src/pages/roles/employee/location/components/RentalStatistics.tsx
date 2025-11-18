@@ -499,7 +499,7 @@ export default function RentalStatistics() {
                           {stat.patientId ? (
                             <div
                               className="font-medium text-green-600 hover:text-green-800 hover:underline cursor-pointer transition-colors"
-                              onClick={() => router.push(`/roles/admin/renseignement/patient/${stat.patientId}`)}
+                              onClick={() => router.push(`/roles/employee/renseignement/patient/${stat.patientId}`)}
                             >
                               {stat.patientName}
                             </div>
@@ -509,7 +509,7 @@ export default function RentalStatistics() {
                           {stat.patientCode && (
                             <div
                               className="text-xs text-slate-500 font-mono cursor-pointer hover:text-green-600 transition-colors"
-                              onClick={() => router.push(`/roles/admin/renseignement/patient/${stat.patientId}`)}
+                              onClick={() => router.push(`/roles/employee/renseignement/patient/${stat.patientId}`)}
                             >
                               {stat.patientCode}
                             </div>

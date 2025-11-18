@@ -178,12 +178,12 @@ const SaleInvoice: React.FC<SaleInvoiceProps> = ({ sale }) => {
             <div className="relative h-16 w-32 mr-4">
               <img 
                 src="/logo_No_BG.png" 
-                alt="Elite Medicale Services" 
+                alt="Iris Medical" 
                 className="object-contain w-full h-auto"
               />
             </div>
             <div>
-              <div className="text-xl font-bold text-blue-800">Elite Medicale Services</div>
+              <div className="text-xl font-bold text-blue-800">Iris Medical</div>
               <div className="text-sm text-gray-600">Matériel et Services Médicaux</div>
             </div>
           </div>

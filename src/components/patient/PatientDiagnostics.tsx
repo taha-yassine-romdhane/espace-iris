@@ -11,21 +11,29 @@ import {
 } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useRouter } from 'next/router';
+import { AddDiagnosticForm } from '@/components/employee/patient-details-forms/AddDiagnosticForm';
 
 interface PatientDiagnosticsProps {
   diagnostics: any[];
   isLoading?: boolean;
   patientId?: string;
+  patientName?: string;
 }
 
-export const PatientDiagnostics = ({ diagnostics = [], isLoading = false, patientId }: PatientDiagnosticsProps) => {
+export const PatientDiagnostics = ({ diagnostics = [], isLoading = false, patientId, patientName }: PatientDiagnosticsProps) => {
   const router = useRouter();
   const [selectedDiagnostic, setSelectedDiagnostic] = useState<any>(null);
+  const [showAddDialog, setShowAddDialog] = useState(false);
 
   const handleAddDiagnostic = () => {
-    // Navigate to diagnostics page with patient pre-selected
-    router.push(`/roles/employee/diagnostics?patientId=${patientId}`);
+    setShowAddDialog(true);
+  };
+
+  const handleAddSuccess = () => {
+    setShowAddDialog(false);
+    // Data will be automatically refreshed by React Query invalidation
   };
 
   const handleEditDiagnostic = (diagnostic: any) => {
@@ -119,15 +127,6 @@ export const PatientDiagnostics = ({ diagnostics = [], isLoading = false, patien
           </div>
           <div className="flex items-center gap-2">
             <Button
-              variant="default"
-              size="sm"
-              onClick={handleAddDiagnostic}
-              className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
-            >
-              <Plus className="h-4 w-4" />
-              Ajouter
-            </Button>
-            <Button
               variant="outline"
               size="sm"
               onClick={handlePrint}
@@ -135,6 +134,15 @@ export const PatientDiagnostics = ({ diagnostics = [], isLoading = false, patien
             >
               <FileText className="h-4 w-4" />
               Imprimer
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleAddDiagnostic}
+              className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+            >
+              <Edit className="h-4 w-4" />
+              Gérer
             </Button>
           </div>
         </div>
@@ -266,6 +274,25 @@ export const PatientDiagnostics = ({ diagnostics = [], isLoading = false, patien
           </div>
         )}
       </CardContent>
+
+      {/* Manage Diagnostics Dialog */}
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-green-700">
+              <Activity className="h-5 w-5 text-green-600" />
+              Gérer les Polygraphies
+            </DialogTitle>
+          </DialogHeader>
+          {patientId && (
+            <AddDiagnosticForm
+              patientId={patientId}
+              diagnostics={diagnostics}
+              onSuccess={handleAddSuccess}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };

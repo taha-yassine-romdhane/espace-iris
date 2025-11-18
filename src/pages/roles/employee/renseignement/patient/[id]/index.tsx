@@ -399,12 +399,15 @@ export default function PatientDetailsPage() {
           diagnostics={patient.diagnostics || []}
           isLoading={false}
           patientId={patient.id}
+          patientName={patient.nom}
         />
 
         {/* Manual Tasks Section */}
         <PatientAppointments
           manualTasks={patient.manualTasks || []}
           isLoading={false}
+          patientId={patient.id}
+          patientName={patient.nom}
         />
 
         {/* Sales Section */}
@@ -412,12 +415,14 @@ export default function PatientDetailsPage() {
           sales={patient.sales || []}
           saleItems={patient.saleItems || []}
           isLoading={false}
+          patientId={patient.id}
         />
 
         {/* Rentals Section */}
         <PatientRentals
           rentals={patient.rentals || []}
           isLoading={false}
+          patientId={patient.id}
         />
 
         {/* CNAM Bonds Section */}
@@ -439,12 +444,14 @@ export default function PatientDetailsPage() {
             ) || [])
           ]}
           isLoading={false}
+          patientId={patient.id}
         />
 
         {/* Payments Section */}
         <PatientPayments
           payments={patient.payments || []}
           isLoading={false}
+          patientId={patient.id}
         />
 
         {/* History Section */}

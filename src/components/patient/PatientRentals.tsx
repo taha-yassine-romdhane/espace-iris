@@ -1,16 +1,27 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Package, AlertCircle, Calendar, CreditCard, FileText, User, Settings } from 'lucide-react';
+import { Package, AlertCircle, Calendar, CreditCard, FileText, User, Settings, Edit2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { format, differenceInDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { AddRentalForm } from '@/components/employee/patient-details-forms/AddRentalForm';
 
 interface PatientRentalsProps {
   rentals: any[];
   isLoading?: boolean;
+  patientId?: string;
 }
 
-export const PatientRentals = ({ rentals = [], isLoading = false }: PatientRentalsProps) => {
+export const PatientRentals = ({ rentals = [], isLoading = false, patientId }: PatientRentalsProps) => {
+  const [showManageDialog, setShowManageDialog] = useState(false);
+
+  const handleManageSuccess = () => {
+    setShowManageDialog(false);
+    // Data will be automatically refreshed by React Query invalidation
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'ACTIVE':
@@ -75,13 +86,26 @@ export const PatientRentals = ({ rentals = [], isLoading = false }: PatientRenta
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5 text-blue-500" />
-            Historique des locations
-          </CardTitle>
-          <CardDescription>
-            Tous les appareils médicaux loués par ce patient
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5 text-blue-500" />
+                Historique des locations
+              </CardTitle>
+              <CardDescription>
+                Tous les appareils médicaux loués par ce patient
+              </CardDescription>
+            </div>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => setShowManageDialog(true)}
+              className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+            >
+              <Edit2 className="h-4 w-4" />
+              Gérer
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -90,24 +114,21 @@ export const PatientRentals = ({ rentals = [], isLoading = false }: PatientRenta
             </div>
           ) : rentals.length > 0 ? (
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse border border-slate-200">
-                <thead className="bg-slate-50">
-                  <tr className="border-b border-slate-200">
-                    <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200">Code Location</th>
-                    <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200">Appareil</th>
-                    <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200">Période</th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-slate-700 border-r border-slate-200">Durée</th>
-                    <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200">Configuration</th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-slate-700 border-r border-slate-200">Statut</th>
-                    <th className="px-3 py-3 text-left text-xs font-semibold text-slate-700 border-r border-slate-200">Assigné à</th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-slate-700 border-r border-slate-200">Paiements</th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-slate-700">Bons CNAM</th>
+              <table className="w-full border-collapse">
+                <thead className="bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700">Code</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700">Appareil</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700">Dates</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700">Statut</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700">Tarif</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700">Flags</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700">Créé par</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700">Assigné à</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rentals.map((rental, index) => {
-                    const duration = calculateDuration(rental.startDate, rental.endDate);
-
                     return (
                       <tr
                         key={rental.id || index}
@@ -115,153 +136,86 @@ export const PatientRentals = ({ rentals = [], isLoading = false }: PatientRenta
                           index % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'
                         }`}
                       >
-                        {/* Rental Code */}
-                        <td className="px-3 py-2.5 text-xs border-r border-slate-100">
-                          <Badge variant="outline" className="text-xs font-mono">
-                            {rental.rentalCode || 'N/A'}
-                          </Badge>
-                          {rental.invoiceNumber && (
-                            <div className="text-xs text-slate-500 mt-1">
-                              Facture: {rental.invoiceNumber}
-                            </div>
-                          )}
-                        </td>
-
-                        {/* Medical Device */}
-                        <td className="px-3 py-2.5 border-r border-slate-100">
-                          <div className="space-y-1">
-                            <div className="font-medium text-sm">{rental.medicalDevice?.name || 'Appareil'}</div>
-                            {rental.medicalDevice?.brand && (
-                              <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-                                {rental.medicalDevice.brand}
-                              </Badge>
-                            )}
-                            {rental.medicalDevice?.serialNumber && (
-                              <div className="text-xs text-slate-500 font-mono">
-                                S/N: {rental.medicalDevice.serialNumber}
-                              </div>
-                            )}
-                            {rental.medicalDevice?.deviceCode && (
-                              <div className="text-xs text-slate-500 font-mono">
-                                Code: {rental.medicalDevice.deviceCode}
+                        {/* Code */}
+                        <td className="px-4 py-3">
+                          <div className="text-xs">
+                            <Badge variant="outline" className="font-mono bg-blue-50 text-blue-700 border-blue-200">
+                              {rental.rentalCode || 'N/A'}
+                            </Badge>
+                            {rental.invoiceNumber && (
+                              <div className="text-slate-500 mt-1">
+                                {rental.invoiceNumber}
                               </div>
                             )}
                           </div>
                         </td>
 
-                        {/* Period */}
-                        <td className="px-3 py-2.5 text-xs border-r border-slate-100">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3 text-slate-400" />
-                              <span className="font-medium">Début:</span>
-                              <span>{format(new Date(rental.startDate), 'dd/MM/yyyy', { locale: fr })}</span>
+                        {/* Appareil */}
+                        <td className="px-4 py-3">
+                          <div className="text-xs">
+                            <div className="font-medium text-slate-900">{rental.medicalDevice?.name || '-'}</div>
+                            <div className="text-slate-500 font-mono">
+                              {rental.medicalDevice?.serialNumber && `S/N: ${rental.medicalDevice.serialNumber}`}
+                              {rental.medicalDevice?.deviceCode && ` • ${rental.medicalDevice.deviceCode}`}
                             </div>
-                            {rental.endDate ? (
-                              <div className="flex items-center gap-1">
-                                <Calendar className="h-3 w-3 text-slate-400" />
-                                <span className="font-medium">Fin:</span>
-                                <span>{format(new Date(rental.endDate), 'dd/MM/yyyy', { locale: fr })}</span>
-                              </div>
-                            ) : (
-                              <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
-                                En cours
-                              </Badge>
-                            )}
                           </div>
                         </td>
 
-                        {/* Duration */}
-                        <td className="px-3 py-2.5 text-center border-r border-slate-100">
-                          <div className="text-sm font-semibold text-blue-600">{duration} jours</div>
+                        {/* Dates */}
+                        <td className="px-4 py-3">
+                          <div className="text-xs text-slate-600 space-y-0.5">
+                            <div>{rental.startDate ? format(new Date(rental.startDate), 'dd/MM/yyyy', { locale: fr }) : '-'}</div>
+                            <div>{rental.endDate ? format(new Date(rental.endDate), 'dd/MM/yyyy', { locale: fr }) : 'En cours'}</div>
+                          </div>
                         </td>
 
-                        {/* Configuration */}
-                        <td className="px-3 py-2.5 border-r border-slate-100">
-                          {rental.configuration ? (
-                            <div className="space-y-1 text-xs">
-                              <div className="flex items-center gap-1">
-                                <span className="font-medium">Tarif:</span>
-                                <span className="text-green-600 font-semibold">{formatAmount(rental.configuration.rentalRate)} DT</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <span className="font-medium">Cycle:</span>
-                                <span>{getBillingCycleLabel(rental.configuration.billingCycle)}</span>
-                              </div>
-                              {rental.configuration.cnamEligible && (
-                                <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
-                                  CNAM Éligible
-                                </Badge>
-                              )}
-                              {rental.configuration.isGlobalOpenEnded && (
-                                <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-                                  Durée indéterminée
-                                </Badge>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-xs text-gray-400">-</span>
-                          )}
-                        </td>
-
-                        {/* Status */}
-                        <td className="px-3 py-2.5 text-center border-r border-slate-100">
+                        {/* Statut */}
+                        <td className="px-4 py-3">
                           <Badge variant="outline" className={getStatusColor(rental.status)}>
                             {getStatusLabel(rental.status)}
                           </Badge>
                         </td>
 
-                        {/* Assigned To */}
-                        <td className="px-3 py-2.5 text-xs border-r border-slate-100">
-                          <div className="space-y-1">
-                            {rental.assignedTo ? (
-                              <div className="flex items-center gap-1">
-                                <User className="h-3 w-3 text-slate-400" />
-                                <span>{rental.assignedTo.firstName} {rental.assignedTo.lastName}</span>
-                              </div>
-                            ) : (
-                              <span className="text-gray-400">Non assigné</span>
+                        {/* Tarif */}
+                        <td className="px-4 py-3">
+                          <div className="text-xs">
+                            <div className="font-semibold text-green-600">
+                              {formatAmount(rental.configuration?.rentalRate)} DT
+                            </div>
+                            <div className="text-slate-500">
+                              {getBillingCycleLabel(rental.configuration?.billingCycle || 'MONTHLY')}
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Flags */}
+                        <td className="px-4 py-3">
+                          <div className="flex flex-wrap gap-1">
+                            {rental.configuration?.cnamEligible && (
+                              <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+                                CNAM
+                              </Badge>
                             )}
-                            {rental.createdBy && (
-                              <div className="text-xs text-slate-500">
-                                Créé par: {rental.createdBy.firstName} {rental.createdBy.lastName}
-                              </div>
+                            {rental.configuration?.isGlobalOpenEnded && (
+                              <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                                Durée indét.
+                              </Badge>
                             )}
                           </div>
                         </td>
 
-                        {/* Payments */}
-                        <td className="px-3 py-2.5 text-center border-r border-slate-100">
-                          {rental.payments && rental.payments.length > 0 ? (
-                            <div className="space-y-1">
-                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
-                                <CreditCard className="h-3 w-3 mr-1" />
-                                {rental.payments.length}
-                              </Badge>
-                              <div className="text-xs text-green-600 font-semibold">
-                                {formatAmount(rental.payments.reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0))} DT
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="text-gray-400 text-xs">-</span>
-                          )}
+                        {/* Créé par */}
+                        <td className="px-4 py-3">
+                          <div className="text-xs text-slate-600">
+                            {rental.createdBy ? `${rental.createdBy.firstName} ${rental.createdBy.lastName}` : 'N/A'}
+                          </div>
                         </td>
 
-                        {/* CNAM Bons */}
-                        <td className="px-3 py-2.5 text-center">
-                          {rental.cnamBons && rental.cnamBons.length > 0 ? (
-                            <div className="space-y-1">
-                              <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-xs">
-                                <FileText className="h-3 w-3 mr-1" />
-                                {rental.cnamBons.length}
-                              </Badge>
-                              <div className="text-xs text-purple-600 font-semibold">
-                                {formatAmount(rental.cnamBons.reduce((sum: number, bon: any) => sum + (Number(bon.bonAmount) || 0), 0))} DT
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="text-gray-400 text-xs">-</span>
-                          )}
+                        {/* Assigné à */}
+                        <td className="px-4 py-3">
+                          <div className="text-xs text-slate-600">
+                            {rental.assignedTo ? `${rental.assignedTo.firstName} ${rental.assignedTo.lastName}` : '-'}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -331,6 +285,25 @@ export const PatientRentals = ({ rentals = [], isLoading = false }: PatientRenta
           )}
         </CardContent>
       </Card>
+
+      {/* Manage Rentals Dialog */}
+      <Dialog open={showManageDialog} onOpenChange={setShowManageDialog}>
+        <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-green-700">
+              <Package className="h-5 w-5 text-green-600" />
+              Gérer les Locations
+            </DialogTitle>
+          </DialogHeader>
+          {patientId && (
+            <AddRentalForm
+              patientId={patientId}
+              rentals={rentals}
+              onSuccess={handleManageSuccess}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

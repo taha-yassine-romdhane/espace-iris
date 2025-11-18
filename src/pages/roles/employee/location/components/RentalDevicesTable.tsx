@@ -362,7 +362,7 @@ export default function RentalDevicesTable() {
                     <TableCell>
                       <div
                         className="flex flex-col cursor-pointer hover:bg-slate-50 p-1 rounded transition-colors"
-                        onClick={() => router.push(`/roles/admin/renseignement/patient/${device.patient.id}`)}
+                        onClick={() => router.push(`/roles/employee/renseignement/patient/${device.patient.id}`)}
                       >
                         <span className="font-medium text-sm text-green-600 hover:text-green-800 hover:underline">
                           {device.patient.firstName} {device.patient.lastName}
