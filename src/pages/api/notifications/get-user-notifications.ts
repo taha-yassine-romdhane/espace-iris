@@ -26,14 +26,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Get notifications for this user
+    // Get notifications for this user with related data
     const notifications = await prisma.notification.findMany({
       where: {
         userId: user.id,
       },
-      orderBy: {
-        createdAt: 'desc'
+      include: {
+        patient: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            patientCode: true,
+          }
+        },
+        company: {
+          select: {
+            id: true,
+            companyName: true,
+          }
+        }
       },
+      orderBy: [
+        { isRead: 'asc' },  // Unread first
+        { priority: 'desc' }, // Then by priority
+        { createdAt: 'desc' } // Then by date
+      ],
       take: 10, // Limit to 10 most recent notifications
     });
 
@@ -41,11 +59,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const unreadCount = await prisma.notification.count({
       where: {
         userId: user.id,
+        isRead: false,
       }
     });
 
-    return res.status(200).json({ 
-      notifications,
+    // Transform notifications to ensure actionUrl is always present
+    const transformedNotifications = notifications.map(notification => {
+      let actionUrl = notification.actionUrl;
+
+      // Generate fallback actionUrl if missing (for old notifications)
+      if (!actionUrl) {
+        // Generate based on notification type and available IDs
+        if (notification.patientId) {
+          actionUrl = `/roles/admin/renseignement/patient/${notification.patientId}`;
+        } else if (notification.companyId) {
+          actionUrl = `/roles/admin/renseignement/company/${notification.companyId}`;
+        } else {
+          actionUrl = '/roles/admin/dashboard';
+        }
+      }
+
+      return {
+        ...notification,
+        actionUrl,
+      };
+    });
+
+    return res.status(200).json({
+      notifications: transformedNotifications,
       unreadCount
     });
   } catch (error) {

@@ -18,7 +18,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import AdminLayout from '../AdminLayout';
+import EmployeeLayout from '../EmployeeLayout';
 import {
   Dialog,
   DialogContent,
@@ -134,7 +134,6 @@ export default function ModernTasksPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('month');
   const [filter, setFilter] = useState('all');
-  const [assignedUserId, setAssignedUserId] = useState('all');
   const [selectedTask, setSelectedTask] = useState<ComprehensiveTask | null>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
 
@@ -166,29 +165,19 @@ export default function ModernTasksPage() {
 
   const dateRange = getDateRange();
 
-  // Fetch comprehensive tasks
+  // Fetch comprehensive tasks (employee only sees their own tasks)
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['comprehensive-tasks', selectedDate, viewMode, filter, assignedUserId],
+    queryKey: ['comprehensive-tasks', selectedDate, viewMode, filter],
     queryFn: async () => {
       const params = new URLSearchParams({
         startDate: dateRange.start.toISOString(),
         endDate: dateRange.end.toISOString(),
         filter,
-        ...(assignedUserId !== 'all' && { assignedUserId })
+        assignedToMe: 'true' // Employee only sees their own assigned tasks
       });
 
       const response = await fetch(`/api/tasks/comprehensive?${params}`);
       if (!response.ok) throw new Error('Failed to fetch tasks');
-      return response.json();
-    }
-  });
-
-  // Fetch users for filtering
-  const { data: usersData } = useQuery({
-    queryKey: ['users-list'],
-    queryFn: async () => {
-      const response = await fetch('/api/users/list');
-      if (!response.ok) throw new Error('Failed to fetch users');
       return response.json();
     }
   });
@@ -236,7 +225,7 @@ export default function ModernTasksPage() {
       case 'OVERDUE':
         return <Badge className="bg-red-100 text-red-800 border-red-200">En retard</Badge>;
       case 'IN_PROGRESS':
-        return <Badge className="bg-blue-100 text-blue-800 border-blue-200">En cours</Badge>;
+        return <Badge className="bg-green-100 text-green-800 border-green-200">En cours</Badge>;
       case 'COMPLETED':
         return <Badge className="bg-green-100 text-green-800 border-green-200">Terminé</Badge>;
       case 'TODO':
@@ -331,17 +320,17 @@ export default function ModernTasksPage() {
 
                 {/* Assigned to - More prominent */}
                 {task.assignedTo ? (
-                  <div className="flex items-center gap-2 bg-blue-50 px-2 py-1 rounded">
+                  <div className="flex items-center gap-2 bg-green-50 px-2 py-1 rounded">
                     <Avatar className="h-5 w-5">
-                      <AvatarFallback className="text-xs bg-blue-100">
+                      <AvatarFallback className="text-xs bg-green-100">
                         {`${task.assignedTo.firstName[0]}${task.assignedTo.lastName[0]}`}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col">
-                      <span className="text-sm font-medium text-blue-800">
+                      <span className="text-sm font-medium text-green-800">
                         {task.assignedTo.firstName} {task.assignedTo.lastName}
                       </span>
-                      <span className="text-xs text-blue-600">
+                      <span className="text-xs text-green-600">
                         {task.assignedTo.role}
                       </span>
                     </div>
@@ -411,17 +400,16 @@ export default function ModernTasksPage() {
     return (
       <div className="space-y-4 mb-6">
         {/* Assignment Overview */}
-        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+        <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-semibold text-blue-900">Vue d&apos;ensemble des affectations</h3>
-                <p className="text-sm text-blue-700 mt-1">
+                <h3 className="font-semibold text-green-900">Mes tâches</h3>
+                <p className="text-sm text-green-700 mt-1">
                   {assignedTasks.length} tâches assignées • {unassignedTasks.length} non assignées
-                  {assignedUserId !== 'all' && ` • Filtrées pour: ${usersData?.users?.find((u: any) => u.id === assignedUserId)?.name}`}
                 </p>
               </div>
-              <Users className="h-8 w-8 text-blue-600" />
+              <Users className="h-8 w-8 text-green-600" />
             </div>
           </CardContent>
         </Card>
@@ -533,12 +521,12 @@ export default function ModernTasksPage() {
                 className={cn(
                   "min-h-[120px] p-2 border-b border-r",
                   !isCurrentMonth && "bg-gray-50 text-gray-400",
-                  isToday && isCurrentMonth && "bg-blue-50"
+                  isToday && isCurrentMonth && "bg-green-50"
                 )}
               >
                 <div className={cn(
                   "text-sm font-medium mb-2",
-                  isToday && isCurrentMonth && "text-blue-600"
+                  isToday && isCurrentMonth && "text-green-600"
                 )}>
                   {format(day, 'd')}
                 </div>
@@ -670,9 +658,9 @@ export default function ModernTasksPage() {
 
             {/* Assignment */}
             {selectedTask.assignedTo ? (
-              <div className="flex items-center gap-2 p-2 bg-blue-50 rounded">
+              <div className="flex items-center gap-2 p-2 bg-green-50 rounded">
                 <Avatar className="h-7 w-7">
-                  <AvatarFallback className="bg-blue-100 text-xs">
+                  <AvatarFallback className="bg-green-100 text-xs">
                     {`${selectedTask.assignedTo.firstName[0]}${selectedTask.assignedTo.lastName[0]}`}
                   </AvatarFallback>
                 </Avatar>
@@ -825,31 +813,6 @@ export default function ModernTasksPage() {
             </SelectContent>
           </Select>
 
-          {/* User Filter */}
-          <Select value={assignedUserId} onValueChange={setAssignedUserId}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Assigné à" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tous les utilisateurs</SelectItem>
-              {usersData?.users?.map((user: any) => (
-                <SelectItem key={user.id} value={user.id}>
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-5 w-5">
-                      <AvatarFallback className="text-xs bg-gray-100">
-                        {user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span>{user.name}</span>
-                    <Badge variant="outline" className="text-xs ml-1">
-                      {user.role}
-                    </Badge>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
           {/* Navigation */}
           <div className="flex items-center gap-1">
             <Button
@@ -924,11 +887,10 @@ export default function ModernTasksPage() {
             {viewMode === 'list' && 'Vue d\'ensemble des tâches'}
           </h2>
           <p className="text-sm text-gray-600 mt-1">
-            {tasks.length} tâche{tasks.length !== 1 ? 's' : ''} 
+            {tasks.length} tâche{tasks.length !== 1 ? 's' : ''}
             {filter !== 'all' && ` • Type: ${filter}`}
-            {assignedUserId !== 'all' && ` • Assigné à: ${usersData?.users?.find((u: any) => u.id === assignedUserId)?.name || assignedUserId}`}
             {' • '}
-            {stats.byStatus?.OVERDUE || 0} en retard • 
+            {stats.byStatus?.OVERDUE || 0} en retard •
             {stats.byStatus?.IN_PROGRESS || 0} en cours
           </p>
         </div>
@@ -958,5 +920,5 @@ export default function ModernTasksPage() {
 
 // Add layout wrapper
 ModernTasksPage.getLayout = function getLayout(page: React.ReactElement) {
-  return <AdminLayout>{page}</AdminLayout>;
+  return <EmployeeLayout>{page}</EmployeeLayout>;
 };

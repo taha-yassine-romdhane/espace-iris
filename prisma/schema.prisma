@@ -539,19 +539,36 @@ model Notification {
   message   String
   type      NotificationType
   status    NotificationStatus @default(PENDING)
+  priority  String             @default("NORMAL") // LOW, NORMAL, HIGH, URGENT
   dueDate   DateTime?
   patientId String?
   companyId String?
-  createdAt DateTime           @default(now())
-  updatedAt DateTime           @updatedAt
-  relatedId String?
-  readAt    DateTime?
-  isRead    Boolean            @default(false)
-  metadata  Json?
   userId    String?
-  company   Company?           @relation(fields: [companyId], references: [id])
-  patient   Patient?           @relation(fields: [patientId], references: [id])
-  user      User?              @relation(fields: [userId], references: [id])
+  // Foreign keys for related records (IDs only, no Prisma relations to avoid circular dependencies)
+  rentalId           String?
+  saleId             String?
+  diagnosticId       String?
+  appointmentId      String?
+  manualTaskId       String?
+  paymentId          String?
+  stockTransferRequestId String?
+  // Metadata and tracking
+  relatedId String?
+  actionUrl String? // Direct URL to navigate to related record
+  metadata  Json?
+  isRead    Boolean  @default(false)
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  // Relations
+  company   Company? @relation(fields: [companyId], references: [id])
+  patient   Patient? @relation(fields: [patientId], references: [id])
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([type])
+  @@index([priority])
 }
 
 model MedicalDeviceParametre {
@@ -1053,8 +1070,18 @@ enum NotificationType {
   MAINTENANCE
   APPOINTMENT
   PAYMENT_DUE
-  OTHER
+  RENTAL_EXPIRING
+  RENTAL_RETURN
+  SALE_COMPLETED
+  TASK_ASSIGNED
+  TASK_COMPLETED
+  STOCK_LOW
   TRANSFER
+  TRANSFER_APPROVED
+  TRANSFER_REJECTED
+  CNAM_RENEWAL
+  DIAGNOSTIC_PENDING
+  OTHER
 }
 
 enum AppointmentType {

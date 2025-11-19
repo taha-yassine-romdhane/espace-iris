@@ -117,8 +117,14 @@ export default function ModernNotificationsPage() {
   };
 
   const handleAction = (notification: DynamicNotification) => {
-    if (notification.actionUrl) {
+    if (notification.actionUrl && notification.actionUrl !== '#') {
       router.push(notification.actionUrl);
+    } else {
+      toast({
+        title: 'Action non disponible',
+        description: 'Aucune page de détails disponible pour cette notification',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -162,12 +168,12 @@ export default function ModernNotificationsPage() {
     const Icon = config.icon;
 
     return (
-      <Card 
+      <Card
         key={notification.id}
         className={cn(
-          "hover:shadow-md transition-all cursor-pointer group",
-          "border-l-4",
-          config.borderColor
+          "hover:shadow-md transition-all group border-l-4",
+          config.borderColor,
+          notification.actionUrl && notification.actionUrl !== '#' ? "cursor-pointer" : "cursor-default opacity-90"
         )}
         onClick={() => handleAction(notification)}
       >

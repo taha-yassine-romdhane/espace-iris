@@ -36,6 +36,8 @@ interface Notification {
     isRead: boolean;
     createdAt: string;
     readAt: string | null;
+    actionUrl?: string;
+    priority?: string;
     metadata?: any;
 }
 
@@ -302,7 +304,13 @@ const Navbar: React.FC<NavbarProps> = ({ onSidebarToggle, sidebarExpanded = true
                                                             ? "border-l-blue-500 bg-blue-50/40 hover:bg-blue-100/60"
                                                             : "border-l-transparent hover:bg-gray-50"
                                                     )}
-                                                    onClick={() => markNotificationAsRead(notification.id)}
+                                                    onClick={() => {
+                                                        markNotificationAsRead(notification.id);
+                                                        if (notification.actionUrl && notification.actionUrl !== '#') {
+                                                            router.push(notification.actionUrl);
+                                                            setIsNotificationsOpen(false);
+                                                        }
+                                                    }}
                                                 >
                                                     <div className="flex-shrink-0 mt-1">
                                                         <div className="p-1 bg-blue-100 rounded-full text-blue-600">
@@ -324,7 +332,13 @@ const Navbar: React.FC<NavbarProps> = ({ onSidebarToggle, sidebarExpanded = true
                                         )}
                                     </div>
                                     <div className="px-4 py-2 border-t border-gray-100">
-                                        <button className="text-sm text-[#1e3a8a] font-medium hover:underline w-full text-left">
+                                        <button
+                                            onClick={() => {
+                                                router.push('/roles/admin/notifications');
+                                                setIsNotificationsOpen(false);
+                                            }}
+                                            className="text-sm text-[#1e3a8a] font-medium hover:underline w-full text-left"
+                                        >
                                             Voir toutes les notifications
                                         </button>
                                     </div>

@@ -36,6 +36,8 @@ interface Notification {
     isRead: boolean;
     createdAt: string;
     readAt: string | null;
+    actionUrl?: string;
+    priority?: string;
     metadata?: any;
 }
 
@@ -271,13 +273,19 @@ const Navbar: React.FC<NavbarProps> = ({ onSidebarToggle, sidebarExpanded = true
                                             ) : notifications.length > 0 ? (
                                                 <div className="max-h-96 overflow-y-auto">
                                                     {notifications.map((notification) => (
-                                                        <div 
-                                                            key={notification.id} 
+                                                        <div
+                                                            key={notification.id}
                                                             className={cn(
-                                                                "px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0",
+                                                                "px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-100 last:border-0",
                                                                 !notification.isRead && "bg-green-50"
                                                             )}
-                                                            onClick={() => markNotificationAsRead(notification.id)}
+                                                            onClick={() => {
+                                                                markNotificationAsRead(notification.id);
+                                                                if (notification.actionUrl && notification.actionUrl !== '#') {
+                                                                    router.push(notification.actionUrl);
+                                                                    setIsNotificationsOpen(false);
+                                                                }
+                                                            }}
                                                         >
                                                             <div className="flex items-start">
                                                                 <div className="flex-shrink-0 pt-0.5">

@@ -68,10 +68,10 @@ export default async function handler(
           clientName: rental.patient ? `${rental.patient.firstName} ${rental.patient.lastName}` : '',
           clientType: 'patient',
           clientId: rental.patientId || '',
-          actionUrl: `/roles/admin/rentals/${rental.id}`,
-          actionLabel: 'Voir la location',
+          actionUrl: rental.patientId ? `/roles/admin/renseignement/patient/${rental.patientId}` : `/roles/admin/location`,
+          actionLabel: rental.patientId ? 'Voir le patient' : 'Voir les locations',
           dueDate: rental.endDate!,
-          metadata: { deviceName: rental.medicalDevice.name },
+          metadata: { deviceName: rental.medicalDevice.name, rentalId: rental.id },
           createdAt: rental.createdAt
         });
       });
@@ -99,6 +99,14 @@ export default async function handler(
 
       overduePayments.forEach(payment => {
         const daysOverdue = Math.ceil((now.getTime() - payment.dueDate!.getTime()) / (1000 * 60 * 60 * 24));
+        // Generate proper action URL based on patient or company
+        let actionUrl = '/roles/admin/location';
+        if (payment.patientId) {
+          actionUrl = `/roles/admin/renseignement/patient/${payment.patientId}`;
+        } else if (payment.companyId) {
+          actionUrl = `/roles/admin/renseignement/company/${payment.companyId}`;
+        }
+
         notifications.push({
           id: `payment-${payment.id}`,
           type: 'PAYMENT_DUE',
@@ -108,13 +116,15 @@ export default async function handler(
           clientName: payment.patient ? `${payment.patient.firstName} ${payment.patient.lastName}` : payment.company?.companyName || '',
           clientType: payment.patient ? 'patient' : 'company',
           clientId: payment.patientId || payment.companyId || '',
-          actionUrl: payment.rentalId ? `/roles/admin/rentals/${payment.rentalId}` : '#',
-          actionLabel: 'Voir le paiement',
+          actionUrl,
+          actionLabel: payment.patientId ? 'Voir le patient' : 'Voir l\'entreprise',
           dueDate: payment.dueDate!,
           amount: Number(payment.amount),
-          metadata: { 
+          metadata: {
             deviceName: payment.rental?.medicalDevice?.name,
-            paymentMethod: payment.method 
+            paymentMethod: payment.method,
+            paymentId: payment.id,
+            rentalId: payment.rentalId
           },
           createdAt: payment.createdAt
         });
@@ -236,13 +246,15 @@ export default async function handler(
           clientName: `${bond.patient.firstName} ${bond.patient.lastName}`,
           clientType: 'patient',
           clientId: bond.patientId,
-          actionUrl: bond.rentalId ? `/roles/admin/rentals/${bond.rentalId}` : '#',
-          actionLabel: 'Voir le dossier',
+          actionUrl: `/roles/admin/renseignement/patient/${bond.patientId}`,
+          actionLabel: 'Voir le patient',
           dueDate: bond.endDate!,
-          metadata: { 
+          metadata: {
             bondType: bond.bondType,
             deviceName: bond.rental?.medicalDevice?.name,
-            monthlyAmount: Number(bond.monthlyAmount)
+            monthlyAmount: Number(bond.monthlyAmount),
+            bondId: bond.id,
+            rentalId: bond.rentalId
           },
           createdAt: bond.createdAt
         });

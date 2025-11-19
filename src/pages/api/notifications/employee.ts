@@ -94,34 +94,41 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         clientId = notification.company.id;
       }
 
-      // Generate action URL based on notification type
-      let actionUrl = '';
+      // Use actionUrl from database or generate fallback based on notification type
+      let actionUrl = (notification as any).actionUrl || '';
       let actionLabel = 'Voir';
 
-      switch (notification.type) {
-        case NotificationType.APPOINTMENT:
-          actionUrl = '/roles/employee/appointments';
-          actionLabel = 'Voir le RDV';
-          break;
-        case NotificationType.MAINTENANCE:
-          actionUrl = '/roles/employee/tasks';
-          actionLabel = 'Voir la tâche';
-          break;
-        case NotificationType.FOLLOW_UP:
-          actionUrl = notification.patientId 
-            ? `/roles/employee/patients/${notification.patientId}`
-            : '/roles/employee/patients';
-          actionLabel = 'Voir le patient';
-          break;
-        default:
-          actionUrl = '/roles/employee/dashboard';
-          break;
+      // Fallback action URL generation if not set in database
+      if (!actionUrl) {
+        switch (notification.type) {
+          case NotificationType.APPOINTMENT:
+            actionUrl = '/roles/employee/appointments';
+            actionLabel = 'Voir le RDV';
+            break;
+          case NotificationType.MAINTENANCE:
+            actionUrl = '/roles/employee/tasks';
+            actionLabel = 'Voir la tâche';
+            break;
+          case NotificationType.FOLLOW_UP:
+            actionUrl = notification.patientId
+              ? `/roles/employee/renseignement/patient/${notification.patientId}`
+              : '/roles/employee/renseignement';
+            actionLabel = 'Voir le patient';
+            break;
+          default:
+            actionUrl = '/roles/employee/dashboard';
+            break;
+        }
       }
+
+      // Get priority from database or calculate fallback
+      const priority = (notification as any).priority ||
+        (notification.status === NotificationStatus.PENDING ? 'HIGH' : 'NORMAL');
 
       return {
         id: notification.id,
         type: notification.type,
-        priority: notification.status === NotificationStatus.PENDING ? 'HIGH' : 'MEDIUM',
+        priority,
         title: notification.title,
         message: notification.message,
         clientName: clientName || undefined,
@@ -133,7 +140,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         metadata: notification.metadata,
         isRead: notification.isRead,
         createdAt: notification.createdAt.toISOString(),
-        relatedId: notification.relatedId
+        // Include new foreign key fields for proper navigation
+        rentalId: (notification as any).rentalId,
+        saleId: (notification as any).saleId,
+        diagnosticId: (notification as any).diagnosticId,
+        appointmentId: (notification as any).appointmentId,
+        manualTaskId: (notification as any).manualTaskId,
+        paymentId: (notification as any).paymentId,
+        stockTransferRequestId: (notification as any).stockTransferRequestId
       };
     });
 

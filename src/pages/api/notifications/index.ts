@@ -90,31 +90,35 @@ export default async function handler(
           }
         }
 
-        // Determine priority based on due date and status
-        let priority = 'MEDIUM';
-        if (notification.dueDate) {
-          const daysUntilDue = Math.floor((new Date(notification.dueDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-          if (daysUntilDue <= 1) {
-            priority = 'HIGH';
-          } else if (daysUntilDue > 7) {
-            priority = 'LOW';
-          }
-        }
-
         return {
           id: notification.id,
           title: notification.title,
           description: notification.message,
           type: frontendType,
           status: notification.status,
-          priority,
+          priority: (notification as any).priority || 'NORMAL', // Use DB priority
           dueDate: notification.dueDate,
           createdAt: notification.createdAt,
           updatedAt: notification.updatedAt,
+          isRead: (notification as any).isRead || false,
+          readAt: (notification as any).readAt,
+          // Patient/Company info
           patientId: notification.patientId,
           patientName: notification.patient ? `${notification.patient.firstName} ${notification.patient.lastName}` : null,
           companyId: notification.companyId,
           companyName: notification.company ? notification.company.companyName : null,
+          // Foreign key IDs for navigation
+          rentalId: (notification as any).rentalId,
+          saleId: (notification as any).saleId,
+          diagnosticId: (notification as any).diagnosticId,
+          appointmentId: (notification as any).appointmentId,
+          manualTaskId: (notification as any).manualTaskId,
+          paymentId: (notification as any).paymentId,
+          stockTransferRequestId: (notification as any).stockTransferRequestId,
+          // Action URL for direct navigation
+          actionUrl: (notification as any).actionUrl,
+          // Metadata for backward compatibility
+          metadata,
           // Include metadata fields for specific notification types
           ...(frontendType === 'DIAGNOSTIC_RESULT' && {
             deviceId: metadata.deviceId,
@@ -123,7 +127,7 @@ export default async function handler(
             parameterName: metadata.parameterName,
           }),
           ...(frontendType === 'TASK' && {
-            taskId: metadata.taskId,
+            taskId: metadata.taskId || (notification as any).manualTaskId,
             assigneeId: metadata.assigneeId,
             assigneeName: metadata.assigneeName,
           }),

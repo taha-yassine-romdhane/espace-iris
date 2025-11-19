@@ -126,9 +126,15 @@ export default function EmployeeNotificationsPage() {
     if (!notification.isRead) {
       markAsRead(notification.id);
     }
-    
-    if (notification.actionUrl) {
+
+    if (notification.actionUrl && notification.actionUrl !== '#') {
       router.push(notification.actionUrl);
+    } else {
+      toast({
+        title: 'Action non disponible',
+        description: 'Aucune page de détails disponible pour cette notification',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -259,13 +265,13 @@ export default function EmployeeNotificationsPage() {
     const Icon = config.icon;
 
     return (
-      <Card 
+      <Card
         key={notification.id}
         className={cn(
-          "hover:shadow-md transition-all cursor-pointer group",
-          "border-l-4",
+          "hover:shadow-md transition-all group border-l-4",
           config.borderColor,
-          !notification.isRead && "bg-blue-50/30"
+          !notification.isRead && "bg-blue-50/30",
+          notification.actionUrl && notification.actionUrl !== '#' ? "cursor-pointer" : "cursor-default opacity-90"
         )}
         onClick={() => handleAction(notification)}
       >

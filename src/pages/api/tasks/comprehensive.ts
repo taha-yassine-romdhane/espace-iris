@@ -83,7 +83,7 @@ export default async function handler(
     const currentUserId = filterByCurrentUser ? session.user.id : (assignedUserId as string);
 
     // 1. Fetch actual tasks from database
-    if (filter === 'all' || filter === 'TASK' || type === 'TASK') {
+    if (filter === 'all' || filter === 'tasks' || filter === 'TASK' || type === 'TASK') {
       const dbTasks = await prisma.task.findMany({
         where: {
           ...(currentUserId && {
@@ -138,7 +138,7 @@ export default async function handler(
             deviceName: task.diagnostic.medicalDevice.name,
             diagnosticId: task.diagnostic.id
           } : undefined,
-          actionUrl: task.diagnostic ? (session.user.role === 'ADMIN' ? `/roles/admin/diagnostics/${task.diagnostic.id}` : `/roles/employee/diagnostics/${task.diagnostic.id}`) : undefined,
+          actionUrl: task.diagnostic?.patient ? (session.user.role === 'ADMIN' ? `/roles/admin/renseignement/patient/${task.diagnostic.patient.id}` : `/roles/employee/renseignement/patient/${task.diagnostic.patient.id}`) : undefined,
           actionLabel: 'Voir la tâche',
           canComplete: task.status !== 'COMPLETED',
           createdAt: task.createdAt,
@@ -152,7 +152,7 @@ export default async function handler(
     }
 
     // 2. Fetch pending diagnostics
-    if (filter === 'all' || filter === 'DIAGNOSTIC_PENDING' || type === 'DIAGNOSTIC_PENDING') {
+    if (filter === 'all' || filter === 'diagnostics' || filter === 'DIAGNOSTIC_PENDING' || type === 'DIAGNOSTIC_PENDING') {
       const pendingDiagnostics = await prisma.diagnostic.findMany({
         where: {
           status: 'PENDING',
@@ -222,7 +222,7 @@ export default async function handler(
             deviceName: diagnostic.medicalDevice.name,
             diagnosticId: diagnostic.id
           },
-          actionUrl: session.user.role === 'ADMIN' ? `/roles/admin/diagnostics/${diagnostic.id}/results` : `/roles/employee/diagnostics/${diagnostic.id}/results`,
+          actionUrl: diagnostic.patient ? (session.user.role === 'ADMIN' ? `/roles/admin/renseignement/patient/${diagnostic.patient.id}` : `/roles/employee/renseignement/patient/${diagnostic.patient.id}`) : diagnostic.Company ? (session.user.role === 'ADMIN' ? `/roles/admin/renseignement/company/${diagnostic.Company.id}` : `/roles/employee/renseignement/company/${diagnostic.Company.id}`) : undefined,
           actionLabel: 'Saisir le résultat',
           canComplete: true,
           createdAt: diagnostic.createdAt,
@@ -232,7 +232,7 @@ export default async function handler(
     }
 
     // 3. Fetch expiring rentals
-    if (filter === 'all' || filter === 'RENTAL_EXPIRING' || type === 'RENTAL_EXPIRING') {
+    if (filter === 'all' || filter === 'rentals' || filter === 'RENTAL_EXPIRING' || type === 'RENTAL_EXPIRING') {
       const expiringRentals = await prisma.rental.findMany({
         where: {
           endDate: { gte: start, lte: end },
@@ -290,7 +290,7 @@ export default async function handler(
             deviceName: rental.medicalDevice.name,
             rentalId: rental.id
           },
-          actionUrl: session.user.role === 'ADMIN' ? `/roles/admin/rentals/${rental.id}` : `/roles/employee/location/${rental.id}`,
+          actionUrl: rental.patient ? (session.user.role === 'ADMIN' ? `/roles/admin/renseignement/patient/${rental.patient.id}` : `/roles/employee/renseignement/patient/${rental.patient.id}`) : (session.user.role === 'ADMIN' ? `/roles/admin/location` : `/roles/employee/location`),
           actionLabel: 'Voir la location',
           canComplete: true,
           createdAt: rental.createdAt,
@@ -300,7 +300,7 @@ export default async function handler(
     }
 
     // 4. Fetch overdue payments
-    if (filter === 'all' || filter === 'PAYMENT_DUE' || type === 'PAYMENT_DUE') {
+    if (filter === 'all' || filter === 'payments' || filter === 'PAYMENT_DUE' || type === 'PAYMENT_DUE') {
       const overduePayments = await prisma.payment.findMany({
         where: {
           status: 'PENDING',
@@ -363,7 +363,7 @@ export default async function handler(
             paymentId: payment.id,
             deviceName: payment.rental?.medicalDevice?.name
           },
-          actionUrl: payment.rentalId ? (session.user.role === 'ADMIN' ? `/roles/admin/rentals/${payment.rentalId}` : `/roles/employee/location/${payment.rentalId}`) : '#',
+          actionUrl: payment.patient ? (session.user.role === 'ADMIN' ? `/roles/admin/renseignement/patient/${payment.patient.id}` : `/roles/employee/renseignement/patient/${payment.patient.id}`) : payment.company ? (session.user.role === 'ADMIN' ? `/roles/admin/renseignement/company/${payment.company.id}` : `/roles/employee/renseignement/company/${payment.company.id}`) : (session.user.role === 'ADMIN' ? `/roles/admin/location` : `/roles/employee/location`),
           actionLabel: 'Voir le paiement',
           canComplete: true,
           createdAt: payment.createdAt,
@@ -373,7 +373,7 @@ export default async function handler(
     }
 
     // 5. Fetch upcoming appointments
-    if (filter === 'all' || filter === 'APPOINTMENT_REMINDER' || type === 'APPOINTMENT_REMINDER') {
+    if (filter === 'all' || filter === 'appointments' || filter === 'APPOINTMENT_REMINDER' || type === 'APPOINTMENT_REMINDER') {
       const upcomingAppointments = await prisma.appointment.findMany({
         where: {
           scheduledDate: { gte: start, lte: end },
@@ -442,7 +442,7 @@ export default async function handler(
           relatedData: {
             appointmentId: appointment.id
           },
-          actionUrl: session.user.role === 'ADMIN' ? `/roles/admin/appointments/${appointment.id}` : `/roles/employee/appointments/${appointment.id}`,
+          actionUrl: appointment.patient ? (session.user.role === 'ADMIN' ? `/roles/admin/renseignement/patient/${appointment.patient.id}` : `/roles/employee/renseignement/patient/${appointment.patient.id}`) : appointment.company ? (session.user.role === 'ADMIN' ? `/roles/admin/renseignement/company/${appointment.company.id}` : `/roles/employee/renseignement/company/${appointment.company.id}`) : undefined,
           actionLabel: 'Voir le rendez-vous',
           canComplete: true,
           createdAt: appointment.createdAt,
@@ -452,7 +452,7 @@ export default async function handler(
     }
 
     // 6. Fetch CNAM renewals
-    if (filter === 'all' || filter === 'CNAM_RENEWAL' || type === 'CNAM_RENEWAL') {
+    if (filter === 'all' || filter === 'cnam' || filter === 'CNAM_RENEWAL' || type === 'CNAM_RENEWAL') {
       const expiringBonds = await prisma.cNAMBonRental.findMany({
         where: {
           endDate: { gte: start, lte: end },
@@ -519,7 +519,7 @@ export default async function handler(
             amount: Number(bond.bonAmount),
             deviceName: bond.rental?.medicalDevice?.name
           },
-          actionUrl: bond.rentalId ? (session.user.role === 'ADMIN' ? `/roles/admin/rentals/${bond.rentalId}` : `/roles/employee/location/${bond.rentalId}`) : '#',
+          actionUrl: session.user.role === 'ADMIN' ? `/roles/admin/renseignement/patient/${bond.patient.id}` : `/roles/employee/renseignement/patient/${bond.patient.id}`,
           actionLabel: 'Voir le dossier',
           canComplete: true,
           createdAt: bond.createdAt,
